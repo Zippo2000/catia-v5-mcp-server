@@ -415,21 +415,36 @@ class PartDesignTools:
 
         Searches in this order:
         1. PartBody.Sketches  (normal case)
-        2. Part.HybridBodies  (Geometrical Sets – fallback when sketch was
+        2. Part.HybridBodies  (Geometrical Sets — fallback when sketch was
            created while a GeoSet was in-edit instead of the PartBody)
         """
         part = self.conn.get_active_part()
         body = self.conn.get_active_part_body()
 
+        def _find_sketch_in_collection(sketches: Any, name: str) -> Any | None:
+            for i in range(1, sketches.Count + 1):
+                try:
+                    if sketches.Item(i).Name == name:
+                        return sketches.Item(i)
+                except Exception:
+                    pass
+            return None
+
+        def _last_sketch_in_collection(sketches: Any) -> Any | None:
+            if sketches.Count > 0:
+                return sketches.Item(sketches.Count)
+            return None
+
         # --- 1. Try PartBody first ---
         body_sketches = body.Sketches
         if sketch_name:
-            try:
-                return body_sketches.Item(sketch_name)
-            except Exception:
-                pass  # not in body – fall through to Geometrical Sets
-        elif body_sketches.Count > 0:
-            return body_sketches.Item(body_sketches.Count)
+            found = _find_sketch_in_collection(body_sketches, sketch_name)
+            if found:
+                return found
+        else:
+            last = _last_sketch_in_collection(body_sketches)
+            if last:
+                return last
 
         # --- 2. Fallback: search all Geometrical Sets (HybridBodies) ---
         last_sketch = None
@@ -438,11 +453,14 @@ class PartDesignTools:
             for i in range(1, hybrid_bodies.Count + 1):
                 hb = hybrid_bodies.Item(i)
                 try:
-                    for j in range(1, hb.Sketches.Count + 1):
-                        sk = hb.Sketches.Item(j)
-                        if sketch_name and sk.Name == sketch_name:
-                            return sk
-                        last_sketch = sk
+                    if sketch_name:
+                        found = _find_sketch_in_collection(hb.Sketches, sketch_name)
+                        if found:
+                            return found
+                    else:
+                        hb_last = _last_sketch_in_collection(hb.Sketches)
+                        if hb_last:
+                            last_sketch = hb_last
                 except Exception:
                     pass
         except Exception:
@@ -451,6 +469,11 @@ class PartDesignTools:
         if last_sketch is not None:
             return last_sketch
 
+        if sketch_name:
+            raise RuntimeError(
+                f"Sketch '{sketch_name}' not found in PartBody or any Geometrical Set. "
+                "Make sure the sketch exists and is closed."
+            )
         raise RuntimeError(
             "No sketches found in the active PartBody or any Geometrical Set. "
             "Create a sketch first."
