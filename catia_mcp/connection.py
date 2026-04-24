@@ -66,7 +66,8 @@ class CATIAConnection:
 
         # Phase 1: Try to attach to a running CATIA instance
         try:
-            self.app = win32com.client.GetActiveObject(self.CATIA_PROGID)
+            raw_app = win32com.client.GetActiveObject(self.CATIA_PROGID)
+            self.app = win32com.client.gencache.EnsureDispatch(raw_app)
             version = self._get_version()
             logger.info("Connected to running CATIA V5 instance (%s)", version)
             return f"Connected to running CATIA V5 instance ({version})"
