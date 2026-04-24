@@ -410,15 +410,18 @@ class PartDesignTools:
             case _:
                 raise ValueError(f"Unknown part design tool: {tool_name}")
 
-    def _get_last_sketch(self, sketch_name: str | None = None) -> Any:
+    def _get_last_sketch(self, sketch_name: str | None = None, part: Any | None = None) -> Any:
         """Get a sketch by name or the last sketch available.
 
         Searches in this order:
         1. PartBody.Sketches  (normal case)
         2. Part.HybridBodies  (Geometrical Sets — fallback when sketch was
            created while a GeoSet was in-edit instead of the PartBody)
+
+        Uses doc.Part directly to avoid stale cached Part references.
         """
-        part = self.conn.get_active_part()
+        if part is None:
+            part = self.conn.get_active_part()
         body = self.conn.get_active_part_body()
 
         def _find_sketch_in_collection(sketches: Any, name: str) -> Any | None:
@@ -493,10 +496,20 @@ class PartDesignTools:
 
     def _pad(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        sf = part.ShapeFactory
 
-        sketch = self._get_last_sketch(args.get("sketch_name"))
+        doc = self.conn.app.ActiveDocument
+        part = doc.Part
+
+        sf = part.ShapeFactory
+        sketch = self._get_last_sketch(args.get("sketch_name"), part)
+
+        sketch_repr = repr(type(sketch))
+        if "IUnknown" in sketch_repr or "unknown" in sketch_repr.lower():
+            raise RuntimeError(
+                f"Sketch object has invalid COM type: {sketch_repr}. "
+                "Try reconnecting to CATIA and recreating the sketch."
+            )
+
         height = args["height"]
         direction = args.get("direction", "normal")
         symmetric = args.get("symmetric", False)
@@ -506,7 +519,7 @@ class PartDesignTools:
         if symmetric:
             pad.IsSymmetric = True
         elif direction == "reverse":
-            pad.DirectionOrientation = 1  # catReverse
+            pad.DirectionOrientation = 1
         elif direction == "both":
             pad.IsSymmetric = True
 
