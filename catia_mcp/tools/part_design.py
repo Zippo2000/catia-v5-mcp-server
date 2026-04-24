@@ -411,18 +411,50 @@ class PartDesignTools:
                 raise ValueError(f"Unknown part design tool: {tool_name}")
 
     def _get_last_sketch(self, sketch_name: str | None = None) -> Any:
-        """Get a sketch by name or the last sketch in the body."""
+        """Get a sketch by name or the last sketch available.
+
+        Searches in this order:
+        1. PartBody.Sketches  (normal case)
+        2. Part.HybridBodies  (Geometrical Sets – fallback when sketch was
+           created while a GeoSet was in-edit instead of the PartBody)
+        """
         part = self.conn.get_active_part()
         body = self.conn.get_active_part_body()
-        sketches = body.Sketches
 
+        # --- 1. Try PartBody first ---
+        body_sketches = body.Sketches
         if sketch_name:
-            return sketches.Item(sketch_name)
+            try:
+                return body_sketches.Item(sketch_name)
+            except Exception:
+                pass  # not in body – fall through to Geometrical Sets
+        elif body_sketches.Count > 0:
+            return body_sketches.Item(body_sketches.Count)
 
-        # Get the last sketch
-        if sketches.Count == 0:
-            raise RuntimeError("No sketches found in the active body. Create a sketch first.")
-        return sketches.Item(sketches.Count)
+        # --- 2. Fallback: search all Geometrical Sets (HybridBodies) ---
+        last_sketch = None
+        try:
+            hybrid_bodies = part.HybridBodies
+            for i in range(1, hybrid_bodies.Count + 1):
+                hb = hybrid_bodies.Item(i)
+                try:
+                    for j in range(1, hb.Sketches.Count + 1):
+                        sk = hb.Sketches.Item(j)
+                        if sketch_name and sk.Name == sketch_name:
+                            return sk
+                        last_sketch = sk
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        if last_sketch is not None:
+            return last_sketch
+
+        raise RuntimeError(
+            "No sketches found in the active PartBody or any Geometrical Set. "
+            "Create a sketch first."
+        )
 
     def _get_last_shape(self, feature_name: str | None = None) -> Any:
         """Get a shape/feature by name or the last one in the body."""
@@ -439,8 +471,7 @@ class PartDesignTools:
     def _pad(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         sketch = self._get_last_sketch(args.get("sketch_name"))
         height = args["height"]
@@ -463,8 +494,7 @@ class PartDesignTools:
     def _pocket(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         sketch = self._get_last_sketch(args.get("sketch_name"))
         depth = args["depth"]
@@ -481,8 +511,7 @@ class PartDesignTools:
     def _shaft(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         sketch = self._get_last_sketch(args.get("sketch_name"))
         angle = args.get("angle", 360)
@@ -497,8 +526,7 @@ class PartDesignTools:
     def _groove(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         sketch = self._get_last_sketch(args.get("sketch_name"))
         angle = args.get("angle", 360)
@@ -513,8 +541,7 @@ class PartDesignTools:
     def _fillet(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         radius = args["radius"]
 
@@ -531,8 +558,7 @@ class PartDesignTools:
     def _chamfer(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         length = args["length"]
         angle = args.get("angle", 45)
@@ -552,19 +578,18 @@ class PartDesignTools:
     def _hole(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         sketch = self._get_last_sketch(args.get("sketch_name"))
         diameter = args["diameter"]
         depth = args["depth"]
 
-        hole = sf.AddNewHole(sketch, depth)
+        hole = sf.AddNewHoleFromSketch(sketch, depth)
         hole.Diameter = diameter
-        hole.BottomType = 0  # catFlatBottom
+        hole.BottomType = 0
 
         if args.get("threaded", False):
-            hole.ThreadingMode = 1  # catThreaded
+            hole.ThreadingMode = 1
 
         part.UpdateObject(hole)
         self.conn.refresh_display()
@@ -573,8 +598,7 @@ class PartDesignTools:
     def _rect_pattern(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         feature = self._get_last_shape(args.get("feature_name"))
         d1_count = args["dir1_count"]
@@ -600,8 +624,7 @@ class PartDesignTools:
     def _circ_pattern(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         feature = self._get_last_shape(args.get("feature_name"))
         count = args["count"]
@@ -627,8 +650,7 @@ class PartDesignTools:
     def _mirror(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         plane_key = args["plane"].lower()
         planes = self.conn.get_origin_elements()
@@ -648,21 +670,26 @@ class PartDesignTools:
     def _shell(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         thickness = args["thickness"]
-        shell = sf.AddNewShell(self._get_last_shape(), 0, thickness, thickness)
 
-        # Remove specified faces if any
+        shell = sf.AddNewShell(None, thickness, thickness)
+
         faces_to_remove = args.get("faces_to_remove", [])
-        for face_name in faces_to_remove:
-            try:
-                face = body.Shapes.Item(face_name) if face_name else None
-                if face:
-                    shell.AddFaceToRemove(part.CreateReferenceFromObject(face))
-            except Exception:
-                pass
+        if faces_to_remove:
+            sel = self.conn.hso
+            sel.Clear()
+            for face_name in faces_to_remove:
+                sel.Search(f"Name={face_name},all")
+                if sel.Count > 0:
+                    try:
+                        shell.AddFaceToRemove(
+                            part.CreateReferenceFromObject(sel.Item(1).Value)
+                        )
+                    except Exception:
+                        pass
+                sel.Clear()
 
         part.UpdateObject(shell)
         self.conn.refresh_display()
@@ -671,8 +698,7 @@ class PartDesignTools:
     def _draft(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         angle = args["angle"]
 
@@ -682,8 +708,20 @@ class PartDesignTools:
         if not neutral:
             raise ValueError(f"Unknown pulling direction plane: {plane_key}")
 
+        last_shape = self._get_last_shape()
+        face_ref = part.CreateReferenceFromObject(last_shape)
         neutral_ref = part.CreateReferenceFromObject(neutral)
-        draft = sf.AddNewDraft(self._get_last_shape(), neutral_ref, angle)
+
+        draft = sf.AddNewDraft(
+            face_ref,           # i_face_to_draft
+            neutral_ref,        # i_neutral
+            0,                 # i_neutral_mode: catDraftNeutralNoPropag = 0
+            None,              # i_parting: no parting plane
+            0.0, 0.0, -1.0,   # i_dir_x/y/z: default pull direction (-Z)
+            0,                 # i_mode: catDraftModeAutomatic = 0
+            angle,             # i_angle
+            0,                 # i_multiselection_mode: catDraftMultiSelectionModeNone = 0
+        )
 
         part.UpdateObject(draft)
         self.conn.refresh_display()
@@ -692,15 +730,15 @@ class PartDesignTools:
     def _thickness(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = body.ShapeFactory
+        sf = part.ShapeFactory
 
         offset = args["offset"]
-        thickness = sf.AddNewThickness(self._get_last_shape(), 0, offset)
+        shape_ref = part.CreateReferenceFromObject(self._get_last_shape())
+        thickness_feat = sf.AddNewThickness(shape_ref, offset)
 
-        part.UpdateObject(thickness)
+        part.UpdateObject(thickness_feat)
         self.conn.refresh_display()
-        return f"Thickness added: {offset} mm offset. Feature: '{thickness.Name}'"
+        return f"Thickness added: {offset} mm offset. Feature: '{thickness_feat.Name}'"
 
     def _list_features(self) -> str:
         self.conn.ensure_connected()

@@ -75,7 +75,7 @@ class CATIAConnection:
 
         # Phase 2: Launch a new CATIA instance
         try:
-            self.app = win32com.client.Dispatch(self.CATIA_PROGID)
+            self.app = win32com.client.gencache.EnsureDispatch(self.CATIA_PROGID)
             self.app.Visible = True
             version = self._get_version()
             logger.info("Launched new CATIA V5 instance (%s)", version)
@@ -131,10 +131,13 @@ class CATIAConnection:
             raise RuntimeError("No active document in CATIA. Create or open a document first.")
 
     @property
-    def active_editor(self) -> Any:
-        """Get the active editor."""
+    def active_editor(self) -> Any | None:
+        """Get the active editor, or None if no editor is available."""
         self.ensure_connected()
-        return self.app.ActiveEditor
+        try:
+            return self.app.ActiveEditor
+        except Exception:
+            return None
 
     @property
     def hso(self) -> Any:
@@ -145,9 +148,21 @@ class CATIAConnection:
     def refresh_display(self) -> None:
         """Refresh the CATIA 3D view."""
         try:
-            self.active_editor.ActiveViewer.Reframe()
+            viewer = self._safe_active_viewer()
+            if viewer is not None:
+                viewer.Reframe()
         except Exception:
             pass
+
+    def _safe_active_viewer(self) -> Any | None:
+        """Get the active viewer safely, or None if unavailable."""
+        try:
+            editor = self.active_editor
+            if editor is None:
+                return None
+            return getattr(editor, "ActiveViewer", None)
+        except Exception:
+            return None
 
     # ── Document type detection ──
 

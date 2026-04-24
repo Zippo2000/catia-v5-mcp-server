@@ -308,7 +308,7 @@ class SketcherTools:
         self._ensure_sketch_open()
         sketch = self._active_sketch
         sketch.CloseEdition()
-        self.conn.get_active_part().UpdateObject(sketch)
+        self.conn.get_active_part().Update()
         self._active_sketch = None
         self._active_factory = None
         self.conn.refresh_display()

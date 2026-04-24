@@ -184,14 +184,18 @@ class ExportTools:
             os.makedirs(output_dir, exist_ok=True)
 
         # Capture via the active viewer
-        viewer = self.conn.active_editor.ActiveViewer
-        viewer.CaptureToFile(1, file_path)  # 1 = catCaptureFormatPNG or auto by extension
+        viewer = self.conn._safe_active_viewer()
+        if viewer is None:
+            raise RuntimeError("No active 3D viewer available. Make sure a Part or Product document is open.")
+        viewer.CaptureToFile(1, file_path)
 
         return f"Screenshot saved to {file_path} ({width}x{height})"
 
     def _set_view(self, view: str) -> str:
         self.conn.ensure_connected()
-        viewer = self.conn.active_editor.ActiveViewer
+        viewer = self.conn._safe_active_viewer()
+        if viewer is None:
+            raise RuntimeError("No active 3D viewer available. Make sure a Part or Product document is open.")
         viewpoint = viewer.Viewpoint3D
 
         # Standard view direction vectors and up vectors
@@ -223,6 +227,8 @@ class ExportTools:
 
     def _fit_all(self) -> str:
         self.conn.ensure_connected()
-        viewer = self.conn.active_editor.ActiveViewer
+        viewer = self.conn._safe_active_viewer()
+        if viewer is None:
+            raise RuntimeError("No active 3D viewer available. Make sure a Part or Product document is open.")
         viewer.Reframe()
         return "View fitted to all geometry"

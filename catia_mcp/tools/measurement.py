@@ -193,8 +193,13 @@ class MeasurementTools:
         except Exception:
             pass
 
-        if density and "volume_mm3" in result:
-            volume_m3 = result["volume_mm3"] * 1e-9  # mm3 to m3
+        if density:
+            if "volume_mm3" not in result:
+                raise RuntimeError(
+                    "Cannot calculate mass: volume measurement failed. "
+                    "Make sure the part has a valid solid body."
+                )
+            volume_m3 = result["volume_mm3"] * 1e-9  # mm³ to m³
             mass_kg = density * volume_m3
             result["mass_kg"] = round(mass_kg, 6)
             result["mass_g"] = round(mass_kg * 1000, 3)

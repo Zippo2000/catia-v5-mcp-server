@@ -246,7 +246,7 @@ class AssemblyTools:
         comp1 = product.Products.Item(args["component1"])
         comp2 = product.Products.Item(args["component2"])
 
-        cst = constraints.AddBiEltCst(0, comp1, comp2)  # Coincidence
+        cst = constraints.AddBiEltCst(20, comp1, comp2)  # catCstTypeSurfContact: face coincidence
         self.conn.refresh_display()
         return (
             f"Coincidence constraint created between "
@@ -276,7 +276,7 @@ class AssemblyTools:
         comp1 = product.Products.Item(args["component1"])
         comp2 = product.Products.Item(args["component2"])
 
-        cst = constraints.AddBiEltCst(2, comp1, comp2)  # Angle
+        cst = constraints.AddBiEltCst(6, comp1, comp2)  # catCstTypeAngle
         cst.Dimension.Value = args["angle"]
 
         self.conn.refresh_display()
