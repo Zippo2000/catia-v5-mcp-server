@@ -497,10 +497,17 @@ class PartDesignTools:
     def _pad(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
 
-        doc = self.conn.app.ActiveDocument
-        part = doc.Part
+        part = self.conn.get_active_part()
+        body = self.conn.get_active_part_body()
 
-        sf = part.ShapeFactory
+        try:
+            sf = part.ShapeFactory
+        except Exception as e:
+            raise RuntimeError(
+                f"Could not access ShapeFactory from part: {e}\n"
+                "Ensure the active document is a valid Part document."
+            )
+
         sketch = self._get_last_sketch(args.get("sketch_name"), part)
 
         sketch_repr = repr(type(sketch))
@@ -514,7 +521,21 @@ class PartDesignTools:
         direction = args.get("direction", "normal")
         symmetric = args.get("symmetric", False)
 
-        pad = sf.AddNewPad(sketch, height)
+        part.InWorkObject = body
+
+        try:
+            pad = sf.AddNewPad(sketch, height)
+        except Exception as e:
+            err_msg = str(e)
+            if not err_msg or err_msg == "None":
+                err_msg = "Unknown CATIA error (possibly invalid sketch profile or geometry)"
+            raise RuntimeError(
+                f"AddNewPad failed: {err_msg}\n"
+                "Ensure:\n"
+                "  1. The sketch is closed (use catia_close_sketch)\n"
+                "  2. The sketch contains valid closed geometry (a complete profile)\n"
+                "  3. The sketch is in PartBody, not a Geometrical Set"
+            )
 
         if symmetric:
             pad.IsSymmetric = True
@@ -523,17 +544,24 @@ class PartDesignTools:
         elif direction == "both":
             pad.IsSymmetric = True
 
-        part.UpdateObject(pad)
+        try:
+            part.UpdateObject(pad)
+        except Exception as e:
+            raise RuntimeError(f"Failed to update pad feature: {e}")
+
         self.conn.refresh_display()
         return f"Pad created: {height} mm ({direction}). Feature: '{pad.Name}'"
 
     def _pocket(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
+        body = self.conn.get_active_part_body()
         sf = part.ShapeFactory
 
-        sketch = self._get_last_sketch(args.get("sketch_name"))
+        sketch = self._get_last_sketch(args.get("sketch_name"), part)
         depth = args["depth"]
+
+        part.InWorkObject = body
 
         pocket = sf.AddNewPocket(sketch, depth)
 
@@ -547,10 +575,13 @@ class PartDesignTools:
     def _shaft(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
+        body = self.conn.get_active_part_body()
         sf = part.ShapeFactory
 
-        sketch = self._get_last_sketch(args.get("sketch_name"))
+        sketch = self._get_last_sketch(args.get("sketch_name"), part)
         angle = args.get("angle", 360)
+
+        part.InWorkObject = body
 
         shaft = sf.AddNewShaft(sketch)
         shaft.FirstAngle = angle
@@ -562,10 +593,13 @@ class PartDesignTools:
     def _groove(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
+        body = self.conn.get_active_part_body()
         sf = part.ShapeFactory
 
-        sketch = self._get_last_sketch(args.get("sketch_name"))
+        sketch = self._get_last_sketch(args.get("sketch_name"), part)
         angle = args.get("angle", 360)
+
+        part.InWorkObject = body
 
         groove = sf.AddNewGroove(sketch)
         groove.FirstAngle = angle
@@ -614,11 +648,14 @@ class PartDesignTools:
     def _hole(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
+        body = self.conn.get_active_part_body()
         sf = part.ShapeFactory
 
-        sketch = self._get_last_sketch(args.get("sketch_name"))
+        sketch = self._get_last_sketch(args.get("sketch_name"), part)
         diameter = args["diameter"]
         depth = args["depth"]
+
+        part.InWorkObject = body
 
         hole = sf.AddNewHoleFromSketch(sketch, depth)
         hole.Diameter = diameter

@@ -6,9 +6,12 @@ Create, open, save, close, and list documents (Part, Product, Drawing).
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from catia_mcp.connection import CATIAConnection
+
+logger = logging.getLogger("catia_mcp")
 
 
 class DocumentTools:
@@ -160,7 +163,10 @@ class DocumentTools:
         docs = self.conn.documents
         doc = docs.Add("Part")
         if name:
-            doc.Part.Name = name
+            try:
+                doc.Part.Name = name
+            except Exception as e:
+                logger.warning("Could not set part name to '%s': %s. Using auto-generated name.", name, e)
         part_name = doc.Part.Name
         self.conn.refresh_display()
         return f"Created new Part document: '{part_name}'"
