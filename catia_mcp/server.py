@@ -29,11 +29,14 @@ from catia_mcp.tools.part_design import PartDesignTools
 from catia_mcp.tools.sketcher import SketcherTools
 
 # ── Logging ──
+import os
+_log_dir = os.path.dirname(os.path.abspath(__file__))
+_log_path = os.path.join(_log_dir, "..", "catia_mcp.log")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     handlers=[
-        logging.FileHandler("catia_mcp.log", encoding="utf-8"),
+        logging.FileHandler(os.path.normpath(_log_path), encoding="utf-8"),
         logging.StreamHandler(sys.stderr),
     ],
 )
@@ -123,9 +126,19 @@ class CATIAMCPServer:
 
     async def run(self) -> None:
         """Run the MCP server over stdio."""
+        import inspect
+        # Log which version of part_design is loaded
+        pd_source = inspect.getsourcefile(PartDesignTools)
+        pad_source = inspect.getsource(PartDesignTools._pad)
+        has_inworkobject = "InWorkObject" in pad_source
+
+        logger.info("=" * 60)
         logger.info("Starting CATIA V5 MCP Server...")
+        logger.info("PartDesignTools source: %s", pd_source)
+        logger.info("_pad has InWorkObject: %s", has_inworkobject)
         logger.info("Registered %d tools across %d modules",
                      len(self._tool_router), len(self._tool_modules))
+        logger.info("=" * 60)
 
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(
