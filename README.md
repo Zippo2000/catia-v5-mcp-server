@@ -1,65 +1,72 @@
 # CATIA V5 MCP Server
 
-> Connect Claude AI to Dassault Systemes CATIA V5 via the Model Context Protocol (MCP).
+> Connect Claude AI to Dassault Systèmes CATIA V5 via the Model Context Protocol (MCP).
 
 The first open-source MCP server for CATIA V5. Drive CATIA V5 CAD modeling from Claude Desktop or Claude Code using natural language.
 
 ## What it does
 
-This MCP server exposes **50+ tools** that let Claude:
+This MCP server exposes **55 tools** across 6 modules that let Claude:
 
-- **Create and manage documents** — new Part, Product (assembly), open, save, close
-- **2D Sketching** — lines, rectangles, circles, arcs, splines, points, constraints
-- **Part Design** — Pad, Pocket, Shaft, Groove, Fillet, Chamfer, Hole, Shell, Draft, Thickness, Patterns (rectangular/circular), Mirror
-- **Assembly** — add components, Fix/Coincidence/Offset/Angle constraints, move/rotate
-- **Measurement** — distance, inertia, bounding box, parameters
-- **Export** — STEP, IGES, STL, 3DXML, VRML, screenshots
-- **View control** — set standard views, fit all, capture screenshots
+| Category | Tools | Examples |
+|----------|-------|----------|
+| 📄 **Document Management** | 10 | Create/open/save/close parts and assemblies, list documents |
+| ✏️ **2D Sketching** | 11 | Lines, rectangles, circles, arcs, splines, points, constraints |
+| 🔧 **Part Design** | 15 | Pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, shell, draft |
+| 📦 **Assembly** | 9 | Add components, constraints (fix/coincidence/offset/angle), move |
+| 📏 **Measurement** | 6 | Distance, inertia, bounding box, parameters, update |
+| 📤 **Export & View** | 4 | STEP/IGES/STL export, screenshots, view orientations |
 
 ## Requirements
 
 - **Windows** (COM automation is Windows-only)
-- **CATIA V5** installed and licensed (R2016+)
+- **CATIA V5** R2016+ installed and licensed
 - **Python 3.10+**
 - **Claude Desktop** or **Claude Code**
 
-## Quick Install (Recommended)
+## Installation
+
+### Option 1: Automated setup (Recommended)
 
 ```bash
-git clone https://github.com/daiemon12/catia-v5-mcp-server.git
+git clone https://github.com/Zippo2000/catia-v5-mcp-server.git
 cd catia-v5-mcp-server
 bash setup.sh
 ```
 
-The script handles everything: dependencies, Claude Desktop config, and verification.
+The `setup.sh` script handles virtual environment creation, dependency installation, Claude Desktop configuration, and verification.
 
-## Manual Installation
-
-### 1. Clone the repository
+### Option 2: Manual installation
 
 ```bash
-git clone https://github.com/daiemon12/catia-v5-mcp-server.git
+git clone https://github.com/Zippo2000/catia-v5-mcp-server.git
 cd catia-v5-mcp-server
-```
 
-### 2. Install dependencies
+# Create and activate virtual environment
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # WSL/Linux
 
-```bash
+# Install the package
 pip install -e .
 ```
 
-Or manually:
+### Option 3: Install via pip
+
 ```bash
-pip install mcp pywin32
+pip install git+https://github.com/Zippo2000/catia-v5-mcp-server.git
 ```
 
-### 3. Configure Claude Desktop
+## Configuration
+
+### Claude Desktop
 
 Edit your Claude Desktop config file:
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-Add the server:
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+Add the server entry:
 
 ```json
 {
@@ -72,49 +79,71 @@ Add the server:
 }
 ```
 
-Or with an absolute path:
+Or with an absolute path to the project:
 
 ```json
 {
   "mcpServers": {
     "catia-v5": {
-      "command": "python",
-      "args": ["C:/path/to/catia-v5-mcp-server/catia_mcp/server.py"]
+      "command": "C:\\path\\to\\catia-v5-mcp-server\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "catia_mcp"]
     }
   }
 }
 ```
 
-### 4. For Claude Code
+### Claude Code
 
 ```bash
 claude mcp add catia-v5 python -- -m catia_mcp
 ```
 
-### 5. Start CATIA V5
+### Standalone (for testing)
 
-Make sure CATIA V5 is running before asking Claude to interact with it. The server will automatically connect to the running instance.
+```bash
+python -m catia_mcp
+# or
+catia-mcp
+```
 
-If CATIA V5 is not running, the server will attempt to launch it (requires CATIA to be registered as COM server: `cnext.exe /regserver`).
+## Getting Started
+
+1. **Start CATIA V5** — make sure it is running before using the server. The server will auto-connect to a running instance or attempt to launch one.
+
+2. **Open Claude Desktop** — in a new conversation, ask Claude to work with CATIA.
+
+3. **Start with `catia_connect`** — Claude will call this automatically when needed.
 
 ## Usage Examples
 
-Once configured, just talk to Claude:
+### Create a simple block
 
-### Create a simple part
-> "Create a new CATIA part. Draw a 100x60mm rectangle centered at the origin on the XY plane, then extrude it 40mm."
+> "Create a new CATIA part. Draw a 100×60 mm rectangle centered at the origin on the XY plane, then extrude it 40 mm."
+
+Claude will call:
+```
+catia_new_part()
+catia_create_sketch(plane="xy")
+catia_sketch_centered_rectangle(cx=0, cy=0, width=100, height=60)
+catia_close_sketch()
+catia_pad(height=40)
+```
 
 ### Design a bracket
-> "Design a mounting bracket: start with a 120x80mm base plate, 5mm thick. Add 4 M6 mounting holes at the corners with 10mm edge distance. Then add two vertical ribs 30mm tall."
+
+> "Design a mounting bracket: 120×80 mm base plate, 5 mm thick. Add 4 M6 mounting holes at the corners (10 mm edge distance). Add two vertical ribs, 30 mm tall."
 
 ### Parametric modification
-> "Show me all parameters of the active part. Then change the pad height to 60mm."
+
+> "Show me all parameters of the active part. Then change the pad height to 60 mm."
 
 ### Export for manufacturing
-> "Export the current part to STEP format at C:/export/bracket.stp and take a screenshot of the isometric view."
+
+> "Export the current part to STEP format at `C:/export/bracket.stp` and take a screenshot of the isometric view."
 
 ### Assembly
-> "Create a new assembly. Add the bracket from C:/parts/bracket.CATPart and the base from C:/parts/base.CATPart. Fix the base, then create a coincidence constraint between the two."
+
+> "Create a new assembly. Add the bracket from `C:/parts/bracket.CATPart` and the base from `C:/parts/base.CATPart`. Fix the base, then create a coincidence constraint between the two."
 
 ## Architecture
 
@@ -122,143 +151,191 @@ Once configured, just talk to Claude:
 catia-v5-mcp-server/
 ├── catia_mcp/
 │   ├── __init__.py
-│   ├── __main__.py          # python -m catia_mcp entry point
-│   ├── server.py            # MCP Server — tool registration & routing
-│   ├── connection.py        # COM connection manager (win32com)
+│   ├── __main__.py            # python -m catia_mcp entry point
+│   ├── server.py              # MCP Server — tool registration & routing
+│   ├── connection.py          # COM connection manager (auto-connect, reconnect, shutdown)
+│   ├── utils.py               # Shared validation utilities
 │   └── tools/
 │       ├── __init__.py
-│       ├── document.py      # Document management (9 tools)
-│       ├── sketcher.py      # 2D Sketch tools (11 tools)
-│       ├── part_design.py   # 3D Part Design features (15 tools)
-│       ├── assembly.py      # Assembly/Product tools (9 tools)
-│       ├── measurement.py   # Measurement & analysis (6 tools)
-│       └── export.py        # Export & view control (4 tools)
+│       ├── document.py        # Document management (10 tools)
+│       ├── sketcher.py        # 2D sketching (11 tools)
+│       ├── part_design.py     # 3D part design (15 tools)
+│       ├── assembly.py        # Assembly/product (9 tools)
+│       ├── measurement.py     # Measurement & analysis (6 tools)
+│       └── export.py          # Export & view control (4 tools)
+├── tests/                     # pytest test suite (55+ tests)
+│   ├── conftest.py            # Shared COM mocking infrastructure
+│   └── test_*.py              # Module-specific tests
 ├── pyproject.toml
-├── requirements.txt
 └── README.md
 ```
 
-### How it works
+### Data flow
 
 ```
 Claude (Desktop/Code)
     │
     │ stdio (MCP JSON-RPC)
     ▼
-catia_mcp/server.py (MCP Server)
+catia_mcp/server.py  (MCP Server)
     │
-    │ Tool routing
+    │ Tool routing + asyncio lock (COM is single-threaded)
     ▼
-catia_mcp/tools/*.py (Tool modules)
+catia_mcp/tools/*.py  (Tool modules)
     │
     │ win32com.client (COM Automation)
     ▼
 CATIA V5 Application
 ```
 
-1. Claude sends MCP tool calls over stdio
-2. The server routes each call to the appropriate tool module
-3. Each tool module uses `win32com.client` to drive CATIA V5 via COM
-4. Results (JSON, text) are returned to Claude
+## Complete Tool Reference
 
-## Tool Reference
+All dimensions are in **millimeters**, angles in **degrees**.
 
-### Document Tools (9)
-| Tool | Description |
-|------|-------------|
-| `catia_connect` | Connect to CATIA V5 |
-| `catia_disconnect` | Disconnect from CATIA V5 |
-| `catia_new_part` | Create a new Part document |
-| `catia_new_product` | Create a new Product (assembly) |
-| `catia_open_document` | Open an existing document |
-| `catia_save_document` | Save / Save As |
-| `catia_close_document` | Close active document |
-| `catia_list_documents` | List all open documents |
-| `catia_get_active_document_info` | Get detailed info about active document |
+---
 
-### Sketcher Tools (11)
-| Tool | Description |
-|------|-------------|
-| `catia_create_sketch` | Create sketch on XY/YZ/ZX plane |
-| `catia_close_sketch` | Close sketch, return to Part Design |
-| `catia_sketch_line` | Draw a line |
-| `catia_sketch_rectangle` | Draw a rectangle (2 corners) |
-| `catia_sketch_centered_rectangle` | Draw a centered rectangle |
-| `catia_sketch_circle` | Draw a circle |
-| `catia_sketch_arc` | Draw an arc |
-| `catia_sketch_spline` | Draw a spline through points |
-| `catia_sketch_point` | Create a point |
-| `catia_sketch_constraint` | Add dimensional/geometric constraint |
-| `catia_sketch_get_geometry` | List sketch geometry elements |
+### 📄 Document Tools (10)
 
-### Part Design Tools (15)
-| Tool | Description |
-|------|-------------|
-| `catia_pad` | Pad (extrusion) |
-| `catia_pocket` | Pocket (cut extrusion) |
-| `catia_shaft` | Shaft (revolution) |
-| `catia_groove` | Groove (revolution cut) |
-| `catia_fillet` | Fillet (edge rounding) |
-| `catia_chamfer` | Chamfer (edge bevel) |
-| `catia_hole` | Hole (simple, counterbored, countersunk) |
-| `catia_rect_pattern` | Rectangular pattern |
-| `catia_circ_pattern` | Circular pattern |
-| `catia_mirror` | Mirror about a plane |
-| `catia_shell` | Shell (hollow out) |
-| `catia_draft` | Draft angle |
-| `catia_thickness` | Thickness offset |
-| `catia_list_features` | List features in body |
-| `catia_list_edges` | List edges for fillet/chamfer |
+| Tool | Parameters | Required | Description |
+|------|------------|----------|-------------|
+| `catia_connect` | — | — | Connect to CATIA V5. Attaches to a running instance or launches a new one. Must be called before any other CATIA tool. |
+| `catia_disconnect` | — | — | Disconnect from CATIA V5 (does not close CATIA). |
+| `catia_close` | — | — | Gracefully close CATIA V5 entirely. Closes all open documents and quits. Does **not** save unsaved changes. |
+| `catia_new_part` | `name` | — | Create a new empty Part document for single-body 3D modeling. |
+| `catia_new_product` | `name` | — | Create a new empty Product (assembly) document. |
+| `catia_open_document` | `file_path` | `file_path` | Open an existing `.CATPart`, `.CATProduct`, or `.CATDrawing`. |
+| `catia_save_document` | `file_path` | — | Save the active document. Optional `file_path` for Save As. |
+| `catia_close_document` | `save` | — | Close the active document. Optional `save` to prompt saving. |
+| `catia_list_documents` | — | — | List all open documents with their types and paths. |
+| `catia_get_active_document_info` | — | — | Get detailed info about the active document: name, type, path, part bodies, features, etc. |
 
-### Assembly Tools (9)
-| Tool | Description |
-|------|-------------|
-| `catia_add_component` | Add existing part to assembly |
-| `catia_add_new_part` | Create new part in assembly |
-| `catia_fix_constraint` | Fix a component in place |
-| `catia_coincidence_constraint` | Coincidence constraint |
-| `catia_offset_constraint` | Offset constraint |
-| `catia_angle_constraint` | Angle constraint |
-| `catia_move_component` | Move/rotate a component |
-| `catia_list_components` | List assembly components |
-| `catia_list_constraints` | List assembly constraints |
+---
 
-### Measurement Tools (6)
-| Tool | Description |
-|------|-------------|
-| `catia_measure_distance` | Measure distance between elements |
-| `catia_get_inertia` | Volume, area, mass, center of gravity |
-| `catia_get_bounding_box` | Bounding box dimensions |
-| `catia_get_parameters` | List all parameters |
-| `catia_set_parameter` | Modify a parameter value |
-| `catia_update_part` | Force rebuild |
+### ✏️ Sketcher Tools (11)
 
-### Export Tools (4)
-| Tool | Description |
-|------|-------------|
-| `catia_export` | Export to STEP/IGES/STL/3DXML/VRML |
-| `catia_screenshot` | Capture 3D view to image |
-| `catia_set_view` | Set view orientation |
-| `catia_fit_all` | Fit all in view |
+| Tool | Parameters | Required | Description |
+|------|------------|----------|-------------|
+| `catia_create_sketch` | `plane` | — | Create a new 2D sketch on a reference plane: `xy` (front), `yz` (right), `zx` (top). Default: `xy`. |
+| `catia_close_sketch` | — | — | Close the active sketch and return to Part Design. Must be called before creating 3D features. |
+| `catia_sketch_line` | `x1`, `y1`, `x2`, `y2` | `x1`, `y1`, `x2`, `y2` | Draw a line from (x1, y1) to (x2, y2). Coordinates in mm. |
+| `catia_sketch_rectangle` | `x1`, `y1`, `x2`, `y2` | `x1`, `y1`, `x2`, `y2` | Draw a rectangle defined by two opposite corners. Creates 4 lines. |
+| `catia_sketch_centered_rectangle` | `cx`, `cy`, `width`, `height` | `width`, `height` | Draw a rectangle centered at (cx, cy). All values in mm. |
+| `catia_sketch_circle` | `cx`, `cy`, `radius` | `radius` | Draw a circle. Center defaults to (0, 0) if not specified. |
+| `catia_sketch_arc` | `cx`, `cy`, `radius`, `start_angle`, `end_angle` | `cx`, `cy`, `radius`, `start_angle`, `end_angle` | Draw a circular arc. Angles are counter-clockwise from positive X axis. |
+| `catia_sketch_spline` | `points`, `closed` | `points` | Draw a spline through control points. `points` is a list of `[x, y]` in mm. |
+| `catia_sketch_point` | `x`, `y` | `x`, `y` | Create a point in the active sketch. |
+| `catia_sketch_constraint` | `type`, `value`, `geometry_index_1`, `geometry_index_2` | `type` | Add a dimensional/geometric constraint. Types: `distance`, `radius`, `angle`, `coincidence`, `tangent`, `perpendicular`, `parallel`, `horizontal`, `vertical`, `fix`. |
+| `catia_sketch_get_geometry` | — | — | List all geometry elements in the active sketch with their indices and types. |
+
+---
+
+### 🔧 Part Design Tools (15)
+
+| Tool | Parameters | Required | Description |
+|------|------------|----------|-------------|
+| `catia_pad` | `height`, `direction`, `symmetric`, `sketch_name` | `height` | Extrude a 2D profile into a 3D solid. `direction`: `normal` (default), `reverse`, `both`. |
+| `catia_pocket` | `depth`, `direction`, `sketch_name` | `depth` | Cut extrusion — remove material by extruding a 2D profile inward. |
+| `catia_shaft` | `angle`, `sketch_name` | — | Revolve a 2D profile around an axis. Default angle: 360° (full revolution). Sketch must contain a reference line. |
+| `catia_groove` | `angle`, `sketch_name` | — | Revolution cut — remove material by revolving a 2D profile around an axis. |
+| `catia_fillet` | `radius`, `edge_name` | `radius` | Add rounded edges. `edge_name` targets a specific edge; omit to fillet all. |
+| `catia_chamfer` | `length`, `angle`, `edge_name` | `length` | Add beveled edges. Default angle: 45°. |
+| `catia_hole` | `diameter`, `depth`, `type`, `threaded`, `sketch_name` | `diameter`, `depth` | Create a hole. `type`: `simple` (default), `counterbored`, `countersunk`. |
+| `catia_rect_pattern` | `dir1_count`, `dir1_spacing`, `dir2_count`, `dir2_spacing`, `feature_name` | `dir1_count`, `dir1_spacing` | Duplicate a feature in a grid along two directions. |
+| `catia_circ_pattern` | `count`, `angular_spacing`, `feature_name` | `count` | Duplicate a feature around a central axis. |
+| `catia_mirror` | `plane`, `feature_name` | `plane` | Mirror a feature or body about a plane: `xy`, `yz`, or `zx`. |
+| `catia_shell` | `thickness`, `faces_to_remove` | `thickness` | Hollow out a solid, leaving walls of specified thickness. Optionally remove faces for openings. |
+| `catia_draft` | `angle`, `face_name`, `pulling_direction` | `angle` | Add draft angle for mold-release. Tapers faces relative to a pulling direction. |
+| `catia_thickness` | `offset`, `face_name` | `offset` | Offset faces inward (negative) or outward (positive). |
+| `catia_list_features` | — | — | List all features in the active Part Body with names and types. |
+| `catia_list_edges` | — | — | List all edges of the active solid body for use with fillet/chamfer. |
+
+---
+
+### 📦 Assembly Tools (9)
+
+| Tool | Parameters | Required | Description |
+|------|------------|----------|-------------|
+| `catia_add_component` | `file_path` | `file_path` | Add an existing `.CATPart` or `.CATProduct` as a component in the active assembly. |
+| `catia_add_new_part` | `name` | — | Create a new empty Part directly inside the active assembly. |
+| `catia_fix_constraint` | `component_name` | `component_name` | Fix a component in place (remove all degrees of freedom). |
+| `catia_coincidence_constraint` | `component1`, `component2`, `element1`, `element2` | `component1`, `component2` | Align axes, planes, or points of two components. |
+| `catia_offset_constraint` | `component1`, `component2`, `offset` | `component1`, `component2`, `offset` | Maintain a constant distance between two faces/planes. |
+| `catia_angle_constraint` | `component1`, `component2`, `angle` | `component1`, `component2`, `angle` | Set an angle between two axes or planes. |
+| `catia_move_component` | `component_name`, `tx`, `ty`, `tz`, `rx`, `ry`, `rz` | `component_name` | Move a component by translation (mm) and/or rotation (degrees). |
+| `catia_list_components` | — | — | List all assembly components with names and positions. |
+| `catia_list_constraints` | — | — | List all assembly constraints in the active product. |
+
+---
+
+### 📏 Measurement Tools (6)
+
+| Tool | Parameters | Required | Description |
+|------|------------|----------|-------------|
+| `catia_measure_distance` | `element1`, `element2` | `element1`, `element2` | Measure the minimum distance between two geometry elements. Returns distance in mm. |
+| `catia_get_inertia` | `density` | — | Get inertia properties: volume, surface area, center of gravity, mass (if density given), moments of inertia. |
+| `catia_get_bounding_box` | — | — | Get the bounding box of the active part. Returns min/max coordinates in mm. |
+| `catia_get_parameters` | `filter` | — | List all user-defined and computed parameters. Optional `filter` for partial name matching. |
+| `catia_set_parameter` | `name`, `value` | `name`, `value` | Set the value of a named parameter. Useful for parametric design. |
+| `catia_update_part` | — | — | Force update/rebuild of the active part. Recalculates all features. |
+
+---
+
+### 📤 Export & View Tools (4)
+
+| Tool | Parameters | Required | Description |
+|------|------------|----------|-------------|
+| `catia_export` | `file_path`, `format` | `file_path` | Export to: STEP (`.stp`), IGES (`.igs`), STL (`.stl`), 3DXML (`.3dxml`), VRML (`.wrl`), PDF, CGR. Format is auto-detected from file extension. |
+| `catia_screenshot` | `file_path`, `width`, `height` | `file_path` | Capture the current 3D view as PNG, JPG, or BMP. Default: 1920×1080. |
+| `catia_set_view` | `view` | `view` | Set view orientation: `front`, `back`, `top`, `bottom`, `left`, `right`, `isometric`. |
+| `catia_fit_all` | — | — | Fit all geometry in the current 3D view (zoom to fit). |
+
+---
+
+## Testing
+
+This project includes a comprehensive pytest test suite (55+ tests) with mocked COM, so tests run on any OS without CATIA installed:
+
+```bash
+pip install -e ".[dev]"
+pytest tests/ -v
+```
 
 ## Troubleshooting
 
 ### "pywin32 is not installed"
+
 ```bash
 pip install pywin32
 ```
-This server requires Windows. It will not work on macOS or Linux.
+
+This server requires **Windows**. It will not work on macOS or native Linux.
 
 ### "Failed to connect to CATIA V5"
+
 1. Make sure CATIA V5 is running
-2. Register CATIA as COM server: navigate to `C:\Program Files\Dassault Systemes\B<version>\<os>\code\bin\` and run `cnext.exe /regserver`
-3. Check that no modal dialog is blocking CATIA
+2. Register CATIA as COM server: run `cnext.exe /regserver` from `C:\Program Files\Dassault Systemes\B<version>\code\bin\`
+3. Ensure no modal dialog is blocking CATIA
 
 ### "No active document"
-Create or open a document first using `catia_new_part` or `catia_open_document`.
+
+Create or open a document first using `catia_new_part`, `catia_new_product`, or `catia_open_document`.
 
 ### COM ByRef array limitations
-Some measurement methods may not work with late binding. If you encounter issues, try using `pycatia` as an alternative backend (contribution welcome).
+
+Some measurement methods (`get_inertia`, `get_bounding_box`) use ByRef arrays. The server includes fallback strategies (early binding → late binding → property access). If issues persist, try `pycatia` as an alternative backend.
+
+### Server not starting
+
+Check the log file at `catia_mcp/catia_mcp.log` for detailed error output.
+
+## Robustness Features
+
+- **Auto-connect**: The server automatically connects to CATIA on first tool use (except for `catia_connect`/`disconnect`/`close`)
+- **Auto-reconnect**: If the COM connection drops, the server attempts to reconnect transparently
+- **Thread safety**: All COM calls are serialized via `asyncio.Lock` (CATIA COM is single-threaded)
+- **Path normalization**: File paths with forward slashes are automatically converted to backslashes for CATIA
+- **Graceful shutdown**: `catia_close` closes all documents and quits CATIA cleanly
+- **Input validation**: All tool inputs are validated before COM calls to provide clear error messages
 
 ## Contributing
 
@@ -268,12 +345,14 @@ This project is open-source. Contributions welcome:
 - **Drawing** tools (2D drafting)
 - **Knowledgeware** (formulas, rules, check)
 - **pycatia backend** as alternative to raw win32com
-- **Tests** with COM mocking
 - **3DEXPERIENCE** CATIA support
+- **Windows integration tests** with real CATIA
+
+Please open an issue or pull request on [GitHub](https://github.com/Zippo2000/catia-v5-mcp-server).
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.
 
 ## Credits
 
