@@ -21,6 +21,8 @@ def _install_com_mocks():
     mock_win32com.client = MagicMock()
     mock_win32com.client.gencache = MagicMock()
     mock_win32com.client.dynamic = MagicMock()
+    # Make Dispatch() return its argument unchanged (pass-through for late binding)
+    mock_win32com.client.dynamic.Dispatch.side_effect = lambda obj: obj
 
     sys.modules["pythoncom"] = mock_pythoncom
     sys.modules["win32com"] = mock_win32com

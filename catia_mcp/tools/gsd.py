@@ -718,6 +718,20 @@ class GSDTools:
 
     # ── Helpers ────────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _hsf(part: Any) -> Any:
+        """Get HybridShapeFactory, wrapped in dynamic.Dispatch on Windows for late binding."""
+        hsf = part.HybridShapeFactory
+        try:
+            import win32com.client.dynamic
+            return win32com.client.dynamic.Dispatch(hsf)
+        except ImportError:
+            # Linux / test env — no win32com, return raw
+            return hsf
+        except Exception:
+            # Dispatch failed for other reasons — fall back to raw
+            return hsf
+
     def _get_or_create_set(self, part: Any, set_name: str | None) -> Any:
         """Return an existing HybridBody by name, or create one."""
         import win32com.client
@@ -809,7 +823,7 @@ class GSDTools:
         z = float(args["z"])
         set_name = args.get("set_name")
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         point = hsf.AddNewPointCoord(x, y, z)
 
         hbody = self._get_or_create_set(part, set_name)
@@ -824,7 +838,7 @@ class GSDTools:
         pt2 = self._ref(part, args["point2_name"])
         set_name = args.get("set_name")
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         line = hsf.AddNewLine2Points(pt1, pt2)
 
         hbody = self._get_or_create_set(part, set_name)
@@ -851,7 +865,7 @@ class GSDTools:
         else:
             dir_ref = part.CreateReferenceFromName(f"{direction}_axis")
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         line = hsf.AddNewLinePtDir(pt, dir_ref)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
@@ -875,7 +889,7 @@ class GSDTools:
             )
 
         plane_ref = part.CreateReferenceFromName(f"{support}_plane")
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         circle = hsf.AddNewCircle(center, radius, plane_ref)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
@@ -897,7 +911,7 @@ class GSDTools:
         offset = float(args["offset"])
 
         ref_plane = part.CreateReferenceFromName(f"{ref}_plane")
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         plane = hsf.AddNewPlaneOffset(ref_plane, offset)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
@@ -921,7 +935,7 @@ class GSDTools:
                 f"Invalid axis '{axis}'. Must be one of: x, y, z, xy, yz, zx"
             )
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         cylinder = hsf.AddNewCylinder(center, axis, radius, height)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
@@ -957,7 +971,7 @@ class GSDTools:
         pt2 = self._ref(part, args["point2_name"])
         pt3 = self._ref(part, args["point3_name"])
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             plane = hsf.AddNewPlane3Points(pt1, pt2, pt3)
         except Exception as e:
@@ -977,7 +991,7 @@ class GSDTools:
 
         refs = [self._ref(part, name) for name in contour_names]
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             fill = hsf.AddNewFill(refs)
         except Exception as e:
@@ -994,7 +1008,7 @@ class GSDTools:
         spine = self._ref(part, args["spine_name"])
         section = self._ref(part, args["section_name"])
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             sweep = hsf.AddNewSweptSurface(spine, section)
         except Exception as e:
@@ -1015,7 +1029,7 @@ class GSDTools:
         # CATIA expects radians
         angle_rad = angle * 3.141592653589793 / 180
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             rotsurf = hsf.AddNewRotationalSurface(axis, profile, angle_rad)
         except Exception as e:
@@ -1032,7 +1046,7 @@ class GSDTools:
         surface = self._ref(part, args["surface_name"])
         distance = float(args["distance"])
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             offset_surf = hsf.AddNewOffset(surface, distance)
         except Exception as e:
@@ -1052,7 +1066,7 @@ class GSDTools:
 
         refs = [self._ref(part, name) for name in surface_names]
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             join = hsf.AddNewJoin(refs)
         except Exception as e:
@@ -1069,7 +1083,7 @@ class GSDTools:
         surface = self._ref(part, args["surface_name"])
         thickness = validate_positive_float(args["thickness"], "thickness")
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             thick = hsf.AddNewThicken(surface, thickness)
         except Exception as e:
@@ -1089,7 +1103,7 @@ class GSDTools:
 
         refs = [self._ref(part, name) for name in contour_names]
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             surf = hsf.AddNewMultiSectionSurf(refs)
         except Exception as e:
@@ -1116,7 +1130,7 @@ class GSDTools:
         lat_start = float(args.get("lat_start", -90))
         lat_end = float(args.get("lat_end", 90))
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         point = hsf.AddNewPointCoord(cx, cy, cz)
 
         try:
@@ -1144,7 +1158,7 @@ class GSDTools:
         top_radius = float(args.get("top_radius", 0))
         angle = float(args.get("angle", 360))
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         point = hsf.AddNewPointCoord(cx, cy, cz)
 
         try:
@@ -1170,7 +1184,7 @@ class GSDTools:
         angle_start = float(args.get("angle_start", 0))
         angle_end = float(args.get("angle_end", 360))
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         point = hsf.AddNewPointCoord(cx, cy, cz)
 
         try:
@@ -1197,7 +1211,7 @@ class GSDTools:
         ref1 = self._ref(part, profile1_name)
         ref2 = self._ref(part, profile2_name)
 
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             ruled = hsf.AddNewRuled(ref1, ref2)
         except Exception as e:
@@ -1220,7 +1234,7 @@ class GSDTools:
             raise ValueError("edge_or_curve_name is required")
 
         edge_ref = self._ref(part, edge_name)
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             blend = hsf.AddNewBlend(edge_ref, radius)
         except Exception as e:
@@ -1242,7 +1256,7 @@ class GSDTools:
 
         surface_ref = self._ref(part, surface_name)
         tool_ref = self._ref(part, tool_name)
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             split = hsf.AddNewSplit(surface_ref, tool_ref)
         except Exception as e:
@@ -1264,7 +1278,7 @@ class GSDTools:
         validate_positive_float(distance, "distance")
 
         surface_ref = self._ref(part, surface_name)
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             extend = hsf.AddNewExtend(surface_ref, float(distance))
         except Exception as e:
@@ -1287,7 +1301,7 @@ class GSDTools:
 
         surface_ref = self._ref(part, surface_name)
         tool_ref = self._ref(part, tool_name)
-        hsf = part.HybridShapeFactory
+        hsf = self._hsf(part)
         try:
             trim = hsf.AddNewTrim(surface_ref, tool_ref, keep_part)
         except Exception as e:
