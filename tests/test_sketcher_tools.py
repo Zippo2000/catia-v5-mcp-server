@@ -109,4 +109,80 @@ class TestExecuteRouting:
 class TestToolDefinitions:
     def test_all_11_tools_defined(self, sk_tools):
         defs = sk_tools.get_tool_definitions()
-        assert len(defs) == 11
+        assert len(defs) == 14
+
+
+class TestConicValidation:
+    """Validation for conic sketch tools."""
+
+    def test_ellipse_negative_major_raises(self, sk_tools, conn_mock):
+        sk = MagicMock()
+        sk_tools._active_sketch = sk
+        sk_tools._active_factory = MagicMock()
+        with pytest.raises(ValueError, match="must be positive"):
+            sk_tools.execute("catia_sketch_ellipse", {
+                "cx": 0, "cy": 0, "major_axis": -10, "minor_axis": 5
+            })
+
+    def test_ellipse_negative_minor_raises(self, sk_tools, conn_mock):
+        sk = MagicMock()
+        sk_tools._active_sketch = sk
+        sk_tools._active_factory = MagicMock()
+        with pytest.raises(ValueError, match="must be positive"):
+            sk_tools.execute("catia_sketch_ellipse", {
+                "cx": 0, "cy": 0, "major_axis": 10, "minor_axis": -5
+            })
+
+    def test_ellipse_no_active_sketch(self, sk_tools):
+        with pytest.raises(RuntimeError, match="No active sketch"):
+            sk_tools.execute("catia_sketch_ellipse", {
+                "cx": 0, "cy": 0, "major_axis": 10, "minor_axis": 5
+            })
+
+    def test_hyperbola_negative_transverse_raises(self, sk_tools, conn_mock):
+        sk = MagicMock()
+        sk_tools._active_sketch = sk
+        sk_tools._active_factory = MagicMock()
+        with pytest.raises(ValueError, match="must be positive"):
+            sk_tools.execute("catia_sketch_hyperbola", {
+                "cx": 0, "cy": 0, "transverse_axis": -10, "conjugate_axis": 5
+            })
+
+    def test_hyperbola_negative_conjugate_raises(self, sk_tools, conn_mock):
+        sk = MagicMock()
+        sk_tools._active_sketch = sk
+        sk_tools._active_factory = MagicMock()
+        with pytest.raises(ValueError, match="must be positive"):
+            sk_tools.execute("catia_sketch_hyperbola", {
+                "cx": 0, "cy": 0, "transverse_axis": 10, "conjugate_axis": -5
+            })
+
+    def test_hyperbola_no_active_sketch(self, sk_tools):
+        with pytest.raises(RuntimeError, match="No active sketch"):
+            sk_tools.execute("catia_sketch_hyperbola", {
+                "cx": 0, "cy": 0, "transverse_axis": 10, "conjugate_axis": 5
+            })
+
+    def test_parabola_zero_focal_raises(self, sk_tools, conn_mock):
+        sk = MagicMock()
+        sk_tools._active_sketch = sk
+        sk_tools._active_factory = MagicMock()
+        with pytest.raises(ValueError, match="must be positive"):
+            sk_tools.execute("catia_sketch_parabola", {
+                "cx": 0, "cy": 0, "focal_length": 0
+            })
+
+    def test_parabola_negative_focal_raises(self, sk_tools, conn_mock):
+        sk = MagicMock()
+        sk_tools._active_sketch = sk
+        sk_tools._active_factory = MagicMock()
+        with pytest.raises(ValueError, match="must be positive"):
+            sk_tools.execute("catia_sketch_parabola", {
+                "cx": 0, "cy": 0, "focal_length": -5
+            })
+
+    def test_parabola_no_active_sketch(self, sk_tools):
+        with pytest.raises(RuntimeError, match="No active sketch"):
+            sk_tools.execute("catia_sketch_parabola", {
+                "cx": 0, "cy": 0, "focal_length": 10
+            })

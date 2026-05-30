@@ -184,6 +184,131 @@ class AssemblyTools:
                 },
             },
             {
+                "name": "catia_contact_constraint",
+                "description": (
+                    "Create a Contact constraint between two components. "
+                    "Faces touch without penetration (zero gap)."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "component1": {
+                            "type": "string",
+                            "description": "Name of first component",
+                        },
+                        "component2": {
+                            "type": "string",
+                            "description": "Name of second component",
+                        },
+                        "element1": {
+                            "type": "string",
+                            "description": "Geometry element on component1 (optional)",
+                        },
+                        "element2": {
+                            "type": "string",
+                            "description": "Geometry element on component2 (optional)",
+                        },
+                    },
+                    "required": ["component1", "component2"],
+                },
+            },
+            {
+                "name": "catia_distance_constraint",
+                "description": (
+                    "Create a Distance constraint between two components. "
+                    "Maintains a constant distance between reference elements."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "component1": {
+                            "type": "string",
+                            "description": "Name of first component",
+                        },
+                        "component2": {
+                            "type": "string",
+                            "description": "Name of second component",
+                        },
+                        "distance": {
+                            "type": "number",
+                            "description": "Distance in mm",
+                        },
+                        "element1": {
+                            "type": "string",
+                            "description": "Geometry element on component1 (optional)",
+                        },
+                        "element2": {
+                            "type": "string",
+                            "description": "Geometry element on component2 (optional)",
+                        },
+                    },
+                    "required": ["component1", "component2", "distance"],
+                },
+            },
+            {
+                "name": "catia_tangent_constraint",
+                "description": (
+                    "Create a Tangency constraint between two components. "
+                    "Surfaces touch tangentially without penetration."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "component1": {
+                            "type": "string",
+                            "description": "Name of first component",
+                        },
+                        "component2": {
+                            "type": "string",
+                            "description": "Name of second component",
+                        },
+                        "element1": {
+                            "type": "string",
+                            "description": "Geometry element on component1 (optional)",
+                        },
+                        "element2": {
+                            "type": "string",
+                            "description": "Geometry element on component2 (optional)",
+                        },
+                    },
+                    "required": ["component1", "component2"],
+                },
+            },
+            {
+                "name": "catia_remove_component",
+                "description": (
+                    "Remove a component from the active assembly. "
+                    "The component will be deleted from the product tree."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "component_name": {
+                            "type": "string",
+                            "description": "Name of the component to remove",
+                        },
+                    },
+                    "required": ["component_name"],
+                },
+            },
+            {
+                "name": "catia_remove_constraint",
+                "description": (
+                    "Remove a constraint from the active assembly. "
+                    "Find the constraint by name and delete it."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "constraint_name": {
+                            "type": "string",
+                            "description": "Name of the constraint to remove",
+                        },
+                    },
+                    "required": ["constraint_name"],
+                },
+            },
+            {
                 "name": "catia_list_constraints",
                 "description": "List all assembly constraints in the active product.",
                 "inputSchema": {
@@ -209,6 +334,16 @@ class AssemblyTools:
                 return self._angle_constraint(arguments)
             case "catia_move_component":
                 return self._move_component(arguments)
+            case "catia_contact_constraint":
+                return self._contact_constraint(arguments)
+            case "catia_distance_constraint":
+                return self._distance_constraint(arguments)
+            case "catia_tangent_constraint":
+                return self._tangent_constraint(arguments)
+            case "catia_remove_component":
+                return self._remove_component(arguments["component_name"])
+            case "catia_remove_constraint":
+                return self._remove_constraint(arguments["constraint_name"])
             case "catia_list_components":
                 return self._list_components()
             case "catia_list_constraints":
@@ -374,6 +509,86 @@ class AssemblyTools:
             f"T=({args.get('tx', 0)}, {args.get('ty', 0)}, {args.get('tz', 0)}) mm, "
             f"R=({args.get('rx', 0)}, {args.get('ry', 0)}, {args.get('rz', 0)})°"
         )
+
+    def _contact_constraint(self, args: dict[str, Any]) -> str:
+        product = self.conn.get_active_product()
+        constraints = product.Connections("CATIAConstraints")
+        comp1 = product.Products.Item(args["component1"])
+        comp2 = product.Products.Item(args["component2"])
+        try:
+            cst = constraints.AddBiEltCst(7, comp1, comp2)  # catCstTypeContact = 7
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddBiEltCst (Contact)", e))
+        self.conn.refresh_display()
+        return (
+            f"Contact constraint created between "
+            f"'{args['component1']}' and '{args['component2']}'"
+        )
+
+    def _distance_constraint(self, args: dict[str, Any]) -> str:
+        product = self.conn.get_active_product()
+        constraints = product.Connections("CATIAConstraints")
+        comp1 = product.Products.Item(args["component1"])
+        comp2 = product.Products.Item(args["component2"])
+        distance = validate_positive_float(args["distance"], "distance")
+        try:
+            cst = constraints.AddBiEltCst(5, comp1, comp2)  # catCstTypeDistance = 5
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddBiEltCst (Distance)", e))
+        cst.Dimension.Value = distance
+        self.conn.refresh_display()
+        return (
+            f"Distance constraint: {distance} mm between "
+            f"'{args['component1']}' and '{args['component2']}'"
+        )
+
+    def _tangent_constraint(self, args: dict[str, Any]) -> str:
+        product = self.conn.get_active_product()
+        constraints = product.Connections("CATIAConstraints")
+        comp1 = product.Products.Item(args["component1"])
+        comp2 = product.Products.Item(args["component2"])
+        try:
+            cst = constraints.AddBiEltCst(8, comp1, comp2)  # catCstTypeTangent = 8
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddBiEltCst (Tangent)", e))
+        self.conn.refresh_display()
+        return (
+            f"Tangency constraint created between "
+            f"'{args['component1']}' and '{args['component2']}'"
+        )
+
+    def _remove_component(self, component_name: str) -> str:
+        product = self.conn.get_active_product()
+        try:
+            component = product.Products.Item(component_name)
+        except Exception:
+            raise ValueError(f"Component '{component_name}' not found in assembly.")
+        try:
+            product.RemoveComponent(component)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("RemoveComponent", e))
+        self.conn.refresh_display()
+        return f"Component '{component_name}' removed from assembly"
+
+    def _remove_constraint(self, constraint_name: str) -> str:
+        product = self.conn.get_active_product()
+        constraints = product.Connections("CATIAConstraints")
+        found = False
+        for i in range(1, constraints.Count + 1):
+            cst = constraints.Item(i)
+            if cst.Name == constraint_name:
+                try:
+                    product.RemoveConstraint(cst)
+                except Exception as e:
+                    raise RuntimeError(format_catia_error("RemoveConstraint", e))
+                self.conn.refresh_display()
+                found = True
+                return f"Constraint '{constraint_name}' removed from assembly"
+        if not found:
+            raise ValueError(
+                f"Constraint '{constraint_name}' not found in assembly. "
+                f"Use catia_list_constraints to see available constraints."
+            )
 
     def _list_components(self) -> str:
         product = self.conn.get_active_product()

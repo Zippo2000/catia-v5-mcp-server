@@ -3,7 +3,7 @@
      3|| Feld | Wert |
      4||------|------|
      5|| **Dokument-ID** | REQ-001 |
-     6|| **Version** | 1.1 |
+     6|| **Version** | 1.3 |
      7|| **Status** | Entwurf |
      8|| **Letzte Änderung** | 2026-05-30 |
      9|| **Projekt** | catia-v5-mcp-server |
@@ -80,10 +80,10 @@
     77|| Dokument-Verwaltung | 10 | Erstellen, Öffnen, Speichern, Schließen von Part/Product/Drawing |
     78|| Sketcher | 11 | 2D-Geometrie-Erstellung und -Bearbeitung |
     79|| Part Design | 19 | 3D-Feature-Erstellung (Pad, Pocket, Fillet, etc.) |
-    80|| Assembly | 9 | Baugruppen-Verwaltung und Constraints |
+    80|| Assembly | 14 | Baugruppen-Verwaltung und Constraints (inkl. Contact, Distance, Tangent, Remove) |
     81|| GSD (Wireframe & Surface) | 16 | Point, Line, Circle, Plane, Cylinder, Fill, Sweep, Join, Thicken |
     82|| Export & View | 4 | Export (STEP/IGES/STL), Screenshots, View |
-    83|| **Total** | **75** | — |
+    83|| **Total** | **83** | — |
     84|
     85|#### 2.1.3 Nutzerklassen und Charakteristiken
     86|
@@ -131,9 +131,9 @@
    128|
    129|> *Verifizierbarkeit:* Der Server antwortet auf `initialize`-Request mit `serverInfo.name == "catia-v5-mcp"`.
    130|
-   131|**FR-01.2** Das System SOLL mindestens 75 Tools implementieren und über `tools/list` verfügbar machen.
+   131|**FR-01.2** Das System SOLL mindestens 83 Tools implementieren und über `tools/list` verfügbar machen.
    132|
-   133|> *Verifizierbarkeit:* `tools/list`-Response enthält ≥75 Einträge mit korrekten `name`, `description`, `inputSchema`.
+   133|> *Verifizierbarkeit:* `tools/list`-Response enthält ≥83 Einträge mit korrekten `name`, `description`, `inputSchema`.
    134|
    135|**FR-01.3** Das System SOLL auf `tools/call`-Requests das angegebene Tool ausführen und ein strukturiertes Text-Ergebnis zurückgeben.
    136|
@@ -565,9 +565,9 @@
    562|| FR-02.1–02.5 | Transport | `server.py` | `test_sse.py` |
    563|| FR-03.1–03.7 | CATIA-Verbindung | `connection.py` | `test_connection.py` |
    564|| FR-04.1–04.7 | Dokument | `tools/document.py` | `test_document_tools.py` |
-   565|| FR-05.1–05.11 | Sketcher | `tools/sketcher.py` | `test_sketcher_tools.py` |
+   565|| FR-05.1–05.14 | Sketcher | `tools/sketcher.py` | `test_sketcher_tools.py` |
    566|| FR-06.1–06.19 | Part Design | `tools/part_design.py` | `test_part_design_tools.py` |
-   567|| FR-07.1–07.9 | Assembly | `tools/assembly.py` | `test_assembly_tools.py` |
+   567|| FR-07.1–07.14 | Assembly | `tools/assembly.py` | `test_assembly_tools.py` |
 | FR-10.1–10.16 | GSD (Wireframe & Surface) | `tools/gsd.py` | `test_gsd_tools.py` |
    568|| FR-08.1–08.6 | Measurement | `tools/measurement.py` | `test_measurement_tools.py` |
    569|| FR-11.1–11.4 | Export & View | `tools/export.py` | `test_export_tools.py` |

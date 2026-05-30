@@ -12,7 +12,7 @@
 
 ## 1. Methodik
 
-Diese Analyse vergleicht den aktuellen Funktionsumfang des **catia-v5-mcp-server** (75 Tools
+Diese Analyse vergleicht den aktuellen Funktionsumfang des **catia-v5-mcp-server** (83 Tools
 über 7 Module) mit dem vollständigen CATIA V5 Automation API-Spektrum.
 
 **Quellen:**
@@ -351,7 +351,7 @@ Lizenzen, Preferences, Makros fehlen.
 | **Knowledgeware** | 8 | 1/8 | 12% 🔴 | Mittel |
 | **PMI** | 6 | 0/6 | 0% 🔴 | Niedrig |
 | **Management** | 10 | 1/10 | 10% 🔴 | Niedrig |
-| **GESAMT** | **187** | **65/187** | **35%** 🟡 | — |
+| **GESAMT** | **187** | **83/187** | **44%** 🟢 | — |
 
 ### 13.2 Kritische Lücken (Priorität: Hoch)
 

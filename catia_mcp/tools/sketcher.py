@@ -148,6 +148,74 @@ class SketcherTools:
                 },
             },
             {
+                "name": "catia_sketch_ellipse",
+                "description": (
+                    "Draw an ellipse in the active sketch centered at (cx, cy) with "
+                    "given major and minor semi-axes. Angle rotates the major axis "
+                    "counter-clockwise from the X axis. Dimensions in mm."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "cx": {"type": "number", "description": "Center X (mm)", "default": 0},
+                        "cy": {"type": "number", "description": "Center Y (mm)", "default": 0},
+                        "major_axis": {"type": "number", "description": "Half of major axis length (mm)"},
+                        "minor_axis": {"type": "number", "description": "Half of minor axis length (mm)"},
+                        "angle": {
+                            "type": "number",
+                            "description": "Rotation angle of major axis counter-clockwise from X (degrees)",
+                            "default": 0,
+                        },
+                    },
+                    "required": ["major_axis", "minor_axis"],
+                },
+            },
+            {
+                "name": "catia_sketch_hyperbola",
+                "description": (
+                    "Draw a hyperbola in the active sketch centered at (cx, cy) with "
+                    "transverse semi-axis a and conjugate semi-axis b. "
+                    "Angle rotates the transverse axis counter-clockwise from X. Dimensions in mm."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "cx": {"type": "number", "description": "Center X (mm)", "default": 0},
+                        "cy": {"type": "number", "description": "Center Y (mm)", "default": 0},
+                        "transverse_axis": {"type": "number", "description": "Transverse semi-axis a (mm)"},
+                        "conjugate_axis": {"type": "number", "description": "Conjugate semi-axis b (mm)"},
+                        "angle": {
+                            "type": "number",
+                            "description": "Rotation angle counter-clockwise from X (degrees)",
+                            "default": 0,
+                        },
+                    },
+                    "required": ["transverse_axis", "conjugate_axis"],
+                },
+            },
+            {
+                "name": "catia_sketch_parabola",
+                "description": (
+                    "Draw a parabola in the active sketch with vertex at (cx, cy) and given "
+                    "focal length (distance from vertex to focus). "
+                    "Angle rotates the parabola counter-clockwise from X. Dimensions in mm."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "cx": {"type": "number", "description": "Vertex X (mm)", "default": 0},
+                        "cy": {"type": "number", "description": "Vertex Y (mm)", "default": 0},
+                        "focal_length": {"type": "number", "description": "Distance from vertex to focus (mm)"},
+                        "angle": {
+                            "type": "number",
+                            "description": "Rotation angle counter-clockwise from X (degrees)",
+                            "default": 0,
+                        },
+                    },
+                    "required": ["focal_length"],
+                },
+            },
+            {
                 "name": "catia_sketch_spline",
                 "description": (
                     "Draw a spline through a list of control points. "
@@ -263,6 +331,24 @@ class SketcherTools:
                 return self._draw_arc(
                     arguments["cx"], arguments["cy"], arguments["radius"],
                     arguments["start_angle"], arguments["end_angle"],
+                )
+            case "catia_sketch_ellipse":
+                return self._draw_ellipse(
+                    arguments.get("cx", 0), arguments.get("cy", 0),
+                    arguments["major_axis"], arguments["minor_axis"],
+                    arguments.get("angle", 0),
+                )
+            case "catia_sketch_hyperbola":
+                return self._draw_hyperbola(
+                    arguments.get("cx", 0), arguments.get("cy", 0),
+                    arguments["transverse_axis"], arguments["conjugate_axis"],
+                    arguments.get("angle", 0),
+                )
+            case "catia_sketch_parabola":
+                return self._draw_parabola(
+                    arguments.get("cx", 0), arguments.get("cy", 0),
+                    arguments["focal_length"],
+                    arguments.get("angle", 0),
                 )
             case "catia_sketch_spline":
                 return self._draw_spline(
@@ -519,3 +605,58 @@ class SketcherTools:
         if not elements:
             return "No geometry elements in the active sketch"
         return json.dumps(elements, indent=2)
+
+    def _draw_ellipse(
+        self, cx: float, cy: float, major_axis: float, minor_axis: float, angle: float = 0
+    ) -> str:
+        self._ensure_sketch_open()
+        factory = self._active_factory
+        validate_positive_float(major_axis, "major_axis")
+        validate_positive_float(minor_axis, "minor_axis")
+        import math
+        angle_rad = math.radians(angle)
+        try:
+            factory.CreateEllipse2(cx, cy, major_axis, minor_axis, angle_rad)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateEllipse2", e))
+        return (
+            f"Ellipse created at ({cx}, {cy}), "
+            f"major_axis={major_axis} mm, minor_axis={minor_axis} mm, "
+            f"rotation={angle}°"
+        )
+
+    def _draw_hyperbola(
+        self, cx: float, cy: float, transverse_axis: float, conjugate_axis: float, angle: float = 0
+    ) -> str:
+        self._ensure_sketch_open()
+        factory = self._active_factory
+        validate_positive_float(transverse_axis, "transverse_axis")
+        validate_positive_float(conjugate_axis, "conjugate_axis")
+        import math
+        angle_rad = math.radians(angle)
+        try:
+            factory.CreateHyperbola2(cx, cy, transverse_axis, conjugate_axis, angle_rad)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateHyperbola2", e))
+        return (
+            f"Hyperbola created at ({cx}, {cy}), "
+            f"a={transverse_axis} mm, b={conjugate_axis} mm, "
+            f"rotation={angle}°"
+        )
+
+    def _draw_parabola(
+        self, cx: float, cy: float, focal_length: float, angle: float = 0
+    ) -> str:
+        self._ensure_sketch_open()
+        factory = self._active_factory
+        validate_positive_float(focal_length, "focal_length")
+        import math
+        angle_rad = math.radians(angle)
+        try:
+            factory.CreateParabola2(cx, cy, focal_length, angle_rad)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateParabola2", e))
+        return (
+            f"Parabola created at ({cx}, {cy}), "
+            f"focal_length={focal_length} mm, rotation={angle}°"
+        )

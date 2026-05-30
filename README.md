@@ -6,15 +6,15 @@ The first open-source MCP server for CATIA V5. Drive CATIA V5 CAD modeling from 
 
 ## What it does
 
-This MCP server exposes **75 tools** across 7 modules that let an LLM-driven client:
+This MCP server exposes **83 tools** across 7 modules that let an LLM-driven client:
 
 | Category | Tools | Examples |
 |----------|-------|----------|
 | 📄 **Document Management** | 10 | Create/open/save/close parts and assemblies, list documents |
-| ✏️ **2D Sketching** | 11 | Lines, rectangles, circles, arcs, splines, points, constraints |
+| ✏️ **2D Sketching** | 14 | Lines, rectangles, circles, arcs, splines, points, constraints, ellipse, hyperbola, parabola |
 | 🔧 **Part Design** | 19 | Pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, shell, draft, lifting, sweep, loft, boolean |
 | 🎨 **GSD (Wireframe & Surface)** | 16 | Point, line, circle, plane, cylinder, fill, sweep, join, thicken, offset surface |
-| 📦 **Assembly** | 9 | Add components, constraints (fix/coincidence/offset/angle), move |
+| 📦 **Assembly** | 14 | Add components, constraints (fix/coincidence/offset/angle/contact/distance/tangent), move, remove |
 | 📏 **Measurement** | 6 | Distance, inertia, bounding box, parameters, update |
 | 📤 **Export & View** | 4 | STEP/IGES/STL export, screenshots, view orientations |
 
@@ -241,13 +241,13 @@ catia-v5-mcp-server/
 │   └── tools/
 │       ├── __init__.py
 │       ├── document.py        # Document management (10 tools)
-│       ├── sketcher.py        # 2D sketching (11 tools)
+│       ├── sketcher.py        # 2D sketching (14 tools)
 │       ├── part_design.py     # 3D part design (19 tools)
-│       ├── assembly.py        # Assembly/product (9 tools)
+│       ├── assembly.py        # Assembly/product (14 tools)
 │       ├── measurement.py     # Measurement & analysis (6 tools)
 │       ├── gsd.py             # Wireframe & surface (16 tools)
 │       └── export.py          # Export & view control (4 tools)
-├── tests/                     # pytest test suite (205 tests)
+├── tests/                     # pytest test suite (242 tests)
 │   ├── conftest.py            # Shared COM mocking infrastructure
 │   ├── test_*.py              # Module-specific tests
 │   └── test_sse.py            # SSE transport tests
@@ -362,6 +362,9 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_coincidence_constraint` | `component1`, `component2`, `element1`, `element2` | `component1`, `component2` | Align axes, planes, or points of two components. |
 | `catia_offset_constraint` | `component1`, `component2`, `offset` | `component1`, `component2`, `offset` | Maintain a constant distance between two faces/planes. |
 | `catia_angle_constraint` | `component1`, `component2`, `angle` | `component1`, `component2`, `angle` | Set an angle between two axes or planes. |
+| `catia_contact_constraint` | `component1`, `component2`, `element1`, `element2` | `component1`, `component2` | Create a contact constraint — faces touch without penetration. |
+| `catia_distance_constraint` | `component1`, `component2`, `distance`, `element1`, `element2` | `component1`, `component2`, `distance` | Create a distance constraint — constant distance between elements. |
+| `catia_tangent_constraint` | `component1`, `component2`, `element1`, `element2` | `component1`, `component2` | Create a tangency constraint — surfaces touch tangentially. |
 | `catia_move_component` | `component_name`, `tx`, `ty`, `tz`, `rx`, `ry`, `rz` | `component_name` | Move a component by translation (mm) and/or rotation (degrees). |
 | `catia_list_components` | — | — | List all assembly components with names and positions. |
 | `catia_list_constraints` | — | — | List all assembly constraints in the active product. |
