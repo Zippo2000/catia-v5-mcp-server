@@ -284,6 +284,18 @@ class CATIAConnection:
         doc = self.active_document
         try:
             return doc.Part
+        except AttributeError:
+            # gencache proxy doesn't expose .Part — try late binding
+            try:
+                import win32com.client.dynamic
+                doc = win32com.client.dynamic.Dispatch(doc)
+                return doc.Part
+            except Exception:
+                pass
+            raise RuntimeError(
+                "Active document is not a Part document. "
+                "Open or create a Part document first."
+            )
         except Exception:
             raise RuntimeError(
                 "Active document is not a Part document. "
@@ -295,6 +307,18 @@ class CATIAConnection:
         doc = self.active_document
         try:
             return doc.Product
+        except AttributeError:
+            # gencache proxy doesn't expose .Product — try late binding
+            try:
+                import win32com.client.dynamic
+                doc = win32com.client.dynamic.Dispatch(doc)
+                return doc.Product
+            except Exception:
+                pass
+            raise RuntimeError(
+                "Active document is not a Product document. "
+                "Open or create an Assembly (Product) document first."
+            )
         except Exception:
             raise RuntimeError(
                 "Active document is not a Product document. "
