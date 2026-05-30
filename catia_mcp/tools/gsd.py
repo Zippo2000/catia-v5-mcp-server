@@ -411,6 +411,256 @@ class GSDTools:
                     "required": ["contour_names"],
                 },
             },
+            {
+                "name": "catia_create_sphere",
+                "description": (
+                    "Create a sphere surface (full or partial) in the active Part. "
+                    "The sphere can be a complete sphere (360°) or a partial spherical patch. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "cx": {"type": "number", "description": "Center X (mm), default 0."},
+                        "cy": {"type": "number", "description": "Center Y (mm), default 0."},
+                        "cz": {"type": "number", "description": "Center Z (mm), default 0."},
+                        "radius": {
+                            "type": "number",
+                            "description": "Sphere radius in mm (required, > 0).",
+                        },
+                        "angle_start": {
+                            "type": "number",
+                            "description": "Start angle in degrees (default 0).",
+                        },
+                        "angle_end": {
+                            "type": "number",
+                            "description": "End angle in degrees (default 360 = full sphere).",
+                        },
+                        "lat_start": {
+                            "type": "number",
+                            "description": "Latitude start in degrees (default -90 = south pole).",
+                        },
+                        "lat_end": {
+                            "type": "number",
+                            "description": "Latitude end in degrees (default 90 = north pole).",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["radius"],
+                },
+            },
+            {
+                "name": "catia_create_cone",
+                "description": (
+                    "Create a cone surface in the active Part. "
+                    "Define by center point, radius at base, height, and optional top radius. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "cx": {"type": "number", "description": "Center X (mm), default 0."},
+                        "cy": {"type": "number", "description": "Center Y (mm), default 0."},
+                        "cz": {"type": "number", "description": "Center Z (mm), default 0."},
+                        "base_radius": {
+                            "type": "number",
+                            "description": "Base radius in mm (required, > 0).",
+                        },
+                        "height": {
+                            "type": "number",
+                            "description": "Cone height in mm (required, > 0).",
+                        },
+                        "top_radius": {
+                            "type": "number",
+                            "description": "Top radius in mm (default 0 = sharp cone tip).",
+                        },
+                        "angle": {
+                            "type": "number",
+                            "description": "Sweep angle in degrees (default 360 = full cone).",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["base_radius", "height"],
+                },
+            },
+            {
+                "name": "catia_create_torus",
+                "description": (
+                    "Create a torus (ring) surface in the active Part. "
+                    "Define by center, major radius (ring), and minor radius (tube). "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "cx": {"type": "number", "description": "Center X (mm), default 0."},
+                        "cy": {"type": "number", "description": "Center Y (mm), default 0."},
+                        "cz": {"type": "number", "description": "Center Z (mm), default 0."},
+                        "major_radius": {
+                            "type": "number",
+                            "description": "Major radius (ring) in mm (required, > 0).",
+                        },
+                        "minor_radius": {
+                            "type": "number",
+                            "description": "Minor radius (tube) in mm (required, > 0).",
+                        },
+                        "angle_start": {
+                            "type": "number",
+                            "description": "Start angle in degrees (default 0).",
+                        },
+                        "angle_end": {
+                            "type": "number",
+                            "description": "End angle in degrees (default 360 = full torus).",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["major_radius", "minor_radius"],
+                },
+            },
+            {
+                "name": "catia_create_ruled",
+                "description": (
+                    "Create a ruled surface between two curves or edges. "
+                    "A ruled surface is a flat/developable surface connecting two profiles. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "profile1": {
+                            "type": "string",
+                            "description": "Name of first curve/edge profile.",
+                        },
+                        "profile2": {
+                            "type": "string",
+                            "description": "Name of second curve/edge profile.",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["profile1", "profile2"],
+                },
+            },
+            # ── Surface Manipulation ───────────────────────────────────────
+            {
+                "name": "catia_create_blend",
+                "description": (
+                    "Create a blend (fillet) on a surface or edge with the specified radius. "
+                    "Smoothly transitions between connected surfaces. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "edge_or_curve_name": {
+                            "type": "string",
+                            "description": "Name of the edge or curve to blend on.",
+                        },
+                        "radius": {
+                            "type": "number",
+                            "description": "Blend/fillet radius in mm (must be > 0).",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["edge_or_curve_name", "radius"],
+                },
+            },
+            {
+                "name": "catia_split_surface",
+                "description": (
+                    "Split a surface using a cutting element (plane, curve, or another surface). "
+                    "The tool returns the split fragments as new surface elements. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "surface_name": {
+                            "type": "string",
+                            "description": "Name of the surface to split.",
+                        },
+                        "tool_name": {
+                            "type": "string",
+                            "description": "Name of the cutting element (plane, curve, surface).",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["surface_name", "tool_name"],
+                },
+            },
+            {
+                "name": "catia_extend_surface",
+                "description": (
+                    "Extend a surface beyond its current boundary. "
+                    "Use distance or target element to define the extension. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "surface_name": {
+                            "type": "string",
+                            "description": "Name of the surface to extend.",
+                        },
+                        "distance": {
+                            "type": "number",
+                            "description": "Extension distance in mm (default 10).",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["surface_name"],
+                },
+            },
+            {
+                "name": "catia_trim_surface",
+                "description": (
+                    "Trim a surface using a cutting element (plane, curve, or surface). "
+                    "Keep either the first or second part of the trimmed surface. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "surface_name": {
+                            "type": "string",
+                            "description": "Name of the surface to trim.",
+                        },
+                        "tool_name": {
+                            "type": "string",
+                            "description": "Name of the cutting element (plane, curve, surface).",
+                        },
+                        "keep_part": {
+                            "type": "integer",
+                            "description": "Which part to keep: 1 (first) or 2 (second). Default 1.",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["surface_name", "tool_name"],
+                },
+            },
         ]
 
     def execute(self, tool_name: str, arguments: dict[str, Any]) -> str:
@@ -447,6 +697,22 @@ class GSDTools:
                 return self._create_thicken(arguments)
             case "catia_create_surface_from_contours":
                 return self._create_surface_from_contours(arguments)
+            case "catia_create_sphere":
+                return self._create_sphere(arguments)
+            case "catia_create_cone":
+                return self._create_cone(arguments)
+            case "catia_create_torus":
+                return self._create_torus(arguments)
+            case "catia_create_ruled":
+                return self._create_ruled(arguments)
+            case "catia_create_blend":
+                return self._create_blend(arguments)
+            case "catia_split_surface":
+                return self._split_surface(arguments)
+            case "catia_extend_surface":
+                return self._extend_surface(arguments)
+            case "catia_trim_surface":
+                return self._trim_surface(arguments)
             case _:
                 raise ValueError(f"Unknown GSD tool: {tool_name}")
 
@@ -832,3 +1098,201 @@ class GSDTools:
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(part, hbody, surf)
         return f"Multi-section surface created from {len(contour_names)} contour(s). Name: '{name}'"
+
+    # ── Advanced Primitives ────────────────────────────────────────────────
+
+    def _create_sphere(self, args: dict[str, Any]) -> str:
+        """Create a sphere surface (full or partial)."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        cx = float(args.get("cx", 0))
+        cy = float(args.get("cy", 0))
+        cz = float(args.get("cz", 0))
+        radius = validate_positive_float(args.get("radius"), "radius")
+
+        angle_start = float(args.get("angle_start", 0))
+        angle_end = float(args.get("angle_end", 360))
+        lat_start = float(args.get("lat_start", -90))
+        lat_end = float(args.get("lat_end", 90))
+
+        hsf = part.HybridShapeFactory
+        point = hsf.AddNewPointCoord(cx, cy, cz)
+
+        try:
+            sphere = hsf.AddNewSpherePointRadius(
+                point, radius, angle_start, angle_end, lat_start, lat_end,
+            )
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewSpherePointRadius", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, sphere, f"Sphere({cx},{cy},{cz},{radius}mm)")
+        return f"Sphere created: center=({cx},{cy},{cz}), radius={radius}mm, angle=({angle_start}°-{angle_end}°), lat=({lat_start}°-{lat_end}°). Name: '{name}'"
+
+    def _create_cone(self, args: dict[str, Any]) -> str:
+        """Create a cone surface."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        cx = float(args.get("cx", 0))
+        cy = float(args.get("cy", 0))
+        cz = float(args.get("cz", 0))
+        base_radius = validate_positive_float(args.get("base_radius"), "base_radius")
+        height = validate_positive_float(args.get("height"), "height")
+
+        top_radius = float(args.get("top_radius", 0))
+        angle = float(args.get("angle", 360))
+
+        hsf = part.HybridShapeFactory
+        point = hsf.AddNewPointCoord(cx, cy, cz)
+
+        try:
+            cone = hsf.AddNewConePointRadius(point, base_radius, top_radius, height, angle)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewConePointRadius", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, cone, f"Cone({cx},{cy},{cz},{base_radius}mm,{height}mm)")
+        return f"Cone created: base={base_radius}mm, top={top_radius}mm, height={height}mm, angle={angle}°. Name: '{name}'"
+
+    def _create_torus(self, args: dict[str, Any]) -> str:
+        """Create a torus (ring) surface."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        cx = float(args.get("cx", 0))
+        cy = float(args.get("cy", 0))
+        cz = float(args.get("cz", 0))
+        major_radius = validate_positive_float(args.get("major_radius"), "major_radius")
+        minor_radius = validate_positive_float(args.get("minor_radius"), "minor_radius")
+
+        angle_start = float(args.get("angle_start", 0))
+        angle_end = float(args.get("angle_end", 360))
+
+        hsf = part.HybridShapeFactory
+        point = hsf.AddNewPointCoord(cx, cy, cz)
+
+        try:
+            torus = hsf.AddNewTorusPointRadius(
+                point, major_radius, minor_radius, angle_start, angle_end,
+            )
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewTorusPointRadius", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, torus, f"Torus({cx},{cy},{cz},{major_radius}mm,{minor_radius}mm)")
+        return f"Torus created: major={major_radius}mm, minor={minor_radius}mm, angle=({angle_start}°-{angle_end}°). Name: '{name}'"
+
+    def _create_ruled(self, args: dict[str, Any]) -> str:
+        """Create a ruled surface between two curves/edges."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        profile1_name = args.get("profile1")
+        profile2_name = args.get("profile2")
+        if not profile1_name or not profile2_name:
+            raise ValueError("profile1 and profile2 are required")
+
+        ref1 = self._ref(part, profile1_name)
+        ref2 = self._ref(part, profile2_name)
+
+        hsf = part.HybridShapeFactory
+        try:
+            ruled = hsf.AddNewRuled(ref1, ref2)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewRuled", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, ruled, f"Ruled({profile1_name},{profile2_name})")
+        return f"Ruled surface created between '{profile1_name}' and '{profile2_name}'. Name: '{name}'"
+
+    # ── Surface Manipulation ───────────────────────────────────────────────
+
+    def _create_blend(self, args: dict[str, Any]) -> str:
+        """Create a blend (fillet) on a surface/edge."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        edge_name = args.get("edge_or_curve_name")
+        radius = validate_positive_float(args.get("radius"), "radius")
+        if not edge_name:
+            raise ValueError("edge_or_curve_name is required")
+
+        edge_ref = self._ref(part, edge_name)
+        hsf = part.HybridShapeFactory
+        try:
+            blend = hsf.AddNewBlend(edge_ref, radius)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewBlend", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, blend, f"Blend({edge_name},{radius}mm)")
+        return f"Blend created on '{edge_name}' with radius {radius}mm. Name: '{name}'"
+
+    def _split_surface(self, args: dict[str, Any]) -> str:
+        """Split a surface using a cutting element."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        surface_name = args.get("surface_name")
+        tool_name = args.get("tool_name")
+        if not surface_name or not tool_name:
+            raise ValueError("surface_name and tool_name are required")
+
+        surface_ref = self._ref(part, surface_name)
+        tool_ref = self._ref(part, tool_name)
+        hsf = part.HybridShapeFactory
+        try:
+            split = hsf.AddNewSplit(surface_ref, tool_ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewSplit", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, split, f"Split({surface_name},{tool_name})")
+        return f"Split created on '{surface_name}' with '{tool_name}'. Name: '{name}'"
+
+    def _extend_surface(self, args: dict[str, Any]) -> str:
+        """Extend a surface beyond its current boundary."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        surface_name = args.get("surface_name")
+        distance = args.get("distance", 10)
+        if not surface_name:
+            raise ValueError("surface_name is required")
+        validate_positive_float(distance, "distance")
+
+        surface_ref = self._ref(part, surface_name)
+        hsf = part.HybridShapeFactory
+        try:
+            extend = hsf.AddNewExtend(surface_ref, float(distance))
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewExtend", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, extend, f"Extend({surface_name},{distance}mm)")
+        return f"Extend created on '{surface_name}' by {distance}mm. Name: '{name}'"
+
+    def _trim_surface(self, args: dict[str, Any]) -> str:
+        """Trim a surface using a cutting element."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        surface_name = args.get("surface_name")
+        tool_name = args.get("tool_name")
+        keep_part = int(args.get("keep_part", 1))
+        if not surface_name or not tool_name:
+            raise ValueError("surface_name and tool_name are required")
+
+        surface_ref = self._ref(part, surface_name)
+        tool_ref = self._ref(part, tool_name)
+        hsf = part.HybridShapeFactory
+        try:
+            trim = hsf.AddNewTrim(surface_ref, tool_ref, keep_part)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewTrim", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, trim, f"Trim({surface_name},{tool_name},P{keep_part})")
+        return f"Trim created on '{surface_name}' with '{tool_name}', keep_part={keep_part}. Name: '{name}'"

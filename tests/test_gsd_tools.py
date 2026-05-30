@@ -61,7 +61,7 @@ class TestToolDefinitions:
 
     def test_16_tools(self, gsd_tools):
         defs = gsd_tools.get_tool_definitions()
-        assert len(defs) == 16
+        assert len(defs) == 24
 
     def test_all_tool_names_present(self, gsd_tools):
         names = {d["name"] for d in gsd_tools.get_tool_definitions()}
@@ -84,6 +84,16 @@ class TestToolDefinitions:
             "catia_create_join",
             "catia_create_thicken",
             "catia_create_surface_from_contours",
+            # Advanced Primitives
+            "catia_create_sphere",
+            "catia_create_cone",
+            "catia_create_torus",
+            "catia_create_ruled",
+            # Surface Manipulation
+            "catia_create_blend",
+            "catia_split_surface",
+            "catia_extend_surface",
+            "catia_trim_surface",
         }
         assert names == expected
 
@@ -395,6 +405,195 @@ class TestCreateSurfaceFromContours:
                 "catia_create_surface_from_contours",
                 {"contour_names": []},
             )
+
+
+# ── Advanced Primitives Tests ──────────────────────────────────────────────
+
+
+class TestCreateSphere:
+    def test_create_sphere_full(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_create_sphere", {
+            "cx": 10, "cy": 20, "cz": 30, "radius": 50,
+        })
+        assert "Sphere created" in result
+        assert "50" in result
+        part = conn_mock.get_active_part()
+        part.HybridShapeFactory.AddNewPointCoord.assert_called_with(10, 20, 30)
+        part.HybridShapeFactory.AddNewSpherePointRadius.assert_called_once()
+
+    def test_create_sphere_partial(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_create_sphere", {
+            "radius": 25,
+            "angle_start": 0, "angle_end": 180,
+            "lat_start": -45, "lat_end": 45,
+        })
+        assert "Sphere created" in result
+        part = conn_mock.get_active_part()
+        call_args = part.HybridShapeFactory.AddNewSpherePointRadius.call_args
+        assert call_args[0][1] == 25
+        assert call_args[0][3] == 180
+        assert call_args[0][4] == -45
+        assert call_args[0][5] == 45
+
+    def test_create_sphere_negative_radius_raises(self, gsd_tools, conn_mock):
+        with pytest.raises(ValueError, match="must be positive"):
+            gsd_tools.execute("catia_create_sphere", {"radius": -5})
+
+    def test_create_sphere_missing_radius_raises(self, gsd_tools, conn_mock):
+        with pytest.raises((ValueError, TypeError), match="radius"):
+            gsd_tools.execute("catia_create_sphere", {})
+
+
+class TestCreateCone:
+    def test_create_cone_standard(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_create_cone", {
+            "cx": 0, "cy": 0, "cz": 0,
+            "base_radius": 30, "height": 100,
+        })
+        assert "Cone created" in result
+        assert "30" in result and "100" in result
+        part = conn_mock.get_active_part()
+        part.HybridShapeFactory.AddNewConePointRadius.assert_called_once()
+
+    def test_create_cone_with_top_radius(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_create_cone", {
+            "base_radius": 40, "height": 80, "top_radius": 10, "angle": 270,
+        })
+        assert "Cone created" in result
+        part = conn_mock.get_active_part()
+        call_args = part.HybridShapeFactory.AddNewConePointRadius.call_args
+        assert call_args[0][1] == 40   # base_radius
+        assert call_args[0][2] == 10   # top_radius
+        assert call_args[0][3] == 80   # height
+        assert call_args[0][4] == 270  # angle
+
+    def test_create_cone_missing_height_raises(self, gsd_tools, conn_mock):
+        with pytest.raises((ValueError, TypeError), match="height"):
+            gsd_tools.execute("catia_create_cone", {"base_radius": 20})
+
+
+class TestCreateTorus:
+    def test_create_torus_full(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_create_torus", {
+            "major_radius": 50, "minor_radius": 10,
+        })
+        assert "Torus created" in result
+        assert "50" in result and "10" in result
+        part = conn_mock.get_active_part()
+        part.HybridShapeFactory.AddNewTorusPointRadius.assert_called_once()
+
+    def test_create_torus_partial(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_create_torus", {
+            "major_radius": 60, "minor_radius": 8,
+            "angle_start": 0, "angle_end": 180,
+        })
+        assert "Torus created" in result
+        part = conn_mock.get_active_part()
+        call_args = part.HybridShapeFactory.AddNewTorusPointRadius.call_args
+        assert call_args[0][3] == 0
+        assert call_args[0][4] == 180
+
+    def test_create_torus_negative_minor_raises(self, gsd_tools, conn_mock):
+        with pytest.raises(ValueError, match="must be positive"):
+            gsd_tools.execute("catia_create_torus", {
+                "major_radius": 50, "minor_radius": -3,
+            })
+
+
+class TestCreateRuled:
+    def test_create_ruled(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_create_ruled", {
+            "profile1": "Line.1", "profile2": "Line.2",
+        })
+        assert "Ruled surface created" in result
+        assert "Line.1" in result and "Line.2" in result
+        conn_mock.get_active_part().HybridShapeFactory.AddNewRuled.assert_called_once()
+
+    def test_create_ruled_missing_profile_raises(self, gsd_tools, conn_mock):
+        with pytest.raises(ValueError, match="profile1 and profile2"):
+            gsd_tools.execute("catia_create_ruled", {"profile1": "Line.1"})
+
+
+# ── Surface Manipulation Tests ─────────────────────────────────────────────
+
+
+class TestCreateBlend:
+    def test_create_blend(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_create_blend", {
+            "edge_or_curve_name": "Edge.1", "radius": 5,
+        })
+        assert "Blend created" in result
+        assert "5" in result
+        conn_mock.get_active_part().HybridShapeFactory.AddNewBlend.assert_called_once()
+
+    def test_create_blend_negative_radius_raises(self, gsd_tools, conn_mock):
+        with pytest.raises(ValueError, match="must be positive"):
+            gsd_tools.execute("catia_create_blend", {
+                "edge_or_curve_name": "Edge.1", "radius": -2,
+            })
+
+    def test_create_blend_missing_radius_raises(self, gsd_tools, conn_mock):
+        with pytest.raises((ValueError, TypeError), match="radius"):
+            gsd_tools.execute("catia_create_blend", {"edge_or_curve_name": "Edge.1"})
+
+
+class TestSplitSurface:
+    def test_split_surface(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_split_surface", {
+            "surface_name": "Sheet.1", "tool_name": "Plane.1",
+        })
+        assert "Split created" in result
+        conn_mock.get_active_part().HybridShapeFactory.AddNewSplit.assert_called_once()
+
+    def test_split_surface_missing_tool_raises(self, gsd_tools, conn_mock):
+        with pytest.raises(ValueError, match="tool"):
+            gsd_tools.execute("catia_split_surface", {"surface_name": "Sheet.1"})
+
+
+class TestExtendSurface:
+    def test_extend_surface(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_extend_surface", {
+            "surface_name": "Sheet.1", "distance": 20,
+        })
+        assert "Extend created" in result
+        conn_mock.get_active_part().HybridShapeFactory.AddNewExtend.assert_called_once()
+
+    def test_extend_surface_default_distance(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_extend_surface", {
+            "surface_name": "Sheet.1",
+        })
+        assert "Extend created" in result
+        part = conn_mock.get_active_part()
+        call_args = part.HybridShapeFactory.AddNewExtend.call_args
+        assert call_args[0][1] == 10  # default distance
+
+    def test_extend_surface_zero_distance_raises(self, gsd_tools, conn_mock):
+        with pytest.raises(ValueError, match="must be positive"):
+            gsd_tools.execute("catia_extend_surface", {
+                "surface_name": "Sheet.1", "distance": 0,
+            })
+
+
+class TestTrimSurface:
+    def test_trim_surface_keep_1(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_trim_surface", {
+            "surface_name": "Sheet.1", "tool_name": "Plane.1", "keep_part": 1,
+        })
+        assert "Trim created" in result
+        conn_mock.get_active_part().HybridShapeFactory.AddNewTrim.assert_called_once()
+
+    def test_trim_surface_default_keep_part(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute("catia_trim_surface", {
+            "surface_name": "Sheet.1", "tool_name": "Plane.1",
+        })
+        assert "Trim created" in result
+        part = conn_mock.get_active_part()
+        call_args = part.HybridShapeFactory.AddNewTrim.call_args
+        assert call_args[0][2] == 1  # default keep_part
+
+    def test_trim_surface_missing_tool_raises(self, gsd_tools, conn_mock):
+        with pytest.raises(ValueError, match="tool"):
+            gsd_tools.execute("catia_trim_surface", {"surface_name": "Sheet.1"})
 
 
 # ── Integration: execute() dispatch ───────────────────────────────────────
