@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import signal
 import sys
 from typing import Any
 
@@ -74,6 +75,9 @@ class CATIAMCPServer:
             for tool_def in module.get_tool_definitions():
                 self._tool_router[tool_def["name"]] = module
 
+        # Asyncio lock for serializing COM calls (COM is single-threaded)
+        self._com_lock = asyncio.Lock()
+
         self._setup_handlers()
 
     def _setup_handlers(self) -> None:
@@ -109,13 +113,17 @@ class CATIAMCPServer:
                         text=f"Unknown tool: '{name}'. Use list_tools to see available tools.",
                     )]
 
-                # Auto-connect for non-connect tools
-                if name != "catia_connect" and name != "catia_disconnect":
-                    if not self.connection.is_connected:
-                        connect_msg = self.connection.connect()
-                        logger.info("Auto-connected: %s", connect_msg)
+                # Serialize COM calls with an asyncio lock
+                # CATIA COM is single-threaded, so we must serialize access
+                async with self._com_lock:
+                    # Auto-connect for non-connect tools
+                    if name not in ("catia_connect", "catia_disconnect"):
+                        if not self.connection.is_connected:
+                            connect_msg = self.connection.connect()
+                            logger.info("Auto-connected: %s", connect_msg)
 
-                result = module.execute(name, arguments)
+                    result = module.execute(name, arguments)
+
                 logger.info("Tool result: %s", result[:200] if len(result) > 200 else result)
                 return [TextContent(type="text", text=result)]
 
@@ -140,12 +148,31 @@ class CATIAMCPServer:
                      len(self._tool_router), len(self._tool_modules))
         logger.info("=" * 60)
 
+        # Set up graceful shutdown
+        loop = asyncio.get_running_loop()
+        loop.add_signal_handler(signal.SIGINT, self._shutdown)
+        try:
+            loop.add_signal_handler(signal.SIGTERM, self._shutdown)
+        except NotImplementedError:
+            pass  # Windows doesn't support SIGTERM
+
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(
                 read_stream,
                 write_stream,
                 self.server.create_initialization_options(),
             )
+
+    def _shutdown(self) -> None:
+        """Graceful shutdown handler."""
+        logger.info("Shutting down CATIA V5 MCP Server...")
+        try:
+            self.connection.disconnect()
+        except Exception:
+            pass
+        logger.info("Server shutdown complete")
+        # Exit cleanly
+        asyncio.get_running_loop().stop()
 
 
 def main() -> None:

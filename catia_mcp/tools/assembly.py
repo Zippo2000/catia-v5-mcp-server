@@ -10,6 +10,12 @@ import json
 from typing import Any
 
 from catia_mcp.connection import CATIAConnection
+from catia_mcp.utils import (
+    format_catia_error,
+    validate_file_path,
+    validate_non_negative_float,
+    validate_positive_float,
+)
 
 
 class AssemblyTools:
@@ -212,17 +218,24 @@ class AssemblyTools:
 
     def _add_component(self, file_path: str) -> str:
         product = self.conn.get_active_product()
+        file_path = validate_file_path(file_path, "file_path")
         products = product.Products
-        component = products.AddComponentsFromFiles(
-            [file_path], "All"
-        )
+        try:
+            component = products.AddComponentsFromFiles(
+                [file_path], "All"
+            )
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddComponentsFromFiles", e))
         self.conn.refresh_display()
         return f"Component added from: {file_path}"
 
     def _add_new_part(self, name: str | None = None) -> str:
         product = self.conn.get_active_product()
         products = product.Products
-        new_product = products.AddNewProduct("Part")
+        try:
+            new_product = products.AddNewProduct("Part")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewProduct", e))
         if name:
             new_product.Name = name
         self.conn.refresh_display()
@@ -232,8 +245,15 @@ class AssemblyTools:
         product = self.conn.get_active_product()
         constraints = product.Connections("CATIAConstraints")
 
-        component = product.Products.Item(component_name)
-        cst = constraints.AddMonoEltCst(0, component)  # Fix constraint
+        try:
+            component = product.Products.Item(component_name)
+        except Exception:
+            raise ValueError(f"Component '{component_name}' not found in assembly.")
+
+        try:
+            cst = constraints.AddMonoEltCst(0, component)  # Fix constraint
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddMonoEltCst (Fix)", e))
         cst.Name = f"Fix.{component_name}"
 
         self.conn.refresh_display()
@@ -246,7 +266,10 @@ class AssemblyTools:
         comp1 = product.Products.Item(args["component1"])
         comp2 = product.Products.Item(args["component2"])
 
-        cst = constraints.AddBiEltCst(20, comp1, comp2)  # catCstTypeSurfContact: face coincidence
+        try:
+            cst = constraints.AddBiEltCst(20, comp1, comp2)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddBiEltCst (Coincidence)", e))
         self.conn.refresh_display()
         return (
             f"Coincidence constraint created between "
@@ -259,13 +282,17 @@ class AssemblyTools:
 
         comp1 = product.Products.Item(args["component1"])
         comp2 = product.Products.Item(args["component2"])
+        offset = validate_non_negative_float(args["offset"], "offset")
 
-        cst = constraints.AddBiEltCst(1, comp1, comp2)  # Offset
-        cst.Dimension.Value = args["offset"]
+        try:
+            cst = constraints.AddBiEltCst(1, comp1, comp2)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddBiEltCst (Offset)", e))
+        cst.Dimension.Value = offset
 
         self.conn.refresh_display()
         return (
-            f"Offset constraint: {args['offset']} mm between "
+            f"Offset constraint: {offset} mm between "
             f"'{args['component1']}' and '{args['component2']}'"
         )
 
@@ -275,43 +302,45 @@ class AssemblyTools:
 
         comp1 = product.Products.Item(args["component1"])
         comp2 = product.Products.Item(args["component2"])
+        angle = validate_non_negative_float(args["angle"], "angle")
 
-        cst = constraints.AddBiEltCst(6, comp1, comp2)  # catCstTypeAngle
-        cst.Dimension.Value = args["angle"]
+        try:
+            cst = constraints.AddBiEltCst(6, comp1, comp2)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddBiEltCst (Angle)", e))
+        cst.Dimension.Value = angle
 
         self.conn.refresh_display()
         return (
-            f"Angle constraint: {args['angle']}° between "
+            f"Angle constraint: {angle}° between "
             f"'{args['component1']}' and '{args['component2']}'"
         )
 
     def _move_component(self, args: dict[str, Any]) -> str:
         import math
         product = self.conn.get_active_product()
-        component = product.Products.Item(args["component_name"])
+        try:
+            component = product.Products.Item(args["component_name"])
+        except Exception:
+            raise ValueError(f"Component '{args['component_name']}' not found in assembly.")
 
-        # Get the current position matrix (4x3 = 12 values in CATIA)
         position = component.Position
         matrix = [0.0] * 12
         position.GetComponents(matrix)
 
-        # Apply translation (values 9, 10, 11 are tx, ty, tz)
         matrix[9] += args.get("tx", 0)
         matrix[10] += args.get("ty", 0)
         matrix[11] += args.get("tz", 0)
 
-        # Apply rotations if specified (simplified: sequential Euler rotations)
         rx = math.radians(args.get("rx", 0))
         ry = math.radians(args.get("ry", 0))
         rz = math.radians(args.get("rz", 0))
 
         if rx != 0 or ry != 0 or rz != 0:
-            # Build rotation matrix (Rz * Ry * Rx convention)
             cx, sx = math.cos(rx), math.sin(rx)
             cy, sy = math.cos(ry), math.sin(ry)
             cz, sz = math.cos(rz), math.sin(rz)
 
-            # Rotation matrix components
             r00 = cy * cz
             r01 = cz * sx * sy - cx * sz
             r02 = sx * sz + cx * cz * sy
@@ -322,7 +351,6 @@ class AssemblyTools:
             r21 = cy * sx
             r22 = cx * cy
 
-            # Apply to current rotation (first 9 elements)
             old = matrix[:9]
             matrix[0] = r00 * old[0] + r01 * old[3] + r02 * old[6]
             matrix[1] = r00 * old[1] + r01 * old[4] + r02 * old[7]
@@ -334,7 +362,10 @@ class AssemblyTools:
             matrix[7] = r20 * old[1] + r21 * old[4] + r22 * old[7]
             matrix[8] = r20 * old[2] + r21 * old[5] + r22 * old[8]
 
-        position.SetComponents(matrix)
+        try:
+            position.SetComponents(matrix)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("SetComponents", e))
         self.conn.refresh_display()
 
         return (

@@ -9,6 +9,11 @@ import json
 from typing import Any
 
 from catia_mcp.connection import CATIAConnection
+from catia_mcp.utils import (
+    format_catia_error,
+    validate_non_negative_float,
+    validate_positive_float,
+)
 
 # ── ByRef array helpers for win32com late binding ──
 #
@@ -261,13 +266,14 @@ class MeasurementTools:
     def _measure_distance(self, elem1_name: str, elem2_name: str) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        spa = self.conn.app.GetWorkbench("SPAWorkbench")
+        try:
+            spa = self.conn.app.GetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("GetWorkbench(SPAWorkbench)", e))
 
-        # Create references from names
         sel = self.conn.hso
         sel.Clear()
 
-        # Search for the elements
         sel.Search(f"Name={elem1_name},all")
         if sel.Count == 0:
             raise RuntimeError(f"Element '{elem1_name}' not found")
@@ -280,15 +286,22 @@ class MeasurementTools:
         ref2 = part.CreateReferenceFromObject(sel.Item(1).Value)
         sel.Clear()
 
-        # Measure
-        measurable = spa.GetMeasurable(ref1)
-        distance = measurable.GetMinimumDistance(ref2)
+        try:
+            measurable = spa.GetMeasurable(ref1)
+            distance = measurable.GetMinimumDistance(ref2)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("GetMinimumDistance", e))
 
         return f"Minimum distance between '{elem1_name}' and '{elem2_name}': {distance:.4f} mm"
 
     def _get_inertia(self, density: float | None = None) -> str:
         self.conn.ensure_connected()
-        spa = self.conn.app.GetWorkbench("SPAWorkbench")
+        if density is not None:
+            validate_non_negative_float(density, "density")
+        try:
+            spa = self.conn.app.GetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("GetWorkbench(SPAWorkbench)", e))
         part = self.conn.get_active_part()
         body = self.conn.get_active_part_body()
         ref = part.CreateReferenceFromObject(body)
@@ -343,7 +356,10 @@ class MeasurementTools:
 
     def _get_bounding_box(self) -> str:
         self.conn.ensure_connected()
-        spa = self.conn.app.GetWorkbench("SPAWorkbench")
+        try:
+            spa = self.conn.app.GetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("GetWorkbench(SPAWorkbench)", e))
         part = self.conn.get_active_part()
         body = self.conn.get_active_part_body()
         ref = part.CreateReferenceFromObject(body)
@@ -353,7 +369,7 @@ class MeasurementTools:
         try:
             bbox = _get_bounding_box_com(measurable)
         except Exception as e:
-            return json.dumps({"error": str(e)}, indent=2)
+            raise RuntimeError(format_catia_error("GetBoundingBox", e))
 
         result = {
             "min": {"x": round(bbox[0], 4), "y": round(bbox[1], 4), "z": round(bbox[2], 4)},
@@ -400,10 +416,17 @@ class MeasurementTools:
         part = self.conn.get_active_part()
         params = part.Parameters
 
-        param = params.Item(name)
+        try:
+            param = params.Item(name)
+        except Exception:
+            raise ValueError(f"Parameter '{name}' not found in the active part.")
+
         old_value = param.Value
-        param.Value = value
-        part.Update()
+        try:
+            param.Value = value
+            part.Update()
+        except Exception as e:
+            raise RuntimeError(format_catia_error("SetParameter", e))
 
         self.conn.refresh_display()
         return f"Parameter '{name}' changed: {old_value} -> {value}"
@@ -411,6 +434,9 @@ class MeasurementTools:
     def _update_part(self) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
-        part.Update()
+        try:
+            part.Update()
+        except Exception as e:
+            raise RuntimeError(format_catia_error("Update", e))
         self.conn.refresh_display()
         return "Part updated successfully"

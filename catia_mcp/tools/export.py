@@ -11,6 +11,11 @@ import os
 from typing import Any
 
 from catia_mcp.connection import CATIAConnection
+from catia_mcp.utils import (
+    format_catia_error,
+    validate_file_path,
+    validate_positive_int,
+)
 
 # CATIA export format identifiers
 FORMAT_MAP = {
@@ -143,6 +148,8 @@ class ExportTools:
         self.conn.ensure_connected()
         doc = self.conn.active_document
 
+        file_path = validate_file_path(file_path, "file_path")
+
         # Determine format from extension if not specified
         if fmt is None:
             ext = os.path.splitext(file_path)[1].lstrip(".").lower()
@@ -161,7 +168,10 @@ class ExportTools:
             os.makedirs(output_dir, exist_ok=True)
 
         # CATIA V5 export via SaveAs with format specification
-        doc.ExportData(file_path, FORMAT_MAP[fmt_key])
+        try:
+            doc.ExportData(file_path, FORMAT_MAP[fmt_key])
+        except Exception as e:
+            raise RuntimeError(format_catia_error("ExportData", e))
 
         size_info = ""
         if os.path.exists(file_path):
@@ -178,6 +188,10 @@ class ExportTools:
     def _screenshot(self, file_path: str, width: int = 1920, height: int = 1080) -> str:
         self.conn.ensure_connected()
 
+        file_path = validate_file_path(file_path, "file_path")
+        validate_positive_int(width, "width")
+        validate_positive_int(height, "height")
+
         # Ensure output directory exists
         output_dir = os.path.dirname(file_path)
         if output_dir and not os.path.exists(output_dir):
@@ -187,7 +201,10 @@ class ExportTools:
         viewer = self.conn._safe_active_viewer()
         if viewer is None:
             raise RuntimeError("No active 3D viewer available. Make sure a Part or Product document is open.")
-        viewer.CaptureToFile(1, file_path)
+        try:
+            viewer.CaptureToFile(1, file_path)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CaptureToFile", e))
 
         return f"Screenshot saved to {file_path} ({width}x{height})"
 
@@ -216,12 +233,12 @@ class ExportTools:
         sight = v["sight"]
         up = v["up"]
 
-        # Set viewpoint sight and up directions
-        viewpoint.PutSightDirection(list(sight))
-        viewpoint.PutUpDirection(list(up))
-
-        # Fit all in view
-        viewer.Reframe()
+        try:
+            viewpoint.PutSightDirection(list(sight))
+            viewpoint.PutUpDirection(list(up))
+            viewer.Reframe()
+        except Exception as e:
+            raise RuntimeError(format_catia_error("SetView", e))
 
         return f"View set to: {view}"
 
@@ -230,5 +247,8 @@ class ExportTools:
         viewer = self.conn._safe_active_viewer()
         if viewer is None:
             raise RuntimeError("No active 3D viewer available. Make sure a Part or Product document is open.")
-        viewer.Reframe()
+        try:
+            viewer.Reframe()
+        except Exception as e:
+            raise RuntimeError(format_catia_error("Reframe", e))
         return "View fitted to all geometry"

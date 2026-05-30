@@ -10,6 +10,10 @@ import logging
 from typing import Any
 
 from catia_mcp.connection import CATIAConnection
+from catia_mcp.utils import (
+    format_catia_error,
+    validate_file_path,
+)
 
 logger = logging.getLogger("catia_mcp")
 
@@ -183,25 +187,42 @@ class DocumentTools:
 
     def _open_document(self, file_path: str) -> str:
         self.conn.ensure_connected()
+        file_path = validate_file_path(file_path, "file_path")
         docs = self.conn.documents
-        doc = docs.Open(file_path)
+        try:
+            doc = docs.Open(file_path)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("OpenDocument", e))
         return f"Opened document: '{doc.Name}' from {file_path}"
 
     def _save_document(self, file_path: str | None = None) -> str:
         doc = self.conn.active_document
         if file_path:
-            doc.SaveAs(file_path)
+            file_path = validate_file_path(file_path, "file_path")
+            try:
+                doc.SaveAs(file_path)
+            except Exception as e:
+                raise RuntimeError(format_catia_error("SaveAs", e))
             return f"Document saved as: {file_path}"
         else:
-            doc.Save()
+            try:
+                doc.Save()
+            except Exception as e:
+                raise RuntimeError(format_catia_error("Save", e))
             return f"Document '{doc.Name}' saved"
 
     def _close_document(self, save: bool = False) -> str:
         doc = self.conn.active_document
         name = doc.Name
         if save:
-            doc.Save()
-        doc.Close()
+            try:
+                doc.Save()
+            except Exception as e:
+                raise RuntimeError(format_catia_error("Save", e))
+        try:
+            doc.Close()
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CloseDocument", e))
         return f"Document '{name}' closed" + (" (saved)" if save else "")
 
     def _list_documents(self) -> str:

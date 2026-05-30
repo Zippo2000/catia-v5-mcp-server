@@ -10,6 +10,11 @@ import json
 from typing import Any
 
 from catia_mcp.connection import CATIAConnection
+from catia_mcp.utils import (
+    format_catia_error,
+    validate_positive_float,
+    validate_plane,
+)
 
 # Plane name mapping
 PLANE_MAP = {
@@ -283,23 +288,27 @@ class SketcherTools:
         part = self.conn.get_active_part()
         body = self.conn.get_active_part_body()
 
+        plane_key = validate_plane(plane)
+
         # Get the reference plane
         origin = part.OriginElements
-        plane_key = plane.lower()
-        if plane_key not in PLANE_MAP:
-            raise ValueError(f"Unknown plane '{plane}'. Use 'xy', 'yz', or 'zx'.")
-
         plane_attr = PLANE_MAP[plane_key]
         ref_plane = getattr(origin, plane_attr)
         ref = part.CreateReferenceFromObject(ref_plane)
 
         # Create the sketch on the plane
         sketches = body.Sketches
-        sketch = sketches.Add(ref)
+        try:
+            sketch = sketches.Add(ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateSketch", e))
 
         # Open the sketch for editing
         self._active_sketch = sketch
-        self._active_factory = sketch.OpenEdition()
+        try:
+            self._active_factory = sketch.OpenEdition()
+        except Exception as e:
+            raise RuntimeError(format_catia_error("OpenSketchEdition", e))
 
         plane_names = {"xy": "XY (front)", "yz": "YZ (right)", "zx": "ZX (top)"}
         return f"Sketch created on {plane_names.get(plane_key, plane)} plane. Ready for geometry."
@@ -307,7 +316,10 @@ class SketcherTools:
     def _close_sketch(self) -> str:
         self._ensure_sketch_open()
         sketch = self._active_sketch
-        sketch.CloseEdition()
+        try:
+            sketch.CloseEdition()
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CloseSketch", e))
         self.conn.get_active_part().Update()
         self._active_sketch = None
         self._active_factory = None
@@ -317,7 +329,10 @@ class SketcherTools:
     def _draw_line(self, x1: float, y1: float, x2: float, y2: float) -> str:
         self._ensure_sketch_open()
         factory = self._active_factory
-        line = factory.CreateLine(x1, y1, x2, y2)
+        try:
+            line = factory.CreateLine(x1, y1, x2, y2)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateLine", e))
         return f"Line created from ({x1}, {y1}) to ({x2}, {y2}) mm"
 
     def _draw_rectangle(self, x1: float, y1: float, x2: float, y2: float) -> str:
@@ -325,10 +340,13 @@ class SketcherTools:
         factory = self._active_factory
 
         # Create 4 lines forming a closed rectangle
-        factory.CreateLine(x1, y1, x2, y1)  # bottom
-        factory.CreateLine(x2, y1, x2, y2)  # right
-        factory.CreateLine(x2, y2, x1, y2)  # top
-        factory.CreateLine(x1, y2, x1, y1)  # left
+        try:
+            factory.CreateLine(x1, y1, x2, y1)  # bottom
+            factory.CreateLine(x2, y1, x2, y2)  # right
+            factory.CreateLine(x2, y2, x1, y2)  # top
+            factory.CreateLine(x1, y2, x1, y1)  # left
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateLine (rectangle)", e))
 
         return (
             f"Rectangle created from ({x1}, {y1}) to ({x2}, {y2}) mm "
@@ -338,13 +356,19 @@ class SketcherTools:
     def _draw_centered_rectangle(
         self, cx: float, cy: float, width: float, height: float
     ) -> str:
+        validate_positive_float(width, "width")
+        validate_positive_float(height, "height")
         hw, hh = width / 2, height / 2
         return self._draw_rectangle(cx - hw, cy - hh, cx + hw, cy + hh)
 
     def _draw_circle(self, cx: float, cy: float, radius: float) -> str:
         self._ensure_sketch_open()
         factory = self._active_factory
-        factory.CreateClosedCircle(cx, cy, radius)
+        validate_positive_float(radius, "radius")
+        try:
+            factory.CreateClosedCircle(cx, cy, radius)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateClosedCircle", e))
         return f"Circle created at ({cx}, {cy}) with radius {radius} mm"
 
     def _draw_arc(
@@ -353,11 +377,14 @@ class SketcherTools:
     ) -> str:
         self._ensure_sketch_open()
         factory = self._active_factory
+        validate_positive_float(radius, "radius")
         import math
-        # CATIA CreateArc expects angles in radians
         start_rad = math.radians(start_angle)
         end_rad = math.radians(end_angle)
-        factory.CreateArc(cx, cy, radius, start_rad, end_rad)
+        try:
+            factory.CreateArc(cx, cy, radius, start_rad, end_rad)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateArc", e))
         return (
             f"Arc created at ({cx}, {cy}), radius={radius} mm, "
             f"from {start_angle}° to {end_angle}°"
@@ -367,19 +394,24 @@ class SketcherTools:
         self._ensure_sketch_open()
         factory = self._active_factory
 
-        # Create a spline using control points
-        # CATIA V5 Sketch.OpenEdition() returns a Factory2D
-        # Factory2D.CreateSpline expects an array of 2D points
+        if len(points) < 2:
+            raise ValueError("Spline requires at least 2 control points.")
+
         spline_pts = []
         for pt in points:
             ctrl_pt = factory.CreatePoint(pt[0], pt[1])
             spline_pts.append(ctrl_pt)
 
-        spline = factory.CreateSpline(spline_pts)
+        try:
+            spline = factory.CreateSpline(spline_pts)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateSpline", e))
 
         if closed and len(points) >= 3:
-            # Close the spline by adding a line from last to first point
-            factory.CreateLine(points[-1][0], points[-1][1], points[0][0], points[0][1])
+            try:
+                factory.CreateLine(points[-1][0], points[-1][1], points[0][0], points[0][1])
+            except Exception as e:
+                raise RuntimeError(format_catia_error("CreateLine (close spline)", e))
 
         pts_str = ", ".join(f"({p[0]}, {p[1]})" for p in points)
         return f"Spline created through {len(points)} points: {pts_str}" + (
@@ -389,7 +421,10 @@ class SketcherTools:
     def _draw_point(self, x: float, y: float) -> str:
         self._ensure_sketch_open()
         factory = self._active_factory
-        factory.CreatePoint(x, y)
+        try:
+            factory.CreatePoint(x, y)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreatePoint", e))
         return f"Point created at ({x}, {y}) mm"
 
     def _add_constraint(self, args: dict[str, Any]) -> str:

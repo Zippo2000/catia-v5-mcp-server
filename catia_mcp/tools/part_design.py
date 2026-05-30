@@ -10,6 +10,14 @@ import json
 from typing import Any
 
 from catia_mcp.connection import CATIAConnection
+from catia_mcp.utils import (
+    format_catia_error,
+    validate_non_negative_float,
+    validate_positive_float,
+    validate_positive_int,
+    validate_plane,
+    validate_sketch_name,
+)
 
 
 class PartDesignTools:
@@ -508,7 +516,8 @@ class PartDesignTools:
                 "Ensure the active document is a valid Part document."
             )
 
-        sketch = self._get_last_sketch(args.get("sketch_name"), part)
+        sketch_name = validate_sketch_name(args.get("sketch_name"))
+        sketch = self._get_last_sketch(sketch_name, part)
 
         sketch_repr = repr(type(sketch))
         if "IUnknown" in sketch_repr or "unknown" in sketch_repr.lower():
@@ -517,7 +526,7 @@ class PartDesignTools:
                 "Try reconnecting to CATIA and recreating the sketch."
             )
 
-        height = args["height"]
+        height = validate_positive_float(args["height"], "height")
         direction = args.get("direction", "normal")
         symmetric = args.get("symmetric", False)
 
@@ -526,16 +535,7 @@ class PartDesignTools:
         try:
             pad = sf.AddNewPad(sketch, height)
         except Exception as e:
-            err_msg = str(e)
-            if not err_msg or err_msg == "None":
-                err_msg = "Unknown CATIA error (possibly invalid sketch profile or geometry)"
-            raise RuntimeError(
-                f"AddNewPad failed: {err_msg}\n"
-                "Ensure:\n"
-                "  1. The sketch is closed (use catia_close_sketch)\n"
-                "  2. The sketch contains valid closed geometry (a complete profile)\n"
-                "  3. The sketch is in PartBody, not a Geometrical Set"
-            )
+            raise RuntimeError(format_catia_error("AddNewPad", e))
 
         if symmetric:
             pad.IsSymmetric = True
@@ -558,12 +558,16 @@ class PartDesignTools:
         body = self.conn.get_active_part_body()
         sf = part.ShapeFactory
 
-        sketch = self._get_last_sketch(args.get("sketch_name"), part)
-        depth = args["depth"]
+        sketch_name = validate_sketch_name(args.get("sketch_name"))
+        sketch = self._get_last_sketch(sketch_name, part)
+        depth = validate_positive_float(args["depth"], "depth")
 
         part.InWorkObject = body
 
-        pocket = sf.AddNewPocket(sketch, depth)
+        try:
+            pocket = sf.AddNewPocket(sketch, depth)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewPocket", e))
 
         if args.get("direction") == "reverse":
             pocket.DirectionOrientation = 1
@@ -578,12 +582,16 @@ class PartDesignTools:
         body = self.conn.get_active_part_body()
         sf = part.ShapeFactory
 
-        sketch = self._get_last_sketch(args.get("sketch_name"), part)
-        angle = args.get("angle", 360)
+        sketch_name = validate_sketch_name(args.get("sketch_name"))
+        sketch = self._get_last_sketch(sketch_name, part)
+        angle = validate_positive_float(args.get("angle", 360), "angle")
 
         part.InWorkObject = body
 
-        shaft = sf.AddNewShaft(sketch)
+        try:
+            shaft = sf.AddNewShaft(sketch)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewShaft", e))
         shaft.FirstAngle = angle
 
         part.UpdateObject(shaft)
@@ -596,12 +604,16 @@ class PartDesignTools:
         body = self.conn.get_active_part_body()
         sf = part.ShapeFactory
 
-        sketch = self._get_last_sketch(args.get("sketch_name"), part)
-        angle = args.get("angle", 360)
+        sketch_name = validate_sketch_name(args.get("sketch_name"))
+        sketch = self._get_last_sketch(sketch_name, part)
+        angle = validate_positive_float(args.get("angle", 360), "angle")
 
         part.InWorkObject = body
 
-        groove = sf.AddNewGroove(sketch)
+        try:
+            groove = sf.AddNewGroove(sketch)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewGroove", e))
         groove.FirstAngle = angle
 
         part.UpdateObject(groove)
@@ -613,13 +625,16 @@ class PartDesignTools:
         part = self.conn.get_active_part()
         sf = part.ShapeFactory
 
-        radius = args["radius"]
+        radius = validate_positive_float(args["radius"], "radius")
 
-        fillet = sf.AddNewSolidEdgeFilletWithConstantRadius(
-            self._get_last_shape(),
-            1,       # catTangencyFilletEdgePropagation
-            radius,
-        )
+        try:
+            fillet = sf.AddNewSolidEdgeFilletWithConstantRadius(
+                self._get_last_shape(),
+                1,       # catTangencyFilletEdgePropagation
+                radius,
+            )
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewSolidEdgeFilletWithConstantRadius", e))
 
         part.UpdateObject(fillet)
         self.conn.refresh_display()
@@ -630,16 +645,19 @@ class PartDesignTools:
         part = self.conn.get_active_part()
         sf = part.ShapeFactory
 
-        length = args["length"]
-        angle = args.get("angle", 45)
+        length = validate_positive_float(args["length"], "length")
+        angle = validate_positive_float(args.get("angle", 45), "angle")
 
-        chamfer = sf.AddNewChamfer(
-            self._get_last_shape(),
-            1,       # catTangencyChamferPropagation
-            0,       # catLengthAngleChamfer mode
-            length,
-            angle,
-        )
+        try:
+            chamfer = sf.AddNewChamfer(
+                self._get_last_shape(),
+                1,       # catTangencyChamferPropagation
+                0,       # catLengthAngleChamfer mode
+                length,
+                angle,
+            )
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewChamfer", e))
 
         part.UpdateObject(chamfer)
         self.conn.refresh_display()
@@ -651,13 +669,17 @@ class PartDesignTools:
         body = self.conn.get_active_part_body()
         sf = part.ShapeFactory
 
-        sketch = self._get_last_sketch(args.get("sketch_name"), part)
-        diameter = args["diameter"]
-        depth = args["depth"]
+        sketch_name = validate_sketch_name(args.get("sketch_name"))
+        sketch = self._get_last_sketch(sketch_name, part)
+        diameter = validate_positive_float(args["diameter"], "diameter")
+        depth = validate_positive_float(args["depth"], "depth")
 
         part.InWorkObject = body
 
-        hole = sf.AddNewHoleFromSketch(sketch, depth)
+        try:
+            hole = sf.AddNewHoleFromSketch(sketch, depth)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
         hole.Diameter = diameter
         hole.BottomType = 0
 
@@ -674,18 +696,21 @@ class PartDesignTools:
         sf = part.ShapeFactory
 
         feature = self._get_last_shape(args.get("feature_name"))
-        d1_count = args["dir1_count"]
-        d1_spacing = args["dir1_spacing"]
-        d2_count = args.get("dir2_count", 1)
-        d2_spacing = args.get("dir2_spacing", 0)
+        d1_count = validate_positive_int(args["dir1_count"], "dir1_count")
+        d1_spacing = validate_positive_float(args["dir1_spacing"], "dir1_spacing")
+        d2_count = validate_positive_int(args.get("dir2_count", 1), "dir2_count")
+        d2_spacing = validate_non_negative_float(args.get("dir2_spacing", 0), "dir2_spacing")
 
-        pattern = sf.AddNewRectPattern(
-            feature,
-            d1_count, d2_count,
-            d1_spacing, d2_spacing,
-            1, 1,  # direction specification
-            True,   # keep specification
-        )
+        try:
+            pattern = sf.AddNewRectPattern(
+                feature,
+                d1_count, d2_count,
+                d1_spacing, d2_spacing,
+                1, 1,  # direction specification
+                True,   # keep specification
+            )
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewRectPattern", e))
 
         part.UpdateObject(pattern)
         self.conn.refresh_display()
@@ -700,18 +725,23 @@ class PartDesignTools:
         sf = part.ShapeFactory
 
         feature = self._get_last_shape(args.get("feature_name"))
-        count = args["count"]
-        angular_spacing = args.get("angular_spacing", 360.0 / count)
-
-        pattern = sf.AddNewCircPattern(
-            feature,
-            count,
-            1,              # rows
-            angular_spacing,
-            0,              # row spacing
-            1, 1,           # direction specification
-            True,           # keep specification
+        count = validate_positive_int(args["count"], "count")
+        angular_spacing = validate_positive_float(
+            args.get("angular_spacing", 360.0 / count), "angular_spacing"
         )
+
+        try:
+            pattern = sf.AddNewCircPattern(
+                feature,
+                count,
+                1,              # rows
+                angular_spacing,
+                0,              # row spacing
+                1, 1,           # direction specification
+                True,           # keep specification
+            )
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewCircPattern", e))
 
         part.UpdateObject(pattern)
         self.conn.refresh_display()
@@ -725,16 +755,16 @@ class PartDesignTools:
         part = self.conn.get_active_part()
         sf = part.ShapeFactory
 
-        plane_key = args["plane"].lower()
+        plane_key = validate_plane(args["plane"])
         planes = self.conn.get_origin_elements()
-        if plane_key not in planes:
-            raise ValueError(f"Unknown plane '{plane_key}'. Use 'xy', 'yz', or 'zx'.")
-
         mirror_plane = planes[plane_key]
         ref = part.CreateReferenceFromObject(mirror_plane)
 
         feature = self._get_last_shape(args.get("feature_name"))
-        mirror = sf.AddNewMirror(ref)
+        try:
+            mirror = sf.AddNewMirror(ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewMirror", e))
 
         part.UpdateObject(mirror)
         self.conn.refresh_display()
@@ -745,9 +775,12 @@ class PartDesignTools:
         part = self.conn.get_active_part()
         sf = part.ShapeFactory
 
-        thickness = args["thickness"]
+        thickness = validate_positive_float(args["thickness"], "thickness")
 
-        shell = sf.AddNewShell(None, thickness, thickness)
+        try:
+            shell = sf.AddNewShell(None, thickness, thickness)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewShell", e))
 
         faces_to_remove = args.get("faces_to_remove", [])
         if faces_to_remove:
@@ -773,28 +806,29 @@ class PartDesignTools:
         part = self.conn.get_active_part()
         sf = part.ShapeFactory
 
-        angle = args["angle"]
+        angle = validate_non_negative_float(args["angle"], "angle")
 
-        plane_key = args.get("pulling_direction", "xy").lower()
+        plane_key = validate_plane(args.get("pulling_direction", "xy"))
         planes = self.conn.get_origin_elements()
         neutral = planes.get(plane_key)
-        if not neutral:
-            raise ValueError(f"Unknown pulling direction plane: {plane_key}")
 
         last_shape = self._get_last_shape()
         face_ref = part.CreateReferenceFromObject(last_shape)
         neutral_ref = part.CreateReferenceFromObject(neutral)
 
-        draft = sf.AddNewDraft(
-            face_ref,           # i_face_to_draft
-            neutral_ref,        # i_neutral
-            0,                 # i_neutral_mode: catDraftNeutralNoPropag = 0
-            None,              # i_parting: no parting plane
-            0.0, 0.0, -1.0,   # i_dir_x/y/z: default pull direction (-Z)
-            0,                 # i_mode: catDraftModeAutomatic = 0
-            angle,             # i_angle
-            0,                 # i_multiselection_mode: catDraftMultiSelectionModeNone = 0
-        )
+        try:
+            draft = sf.AddNewDraft(
+                face_ref,           # i_face_to_draft
+                neutral_ref,        # i_neutral
+                0,                 # i_neutral_mode: catDraftNeutralNoPropag = 0
+                None,              # i_parting: no parting plane
+                0.0, 0.0, -1.0,   # i_dir_x/y/z: default pull direction (-Z)
+                0,                 # i_mode: catDraftModeAutomatic = 0
+                angle,             # i_angle
+                0,                 # i_multiselection_mode: catDraftMultiSelectionModeNone = 0
+            )
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewDraft", e))
 
         part.UpdateObject(draft)
         self.conn.refresh_display()
@@ -805,9 +839,12 @@ class PartDesignTools:
         part = self.conn.get_active_part()
         sf = part.ShapeFactory
 
-        offset = args["offset"]
+        offset = validate_non_negative_float(args["offset"], "offset")
         shape_ref = part.CreateReferenceFromObject(self._get_last_shape())
-        thickness_feat = sf.AddNewThickness(shape_ref, offset)
+        try:
+            thickness_feat = sf.AddNewThickness(shape_ref, offset)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewThickness", e))
 
         part.UpdateObject(thickness_feat)
         self.conn.refresh_display()
