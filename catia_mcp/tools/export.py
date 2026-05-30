@@ -149,6 +149,7 @@ class ExportTools:
         doc = self.conn.active_document
 
         file_path = validate_file_path(file_path, "file_path")
+        file_path = self.conn.normalize_path(file_path)
 
         # Determine format from extension if not specified
         if fmt is None:
@@ -189,6 +190,7 @@ class ExportTools:
         self.conn.ensure_connected()
 
         file_path = validate_file_path(file_path, "file_path")
+        file_path = self.conn.normalize_path(file_path)
         validate_positive_int(width, "width")
         validate_positive_int(height, "height")
 

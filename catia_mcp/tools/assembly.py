@@ -219,6 +219,7 @@ class AssemblyTools:
     def _add_component(self, file_path: str) -> str:
         product = self.conn.get_active_product()
         file_path = validate_file_path(file_path, "file_path")
+        file_path = self.conn.normalize_path(file_path)
         products = product.Products
         try:
             component = products.AddComponentsFromFiles(

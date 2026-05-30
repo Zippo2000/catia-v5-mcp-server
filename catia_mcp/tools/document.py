@@ -46,6 +46,17 @@ class DocumentTools:
                 },
             },
             {
+                "name": "catia_close",
+                "description": (
+                    "Gracefully close CATIA V5 entirely. Closes all open documents and quits the application. "
+                    "Use this for a clean shutdown after finishing work. Does NOT save unsaved changes."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                },
+            },
+            {
                 "name": "catia_new_part",
                 "description": (
                     "Create a new empty Part document in CATIA V5. "
@@ -145,6 +156,8 @@ class DocumentTools:
                 return self.conn.connect()
             case "catia_disconnect":
                 return self.conn.disconnect()
+            case "catia_close":
+                return self.conn.close()
             case "catia_new_part":
                 return self._new_part(arguments.get("name"))
             case "catia_new_product":
@@ -188,6 +201,7 @@ class DocumentTools:
     def _open_document(self, file_path: str) -> str:
         self.conn.ensure_connected()
         file_path = validate_file_path(file_path, "file_path")
+        file_path = self.conn.normalize_path(file_path)
         docs = self.conn.documents
         try:
             doc = docs.Open(file_path)
@@ -199,6 +213,7 @@ class DocumentTools:
         doc = self.conn.active_document
         if file_path:
             file_path = validate_file_path(file_path, "file_path")
+            file_path = self.conn.normalize_path(file_path)
             try:
                 doc.SaveAs(file_path)
             except Exception as e:

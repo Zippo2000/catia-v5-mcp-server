@@ -21,6 +21,21 @@ except ImportError:
     HAS_COM = False
 
 
+def _normalize_path(path: str) -> str:
+    """Normalize file paths for Windows CATIA.
+
+    Converts forward slashes to backslashes and ensures the path
+    is suitable for CATIA's COM API.
+    """
+    if not isinstance(path, str):
+        return path
+    # Normalize slashes to Windows format
+    normalized = path.replace("/", "\\")
+    # Remove trailing slashes
+    normalized = normalized.rstrip("\\")
+    return normalized
+
+
 class CATIAConnection:
     """Manages connection to CATIA V5 via COM Automation."""
 
@@ -30,6 +45,8 @@ class CATIAConnection:
     def __init__(self) -> None:
         self.app: Any | None = None
         self._initialized_com = False
+        self._launched_instance = False  # Track if we launched CATIA ourselves
+        self._locked = False             # Prevent double-connect race
 
     @property
     def is_connected(self) -> bool:
@@ -59,34 +76,43 @@ class CATIAConnection:
             version = self._get_version()
             return f"Already connected to CATIA V5 ({version})"
 
-        # Initialize COM for this thread
-        if not self._initialized_com:
-            pythoncom.CoInitialize()
-            self._initialized_com = True
+        if self._locked:
+            raise RuntimeError("Connection attempt already in progress. Please wait.")
 
-        # Phase 1: Try to attach to a running CATIA instance
+        self._locked = True
+        self._launched_instance = False
         try:
-            raw_app = win32com.client.GetActiveObject(self.CATIA_PROGID)
-            self.app = win32com.client.gencache.EnsureDispatch(raw_app)
-            version = self._get_version()
-            logger.info("Connected to running CATIA V5 instance (%s)", version)
-            return f"Connected to running CATIA V5 instance ({version})"
-        except Exception:
-            logger.info("No running CATIA instance found, launching new one...")
+            # Initialize COM for this thread
+            if not self._initialized_com:
+                pythoncom.CoInitialize()
+                self._initialized_com = True
 
-        # Phase 2: Launch a new CATIA instance
-        try:
-            self.app = win32com.client.gencache.EnsureDispatch(self.CATIA_PROGID)
-            self.app.Visible = True
-            version = self._get_version()
-            logger.info("Launched new CATIA V5 instance (%s)", version)
-            return f"Launched new CATIA V5 instance ({version})"
-        except Exception as e:
-            self.app = None
-            raise RuntimeError(
-                f"Failed to connect to CATIA V5: {e}\n"
-                "Make sure CATIA V5 is installed and licensed on this machine."
-            ) from e
+            # Phase 1: Try to attach to a running CATIA instance
+            try:
+                raw_app = win32com.client.GetActiveObject(self.CATIA_PROGID)
+                self.app = win32com.client.gencache.EnsureDispatch(raw_app)
+                version = self._get_version()
+                logger.info("Connected to running CATIA V5 instance (%s)", version)
+                return f"Connected to running CATIA V5 instance ({version})"
+            except Exception:
+                logger.info("No running CATIA instance found, launching new one...")
+
+            # Phase 2: Launch a new CATIA instance
+            try:
+                self.app = win32com.client.gencache.EnsureDispatch(self.CATIA_PROGID)
+                self.app.Visible = True
+                self._launched_instance = True
+                version = self._get_version()
+                logger.info("Launched new CATIA V5 instance (%s)", version)
+                return f"Launched new CATIA V5 instance ({version})"
+            except Exception as e:
+                self.app = None
+                raise RuntimeError(
+                    f"Failed to connect to CATIA V5: {e}\n"
+                    "Make sure CATIA V5 is installed and licensed on this machine."
+                ) from e
+        finally:
+            self._locked = False
 
     def reconnect(self) -> str:
         """Try to reconnect to a running CATIA instance after a crash.
@@ -131,8 +157,17 @@ class CATIAConnection:
             ) from e
 
     def disconnect(self) -> str:
-        """Disconnect from CATIA V5 (does not close CATIA)."""
+        """Disconnect from CATIA V5 (does not close CATIA).
+
+        Releases COM references and uninitializes COM for this thread.
+        """
+        was_connected = self.is_connected
         if self.app is not None:
+            try:
+                # Release COM reference explicitly
+                del self.app
+            except Exception:
+                pass
             self.app = None
         if self._initialized_com:
             try:
@@ -140,7 +175,37 @@ class CATIAConnection:
             except Exception:
                 pass
             self._initialized_com = False
+        self._launched_instance = False
+        self._locked = False
         return "Disconnected from CATIA V5"
+
+    def close(self) -> str:
+        """Gracefully close CATIA V5 entirely.
+
+        Saves all open documents, then quits the CATIA application.
+        Use this for a clean shutdown after finishing work.
+        """
+        if not self.is_connected:
+            return "Not connected to CATIA V5"
+
+        try:
+            # Close all open documents without saving (user should save explicitly)
+            docs = self.app.Documents
+            while docs.Count > 0:
+                try:
+                    docs.Item(1).Close()
+                except Exception:
+                    break
+
+            # Quit CATIA
+            self.app.Quit()
+            logger.info("CATIA V5 has been closed")
+        except Exception as e:
+            logger.warning("Error closing CATIA: %s", e)
+        finally:
+            self.disconnect()
+
+        return "CATIA V5 has been closed"
 
     def ensure_connected(self) -> None:
         """Ensure we have an active CATIA connection, reconnecting if needed."""
@@ -250,3 +315,10 @@ class CATIAConnection:
             "yz": origin.PlaneYZ,
             "zx": origin.PlaneZX,
         }
+
+    def normalize_path(self, path: str) -> str:
+        """Normalize a file path for CATIA COM API (Windows).
+
+        Converts forward slashes to backslashes, which CATIA expects.
+        """
+        return _normalize_path(path)

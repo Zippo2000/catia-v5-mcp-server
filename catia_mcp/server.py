@@ -116,8 +116,8 @@ class CATIAMCPServer:
                 # Serialize COM calls with an asyncio lock
                 # CATIA COM is single-threaded, so we must serialize access
                 async with self._com_lock:
-                    # Auto-connect for non-connect tools
-                    if name not in ("catia_connect", "catia_disconnect"):
+                    # Auto-connect for non-connect/close tools
+                    if name not in ("catia_connect", "catia_disconnect", "catia_close"):
                         if not self.connection.is_connected:
                             connect_msg = self.connection.connect()
                             logger.info("Auto-connected: %s", connect_msg)
@@ -167,12 +167,16 @@ class CATIAMCPServer:
         """Graceful shutdown handler."""
         logger.info("Shutting down CATIA V5 MCP Server...")
         try:
+            # Use disconnect (not close) on shutdown - user decides when to close CATIA
             self.connection.disconnect()
         except Exception:
             pass
         logger.info("Server shutdown complete")
         # Exit cleanly
-        asyncio.get_running_loop().stop()
+        try:
+            asyncio.get_running_loop().stop()
+        except Exception:
+            pass
 
 
 def main() -> None:
