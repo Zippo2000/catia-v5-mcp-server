@@ -282,12 +282,6 @@ class CATIAConnection:
     def get_active_part(self) -> Any:
         """Get the Part object from the active PartDocument."""
         doc = self.active_document
-        # Use dynamic.Dispatch to avoid gencache proxy missing .Part attribute
-        try:
-            import win32com.client.dynamic
-            doc = win32com.client.dynamic.Dispatch(doc)
-        except Exception:
-            pass
         try:
             return doc.Part
         except Exception:
@@ -299,12 +293,6 @@ class CATIAConnection:
     def get_active_product(self) -> Any:
         """Get the Product object from the active ProductDocument."""
         doc = self.active_document
-        # Use dynamic.Dispatch to avoid gencache proxy missing .Product attribute
-        try:
-            import win32com.client.dynamic
-            doc = win32com.client.dynamic.Dispatch(doc)
-        except Exception:
-            pass
         try:
             return doc.Product
         except Exception:
