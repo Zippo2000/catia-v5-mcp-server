@@ -16,7 +16,10 @@ keywords = ["catia", "catia-v5", "mcp", "claude", "dassault-systemes", "cao", "c
 
 dependencies = [
     "mcp>=1.0.0",
-    "pywin32>=306",
+    "pywin32>=306; sys_platform == 'win32'",
+    "starlette>=0.40.0",
+    "sse-starlette>=3.0.0",
+    "uvicorn>=0.30.0",
 ]
 
 [project.optional-dependencies]

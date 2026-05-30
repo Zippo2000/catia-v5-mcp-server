@@ -1,17 +1,21 @@
 """CATIA V5 MCP Server.
 
 Main entry point. Exposes all CATIA V5 automation tools via the
-Model Context Protocol (MCP) for use with Claude Desktop or Claude Code.
+Model Context Protocol (MCP) for use with Claude Desktop, Claude Code,
+vLLM.rs, LM Studio, and any other MCP-compatible client.
 
 Usage:
-    python -m catia_mcp.server
+    python -m catia_mcp.server         # stdio (Claude Desktop/Code)
+    python -m catia_mcp.server --sse   # SSE over HTTP (vLLM, LM Studio, etc.)
     # or
     catia-mcp  (if installed via pip)
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
+import inspect
 import logging
 import signal
 import sys
@@ -32,7 +36,6 @@ from catia_mcp.tools.sketcher import SketcherTools
 # ── Logging ──
 import os
 import tempfile
-import atexit
 
 _log_dir = os.path.join(tempfile.gettempdir(), "catia-mcp")
 os.makedirs(_log_dir, exist_ok=True)
@@ -47,9 +50,47 @@ logging.basicConfig(
 )
 logger = logging.getLogger("catia_mcp")
 
+# ── CLI Arguments ──
+DEFAULT_SSE_HOST = "0.0.0.0"
+DEFAULT_SSE_PORT = 8765
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse CLI arguments for transport mode selection."""
+    parser = argparse.ArgumentParser(
+        description="CATIA V5 MCP Server",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    transport = parser.add_mutually_exclusive_group()
+    transport.add_argument(
+        "--stdio",
+        action="store_true",
+        default=False,
+        help="Run as stdio MCP server (default, for Claude Desktop/Code)",
+    )
+    transport.add_argument(
+        "--sse",
+        action="store_true",
+        default=False,
+        help="Run as SSE MCP server over HTTP (for vLLM, LM Studio, etc.)",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default=DEFAULT_SSE_HOST,
+        help=f"SSE bind host (default: {DEFAULT_SSE_HOST})",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=DEFAULT_SSE_PORT,
+        help=f"SSE bind port (default: {DEFAULT_SSE_PORT})",
+    )
+    return parser.parse_args(argv)
+
 
 class CATIAMCPServer:
-    """MCP Server that bridges Claude to CATIA V5 via COM Automation."""
+    """MCP Server that bridges Claude (or any MCP client) to CATIA V5 via COM Automation."""
 
     def __init__(self) -> None:
         self.server = Server("catia-v5-mcp")
@@ -136,16 +177,14 @@ class CATIAMCPServer:
                 logger.error(error_msg, exc_info=True)
                 return [TextContent(type="text", text=error_msg)]
 
-    async def run(self) -> None:
-        """Run the MCP server over stdio."""
-        import inspect
-        # Log which version of part_design is loaded
+    async def run_stdio(self) -> None:
+        """Run the MCP server over stdio (Claude Desktop / Claude Code)."""
         pd_source = inspect.getsourcefile(PartDesignTools)
         pad_source = inspect.getsource(PartDesignTools._pad)
         has_inworkobject = "InWorkObject" in pad_source
 
         logger.info("=" * 60)
-        logger.info("Starting CATIA V5 MCP Server...")
+        logger.info("Starting CATIA V5 MCP Server (stdio)...")
         logger.info("PartDesignTools source: %s", pd_source)
         logger.info("_pad has InWorkObject: %s", has_inworkobject)
         logger.info("Registered %d tools across %d modules",
@@ -167,8 +206,93 @@ class CATIAMCPServer:
                 self.server.create_initialization_options(),
             )
 
+    async def run_sse(self, host: str = DEFAULT_SSE_HOST, port: int = DEFAULT_SSE_PORT) -> None:
+        """Run the MCP server over HTTP SSE (Server-Sent Events).
+
+        Creates two ASGI endpoints:
+            GET  /sse         → SSE stream (server → client)
+            POST /messages/   → Client messages (client → server)
+
+        Compatible with vLLM.rs, LM Studio, Open WebUI, Cursor, and any
+        MCP client that supports the SSE transport.
+        """
+        import uvicorn
+        from sse_starlette import EventSourceResponse  # noqa: F401
+        from starlette.applications import Starlette
+        from starlette.responses import Response
+        from starlette.routing import Mount, Route
+
+        from mcp.server.sse import SseServerTransport
+
+        pd_source = inspect.getsourcefile(PartDesignTools)
+        pad_source = inspect.getsource(PartDesignTools._pad)
+        has_inworkobject = "InWorkObject" in pad_source
+
+        logger.info("=" * 60)
+        logger.info("Starting CATIA V5 MCP Server (SSE)...")
+        logger.info("Transport: SSE over HTTP")
+        logger.info("Host: %s, Port: %d", host, port)
+        logger.info("SSE endpoint:  http://%s:%d/sse", host, port)
+        logger.info("Message endpoint: http://%s:%d/messages/", host, port)
+        logger.info("PartDesignTools source: %s", pd_source)
+        logger.info("_pad has InWorkObject: %s", has_inworkobject)
+        logger.info("Registered %d tools across %d modules",
+                     len(self._tool_router), len(self._tool_modules))
+        logger.info("=" * 60)
+
+        # Create SSE transport — handles the ASGI protocol
+        sse = SseServerTransport("/messages/")
+
+        # SSE connection handler: each GET /sse opens a new MCP session
+        async def handle_sse(request):
+            async with sse.connect_sse(
+                request.scope, request.receive, request._send
+            ) as (read_stream, write_stream):
+                await self.server.run(
+                    read_stream,
+                    write_stream,
+                    self.server.create_initialization_options(),
+                )
+            # Return empty response to avoid NoneType error on disconnect
+            return Response()
+
+        # Build Starlette app with two routes
+        app = Starlette(
+            routes=[
+                Route("/sse", endpoint=handle_sse, methods=["GET"]),
+                Mount("/messages/", app=sse.handle_post_message),
+            ],
+        )
+
+        # uvicorn handles signals (SIGINT/SIGTERM) and graceful shutdown
+        config = uvicorn.Config(app, host=host, port=port, log_level="info")
+        srv = uvicorn.Server(config)
+
+        try:
+            await srv.serve()
+        finally:
+            # Clean up CATIA connection on server exit
+            try:
+                self.connection.disconnect()
+            except Exception:
+                pass
+            logger.info("SSE server shutdown complete")
+
+    async def run(self, transport: str = "stdio", host: str = DEFAULT_SSE_HOST, port: int = DEFAULT_SSE_PORT) -> None:
+        """Run the MCP server with the specified transport.
+
+        Args:
+            transport: "stdio" or "sse"
+            host: SSE bind host (ignored for stdio)
+            port: SSE bind port (ignored for stdio)
+        """
+        if transport == "sse":
+            await self.run_sse(host, port)
+        else:
+            await self.run_stdio()
+
     def _shutdown(self) -> None:
-        """Graceful shutdown handler."""
+        """Graceful shutdown handler (used by stdio mode)."""
         logger.info("Shutting down CATIA V5 MCP Server...")
         try:
             # Use disconnect (not close) on shutdown - user decides when to close CATIA
@@ -185,8 +309,13 @@ class CATIAMCPServer:
 
 def main() -> None:
     """Entry point for the CATIA V5 MCP Server."""
+    args = parse_args()
     server = CATIAMCPServer()
-    asyncio.run(server.run())
+
+    if args.sse:
+        asyncio.run(server.run(transport="sse", host=args.host, port=args.port))
+    else:
+        asyncio.run(server.run(transport="stdio"))
 
 
 if __name__ == "__main__":
