@@ -280,22 +280,19 @@ class CATIAConnection:
     # ── Document type detection ──
 
     def get_active_part(self) -> Any:
-        """Get the Part object from the active PartDocument."""
+        """Get the Part object from the active PartDocument.
+
+        IMPORTANT: Returns dynamic.Dispatch(doc).Part to ensure .Part is accessible
+        even when the gencache proxy for Document doesn't expose it.
+        The returned Part is late-bound, so callers needing .HybridBodies iteration
+        should use gsd._find_shape() which handles both proxy types.
+        """
         doc = self.active_document
+        import win32com.client.dynamic
+        # Always use dynamic.Dispatch for .Part/.Product access —
+        # gencache Document proxy doesn't expose these properties
         try:
-            return doc.Part
-        except AttributeError:
-            # gencache proxy doesn't expose .Part — try late binding
-            try:
-                import win32com.client.dynamic
-                doc = win32com.client.dynamic.Dispatch(doc)
-                return doc.Part
-            except Exception:
-                pass
-            raise RuntimeError(
-                "Active document is not a Part document. "
-                "Open or create a Part document first."
-            )
+            return win32com.client.dynamic.Dispatch(doc).Part
         except Exception:
             raise RuntimeError(
                 "Active document is not a Part document. "
@@ -303,22 +300,14 @@ class CATIAConnection:
             )
 
     def get_active_product(self) -> Any:
-        """Get the Product object from the active ProductDocument."""
+        """Get the Product object from the active ProductDocument.
+
+        IMPORTANT: Returns dynamic.Dispatch(doc).Product for consistent late binding.
+        """
         doc = self.active_document
+        import win32com.client.dynamic
         try:
-            return doc.Product
-        except AttributeError:
-            # gencache proxy doesn't expose .Product — try late binding
-            try:
-                import win32com.client.dynamic
-                doc = win32com.client.dynamic.Dispatch(doc)
-                return doc.Product
-            except Exception:
-                pass
-            raise RuntimeError(
-                "Active document is not a Product document. "
-                "Open or create an Assembly (Product) document first."
-            )
+            return win32com.client.dynamic.Dispatch(doc).Product
         except Exception:
             raise RuntimeError(
                 "Active document is not a Product document. "

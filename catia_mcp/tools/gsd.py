@@ -775,22 +775,31 @@ class GSDTools:
     def _find_shape(self, part: Any, name: str) -> Any | None:
         """Search all HybridBodies for a HybridShape by name.
 
-        NOTE: Uses part.HybridBodies directly (gencache proxy).
-        In tests with dynamic.Dispatch mocks, this still works because
-        the mock's __iter__ is configured. On Windows with real COM,
-        gencache proxies expose HybridBodies as iterable.
+        IMPORTANT: If part is a dynamic.Dispatch wrapper (no iterable HybridBodies),
+        re-wrap via gencache.EnsureDispatch to get iterable access.
         """
+        import win32com.client
+
+        # If part is a dynamic.Dispatch, we need gencache for HybridBodies iteration
+        iter_part = part
         try:
-            for hb in part.HybridBodies:
-                try:
-                    for i in range(1, hb.HybridShapes.Count + 1):
-                        obj = hb.HybridShapes.Item(i)
-                        if obj.Name == name:
-                            return obj
-                except Exception:
-                    continue
+            # Test: can we iterate HybridBodies?
+            list(part.HybridBodies)
         except Exception:
-            pass
+            # dynamic.Dispatch wrapper — get gencache proxy for iteration
+            try:
+                iter_part = win32com.client.gencache.EnsureDispatch(part)
+            except Exception:
+                return None
+
+        for hb in iter_part.HybridBodies:
+            try:
+                for i in range(1, hb.HybridShapes.Count + 1):
+                    obj = hb.HybridShapes.Item(i)
+                    if obj.Name == name:
+                        return obj
+            except Exception:
+                continue
         return None
 
     def _ref(self, part: Any, name: str) -> Any:

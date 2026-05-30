@@ -178,12 +178,11 @@ class DocumentTools:
     def _new_part(self, name: str | None = None) -> str:
         self.conn.ensure_connected()
         docs = self.conn.documents
-        # docs.Add() creates the document and sets it as ActiveDocument.
-        # Always re-fetch via ActiveDocument to get the correct gencache proxy
-        # that connection.get_active_part() will also use later.
-        # pycatia pattern: https://github.com/DamianStasik/pycatia
-        docs.Add("Part")
-        doc = self.conn.app.ActiveDocument
+        import win32com.client
+        # docs.Add() returns a raw COM object that gencache can't proxy properly
+        # for .Part. Use dynamic.Dispatch to get a late-bound Document that exposes .Part.
+        raw_doc = docs.Add("Part")
+        doc = win32com.client.dynamic.Dispatch(raw_doc)
         if name:
             try:
                 doc.Part.Name = name
@@ -196,9 +195,9 @@ class DocumentTools:
     def _new_product(self, name: str | None = None) -> str:
         self.conn.ensure_connected()
         docs = self.conn.documents
-        # Same pattern as _new_part: re-fetch via ActiveDocument
-        docs.Add("Product")
-        doc = self.conn.app.ActiveDocument
+        import win32com.client
+        raw_doc = docs.Add("Product")
+        doc = win32com.client.dynamic.Dispatch(raw_doc)
         if name:
             try:
                 doc.Product.Name = name
@@ -213,10 +212,10 @@ class DocumentTools:
         file_path = validate_file_path(file_path, "file_path")
         file_path = self.conn.normalize_path(file_path)
         docs = self.conn.documents
+        import win32com.client
         try:
-            docs.Open(file_path)
-            # Re-fetch via ActiveDocument to get consistent gencache proxy
-            doc = self.conn.app.ActiveDocument
+            raw_doc = docs.Open(file_path)
+            doc = win32com.client.dynamic.Dispatch(raw_doc)
         except Exception as e:
             raise RuntimeError(format_catia_error("OpenDocument", e))
         return f"Opened document: '{doc.Name}' from {file_path}"
