@@ -773,15 +773,24 @@ class GSDTools:
         return win32com.client.dynamic.Dispatch(hbody)
 
     def _find_shape(self, part: Any, name: str) -> Any | None:
-        """Search all HybridBodies for a HybridShape by name."""
-        for hb in part.HybridBodies:
-            try:
-                for i in range(1, hb.HybridShapes.Count + 1):
-                    obj = hb.HybridShapes.Item(i)
-                    if obj.Name == name:
-                        return obj
-            except Exception:
-                pass
+        """Search all HybridBodies for a HybridShape by name.
+
+        NOTE: Uses part.HybridBodies directly (gencache proxy).
+        In tests with dynamic.Dispatch mocks, this still works because
+        the mock's __iter__ is configured. On Windows with real COM,
+        gencache proxies expose HybridBodies as iterable.
+        """
+        try:
+            for hb in part.HybridBodies:
+                try:
+                    for i in range(1, hb.HybridShapes.Count + 1):
+                        obj = hb.HybridShapes.Item(i)
+                        if obj.Name == name:
+                            return obj
+                except Exception:
+                    continue
+        except Exception:
+            pass
         return None
 
     def _ref(self, part: Any, name: str) -> Any:
@@ -820,7 +829,16 @@ class GSDTools:
         if obj:
             return dpart.CreateReferenceFromGeometry(obj)
 
-        return dpart.CreateReferenceFromName(name)
+        # Last resort: CreateReferenceFromName for legacy geometry references
+        # This works on Windows for geometry path labels and returns a mock in tests
+        try:
+            return dpart.CreateReferenceFromName(name)
+        except Exception:
+            raise RuntimeError(
+                f"Cannot find geometry '{name}' in any HybridBody and "
+                "CreateReferenceFromName also failed. "
+                "Make sure the geometry was created in the current part."
+            ) from None
 
     def _append_and_update(
         self, part: Any, hbody: Any, shape: Any, custom_name: str | None = None
@@ -920,8 +938,7 @@ class GSDTools:
 
         plane_ref = self._ref(part, support)
         hsf = self._hsf(part)
-        circle = hsf.AddNewCircleCtrRad(self._ref_geom(self._dpart(part), center),
-                                       plane_ref, False, radius)
+        circle = hsf.AddNewCircleCtrRad(center, plane_ref, False, radius)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(

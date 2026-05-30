@@ -24,11 +24,22 @@ def conn_mock():
     hsf = MagicMock()
     part_mock.HybridShapeFactory = hsf
 
-    # HybridBodies — mock as a callable collection with .Add()
+    # HybridBodies with mock shapes that _find_shape() can locate
+    # _find_shape iterates: part.HybridBodies -> hbody.HybridShapes.Item(i) -> obj.Name
+    point_mock = MagicMock()
+    point_mock.Name = "Point.1"
+    line_mock = MagicMock()
+    line_mock.Name = "Line.1"
+    circle_mock = MagicMock()
+    circle_mock.Name = "Circle.1"
+
+    shapes_mock = MagicMock()
+    shapes_mock.Count = 3
+    shapes_mock.Item.side_effect = lambda i: [point_mock, line_mock, circle_mock][i - 1]
+
     hbody = MagicMock()
     hbody.Name = "Geometrical Set.1"
-    hbody.HybridShapes = MagicMock()
-    hbody.HybridShapes.Count = 0
+    hbody.HybridShapes = shapes_mock
     hbodies = MagicMock()
     hbodies.__iter__ = MagicMock(return_value=iter([hbody]))
     hbodies.__len__ = MagicMock(return_value=1)
@@ -36,12 +47,19 @@ def conn_mock():
     hbodies.Item.return_value = hbody
     part_mock.HybridBodies = hbodies
 
-    # Origin elements
-    mock.get_origin_elements.return_value = {
-        "xy": MagicMock(),
-        "yz": MagicMock(),
-        "zx": MagicMock(),
-    }
+    # Origin elements — must be on part_mock for _ref() to find them
+    oe = MagicMock()
+    oe.PlaneXY = MagicMock()
+    oe.PlaneYZ = MagicMock()
+    oe.PlaneZX = MagicMock()
+    oe.XAxis = MagicMock()
+    oe.YAxis = MagicMock()
+    oe.ZAxis = MagicMock()
+    part_mock.OriginElements = oe
+
+    # Make CreateReferenceFromObject/Geometry return a mock Reference
+    part_mock.CreateReferenceFromObject = MagicMock(return_value=MagicMock())
+    part_mock.CreateReferenceFromGeometry = MagicMock(return_value=MagicMock())
 
     return mock
 
