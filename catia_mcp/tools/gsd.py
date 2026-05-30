@@ -777,18 +777,21 @@ class GSDTools:
         """Create a Reference from a geometry name or standard element."""
         import win32com.client
 
-        # Standard planes and axes — use direct COM properties, not CreateReferenceFromName
-        # (which requires the exact naming from the type library and may fail on some CATIA versions)
-        plane_map = {"xy": "PlaneXY", "yz": "PlaneYZ", "zx": "PlaneZX"}
-        axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
-        lookup = name.lower().strip()
+        # Standard planes and axes via OriginElements (works with dynamic.Dispatch)
+        try:
+            oe = part.OriginElements
+            plane_map = {"xy": "PlaneXY", "yz": "PlaneYZ", "zx": "PlaneZX"}
+            axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
+            lookup = name.lower().strip()
 
-        if lookup in plane_map:
-            elem = getattr(part, plane_map[lookup])
-            return part.CreateReferenceFromObject(elem)
-        if lookup in axis_map:
-            elem = getattr(part, axis_map[lookup])
-            return part.CreateReferenceFromObject(elem)
+            if lookup in plane_map:
+                elem = getattr(oe, plane_map[lookup])
+                return part.CreateReferenceFromObject(elem)
+            if lookup in axis_map:
+                elem = getattr(oe, axis_map[lookup])
+                return part.CreateReferenceFromObject(elem)
+        except Exception:
+            pass
 
         # Search HybridShapes
         obj = self._find_shape(part, name)
