@@ -814,8 +814,9 @@ class GSDTools:
                     f"Cannot reference '{name}': Failed to access OriginElements.{key}: {e}"
                 ) from e
 
-        # Search HybridShapes (points, lines, circles, etc.)
-        obj = self._find_shape(dpart, name)
+        # Search HybridShapes — use gencache 'part' for iteration (works),
+        # but 'dpart' for CreateReferenceFromGeometry (required for late binding)
+        obj = self._find_shape(part, name)
         if obj:
             return dpart.CreateReferenceFromGeometry(obj)
 
