@@ -308,7 +308,7 @@ class CATIAMCPServer:
         """
         import uvicorn
         from starlette.applications import Starlette
-        from starlette.routing import Route
+        from starlette.routing import Mount, Route
 
         from mcp.server.streamable_http import StreamableHTTPServerTransport
 
