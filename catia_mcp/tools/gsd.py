@@ -776,10 +776,9 @@ class GSDTools:
     def _ref(self, part: Any, name: str) -> Any:
         """Create a Reference from a geometry name or standard element.
 
-        See scripting4v5.com 'When to use CreateReference':
-        - CreateReferenceFromObject: for AnyObject (OriginElements.PlaneXY, etc.)
-        - CreateReferenceFromGeometry: for HybridShape objects (points, lines, circles)
-        - CreateReferenceFromName: for string path labels (internal CATIA format)
+        Per pycatia: CreateReferenceFromObject works for ALL types — both
+        AnyObject (OriginElements.PlaneXY) and HybridShape (points, lines).
+        See pycatia/examples/example__hybrid_shape_factory__003.py.
         """
         import win32com.client
 
@@ -798,7 +797,6 @@ class GSDTools:
             except (AttributeError, Exception):
                 pass
             # Fallback: use dynamic.Dispatch on the part to access OriginElements
-            # This is needed when the gencache proxy doesn't have OriginElements cached
             try:
                 import win32com.client.dynamic
                 dpart = win32com.client.dynamic.Dispatch(part)
@@ -809,15 +807,14 @@ class GSDTools:
                 pass
             raise RuntimeError(
                 f"Cannot reference '{name}': Failed to access OriginElements.{key}. "
-                f"The gencache for CATIA's OriginElements may need regeneration. "
-                f"Try: import win32com.client; win32com.client.gencache.EnsureDispatch('CATIA.Application')"
+                f"The gencache for CATIA's OriginElements may need regeneration."
             )
 
         # Search HybridShapes (points, lines, circles, etc.)
         obj = self._find_shape(part, name)
         if obj:
-            # HybridShape objects require CreateReferenceFromGeometry, NOT CreateReferenceFromObject
-            return part.CreateReferenceFromGeometry(obj)
+            # Per pycatia: CreateReferenceFromObject works for HybridShapes too
+            return part.CreateReferenceFromObject(obj)
 
         # Fallback: try name as-is (for user-created named geometry)
         return part.CreateReferenceFromName(name)
@@ -971,7 +968,7 @@ class GSDTools:
         # The cylinder axis is the Z-axis of the reference system at the center point
         # To orient along arbitrary axis, we need a different approach
         # For now: create cylinder along Z axis at the point
-        cyl_ref = part.CreateReferenceFromGeometry(center)
+        cyl_ref = part.CreateReferenceFromObject(center)
         half_h = height / 2.0
         cylinder = hsf.AddNewCylinder(cyl_ref, radius, -half_h, half_h)
 
@@ -1174,7 +1171,7 @@ class GSDTools:
         # pycatia example: add_new_sphere(center_ref, None, radius, begin_par, end_par, begin_mer, end_mer)
         try:
             sphere = hsf.AddNewSphere(
-                part.CreateReferenceFromGeometry(point),
+                part.CreateReferenceFromObject(point),
                 None,  # axis not needed for full sphere
                 radius,
                 angle_start,
@@ -1212,23 +1209,23 @@ class GSDTools:
         point_top = hsf.AddNewPointCoord(cx + top_radius, cy, cz + height)
         # Create line profile
         profile = hsf.AddNewLinePtPt(
-            part.CreateReferenceFromGeometry(point_base),
-            part.CreateReferenceFromGeometry(point_top),
+            part.CreateReferenceFromObject(point_base),
+            part.CreateReferenceFromObject(point_top),
         )
         # Create axis of revolution (Z axis through center)
         center_pt = hsf.AddNewPointCoord(cx, cy, cz)
         center_top = hsf.AddNewPointCoord(cx, cy, cz + height)
         axis_line = hsf.AddNewLinePtPt(
-            part.CreateReferenceFromGeometry(center_pt),
-            part.CreateReferenceFromGeometry(center_top),
+            part.CreateReferenceFromObject(center_pt),
+            part.CreateReferenceFromObject(center_top),
         )
         # AddNewRevol(iObjectToExtrude, iOffsetDebut, iOffsetFin, iAxis)
         try:
             cone = hsf.AddNewRevol(
-                part.CreateReferenceFromGeometry(profile),
+                part.CreateReferenceFromObject(profile),
                 0.0,            # angle start
                 float(angle),   # angle end (degrees)
-                part.CreateReferenceFromGeometry(axis_line),
+                part.CreateReferenceFromObject(axis_line),
             )
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewRevol", e))
@@ -1259,20 +1256,20 @@ class GSDTools:
         # Create circle for the torus profile
         circle_center = hsf.AddNewPointCoord(cx + major_radius, cy, cz)
         plane_ref = self._ref(part, "xy")
-        circle = hsf.AddNewCircleCtrRad(part.CreateReferenceFromGeometry(circle_center),
+        circle = hsf.AddNewCircleCtrRad(part.CreateReferenceFromObject(circle_center),
                                          plane_ref, False, minor_radius)
         # Create axis of revolution through (cx, cy) parallel to Z
         # Use a line through the center points (not OriginElements to allow offset)
         axis_bottom = hsf.AddNewPointCoord(cx, cy, cz - 20)
         axis_top = hsf.AddNewPointCoord(cx, cy, cz + 20)
-        axis_line = hsf.AddNewLinePtPt(part.CreateReferenceFromGeometry(axis_bottom),
-                                        part.CreateReferenceFromGeometry(axis_top))
+        axis_line = hsf.AddNewLinePtPt(part.CreateReferenceFromObject(axis_bottom),
+                                        part.CreateReferenceFromObject(axis_top))
         try:
             torus = hsf.AddNewRevol(
-                part.CreateReferenceFromGeometry(circle),
+                part.CreateReferenceFromObject(circle),
                 float(angle_start),
                 float(angle_end),
-                part.CreateReferenceFromGeometry(axis_line),
+                part.CreateReferenceFromObject(axis_line),
             )
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewRevol", e))
