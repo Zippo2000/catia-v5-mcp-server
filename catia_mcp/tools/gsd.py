@@ -723,8 +723,9 @@ class GSDTools:
         """Get HybridShapeFactory via late binding on the Part object."""
         try:
             import win32com.client.dynamic
-            # Use _dpart pattern to avoid double-wrapping
-            if hasattr(part, '_username_'):
+            # Use same detection as _dpart to avoid double-wrapping
+            cls_module = type(part).__module__
+            if cls_module and 'dynamic' in cls_module:
                 dp = part
             else:
                 dp = win32com.client.dynamic.Dispatch(part)
@@ -739,12 +740,14 @@ class GSDTools:
         """Get late-bound wrapper for the Part, avoiding gencache proxy issues.
 
         If part is already a dynamic.Dispatch wrapper, return as-is.
-        Double-wrapping (dynamic.Dispatch(dynamic.Dispatch(...))) crashes.
+        Double-wrapping (dynamic.Dispatch(dynamic.Dispatch(...))) crashes
+        with <unknown>.ZAxis because COM interface resolution is lost.
         """
-        # Check if already a dynamic.Dispatch object (has _username_ attr)
-        if hasattr(part, '_username_') or (
-            hasattr(part, '__com_object__') and hasattr(part, '_username_')
-        ):
+        # Detect dynamic.Dispatch by its class module (not _username_ which
+        # is also present on gencache proxies via __getattr__ fallback)
+        cls_name = type(part).__name__
+        cls_module = type(part).__module__
+        if cls_module and 'dynamic' in cls_module:
             return part
         try:
             import win32com.client.dynamic
