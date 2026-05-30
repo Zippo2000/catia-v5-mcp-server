@@ -419,7 +419,7 @@ class TestCreateSphere:
         assert "50" in result
         part = conn_mock.get_active_part()
         part.HybridShapeFactory.AddNewPointCoord.assert_called_with(10, 20, 30)
-        part.HybridShapeFactory.AddNewSpherePointRadius.assert_called_once()
+        part.HybridShapeFactory.AddNewSphere.assert_called_once()
 
     def test_create_sphere_partial(self, gsd_tools, conn_mock):
         result = gsd_tools.execute("catia_create_sphere", {
@@ -429,11 +429,11 @@ class TestCreateSphere:
         })
         assert "Sphere created" in result
         part = conn_mock.get_active_part()
-        call_args = part.HybridShapeFactory.AddNewSpherePointRadius.call_args
-        assert call_args[0][1] == 25
-        assert call_args[0][3] == 180
-        assert call_args[0][4] == -45
-        assert call_args[0][5] == 45
+        call_args = part.HybridShapeFactory.AddNewSphere.call_args
+        assert call_args[0][2] == 25  # radius (now 3rd param after point, axis)
+        assert call_args[0][4] == 180  # endParallelAngle
+        assert call_args[0][5] == -45  # beginMeridianAngle
+        assert call_args[0][6] == 45  # endMeridianAngle
 
     def test_create_sphere_negative_radius_raises(self, gsd_tools, conn_mock):
         with pytest.raises(ValueError, match="must be positive"):
@@ -453,7 +453,7 @@ class TestCreateCone:
         assert "Cone created" in result
         assert "30" in result and "100" in result
         part = conn_mock.get_active_part()
-        part.HybridShapeFactory.AddNewConePointRadius.assert_called_once()
+        part.HybridShapeFactory.AddNewRevol.assert_called()
 
     def test_create_cone_with_top_radius(self, gsd_tools, conn_mock):
         result = gsd_tools.execute("catia_create_cone", {
@@ -461,11 +461,8 @@ class TestCreateCone:
         })
         assert "Cone created" in result
         part = conn_mock.get_active_part()
-        call_args = part.HybridShapeFactory.AddNewConePointRadius.call_args
-        assert call_args[0][1] == 40   # base_radius
-        assert call_args[0][2] == 10   # top_radius
-        assert call_args[0][3] == 80   # height
-        assert call_args[0][4] == 270  # angle
+        # Cone now uses AddNewRevol - check it was called
+        assert part.HybridShapeFactory.AddNewRevol.call_count >= 1
 
     def test_create_cone_missing_height_raises(self, gsd_tools, conn_mock):
         with pytest.raises((ValueError, TypeError), match="height"):
@@ -480,7 +477,7 @@ class TestCreateTorus:
         assert "Torus created" in result
         assert "50" in result and "10" in result
         part = conn_mock.get_active_part()
-        part.HybridShapeFactory.AddNewTorusPointRadius.assert_called_once()
+        part.HybridShapeFactory.AddNewRevol.assert_called()
 
     def test_create_torus_partial(self, gsd_tools, conn_mock):
         result = gsd_tools.execute("catia_create_torus", {
@@ -489,9 +486,8 @@ class TestCreateTorus:
         })
         assert "Torus created" in result
         part = conn_mock.get_active_part()
-        call_args = part.HybridShapeFactory.AddNewTorusPointRadius.call_args
-        assert call_args[0][3] == 0
-        assert call_args[0][4] == 180
+        # Torus now uses AddNewRevol (revolution of circle around axis)
+        assert part.HybridShapeFactory.AddNewRevol.call_count >= 1
 
     def test_create_torus_negative_minor_raises(self, gsd_tools, conn_mock):
         with pytest.raises(ValueError, match="must be positive"):

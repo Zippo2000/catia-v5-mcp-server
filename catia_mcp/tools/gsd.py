@@ -845,7 +845,7 @@ class GSDTools:
         set_name = args.get("set_name")
 
         hsf = self._hsf(part)
-        line = hsf.AddNewLine2Points(pt1, pt2)
+        line = hsf.AddNewLinePtPt(pt1, pt2)
 
         hbody = self._get_or_create_set(part, set_name)
         name = self._append_and_update(
@@ -896,7 +896,7 @@ class GSDTools:
 
         plane_ref = part.CreateReferenceFromName(f"{support}_plane")
         hsf = self._hsf(part)
-        circle = hsf.AddNewCircle(center, radius, plane_ref)
+        circle = hsf.AddNewCircleCtrRad(center, plane_ref, False, radius)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(
@@ -918,7 +918,7 @@ class GSDTools:
 
         ref_plane = part.CreateReferenceFromName(f"{ref}_plane")
         hsf = self._hsf(part)
-        plane = hsf.AddNewPlaneOffset(ref_plane, offset)
+        plane = hsf.AddNewPlaneOffset(ref_plane, offset, True)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(
@@ -942,7 +942,12 @@ class GSDTools:
             )
 
         hsf = self._hsf(part)
-        cylinder = hsf.AddNewCylinder(center, axis, radius, height)
+        # Build axis reference
+        axis_ref = self._ref(part, axis)
+        # AddNewCylinder(center, radius, firstLen, secondLen, direction)
+        # firstLen and secondLen are in opposite directions along the axis
+        half_h = height / 2.0
+        cylinder = hsf.AddNewCylinder(center, radius, half_h, half_h, axis_ref)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(
@@ -1139,19 +1144,26 @@ class GSDTools:
         hsf = self._hsf(part)
         point = hsf.AddNewPointCoord(cx, cy, cz)
 
+        # Create Z axis reference as default sphere axis
         try:
-            sphere = hsf.AddNewSpherePointRadius(
-                point, radius, angle_start, angle_end, lat_start, lat_end,
-            )
+            z_axis_ref = self._ref(part, "z")
+        except Exception:
+            z_axis_ref = self._ref(part, "z_axis")
+        try:
+            sphere = hsf.AddNewSphere(point, z_axis_ref, radius,
+                angle_start, angle_end, lat_start, lat_end)
         except Exception as e:
-            raise RuntimeError(format_catia_error("AddNewSpherePointRadius", e))
+            raise RuntimeError(format_catia_error("AddNewSphere", e))
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(part, hbody, sphere, f"Sphere({cx},{cy},{cz},{radius}mm)")
         return f"Sphere created: center=({cx},{cy},{cz}), radius={radius}mm, angle=({angle_start}°-{angle_end}°), lat=({lat_start}°-{lat_end}°). Name: '{name}'"
 
     def _create_cone(self, args: dict[str, Any]) -> str:
-        """Create a cone surface."""
+        """Create a cone surface via AddNewRevol (AddNewConePointRadius does not exist in CATIA API).
+        
+        Creates a cone by revolving a line profile around the Z axis.
+        """
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
 
@@ -1165,19 +1177,35 @@ class GSDTools:
         angle = float(args.get("angle", 360))
 
         hsf = self._hsf(part)
-        point = hsf.AddNewPointCoord(cx, cy, cz)
-
+        # Create two points for the cone profile (at base and top radii)
+        point_base = hsf.AddNewPointCoord(cx + base_radius, cy, cz)
+        point_top = hsf.AddNewPointCoord(cx + top_radius, cy, cz + height)
+        # Create line profile
+        profile = hsf.AddNewLinePtPt(part.CreateReferenceFromObject(point_base),
+                                      part.CreateReferenceFromObject(point_top))
+        # Create axis of revolution (Z axis through center)
+        center_pt = hsf.AddNewPointCoord(cx, cy, cz)
+        center_top = hsf.AddNewPointCoord(cx, cy, cz + height)
+        axis_line = hsf.AddNewLinePtPt(part.CreateReferenceFromObject(center_pt),
+                                        part.CreateReferenceFromObject(center_top))
+        # Revolve the profile around the axis
         try:
-            cone = hsf.AddNewConePointRadius(point, base_radius, top_radius, height, angle)
+            angle_rad = angle * 3.141592653589793 / 180
+            cone = hsf.AddNewRevol(part.CreateReferenceFromObject(profile),
+                                    part.CreateReferenceFromObject(axis_line),
+                                    angle_rad)
         except Exception as e:
-            raise RuntimeError(format_catia_error("AddNewConePointRadius", e))
+            raise RuntimeError(format_catia_error("AddNewRevol", e))
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(part, hbody, cone, f"Cone({cx},{cy},{cz},{base_radius}mm,{height}mm)")
-        return f"Cone created: base={base_radius}mm, top={top_radius}mm, height={height}mm, angle={angle}°. Name: '{name}'"
+        return f"Cone created (via revolution): base={base_radius}mm, top={top_radius}mm, height={height}mm, angle={angle}°. Name: '{name}'"
 
     def _create_torus(self, args: dict[str, Any]) -> str:
-        """Create a torus (ring) surface."""
+        """Create a torus (ring) surface via AddNewRevol (AddNewTorusPointRadius does not exist in CATIA API).
+        
+        Creates a torus by revolving a circle around an axis.
+        """
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
 
@@ -1191,18 +1219,29 @@ class GSDTools:
         angle_end = float(args.get("angle_end", 360))
 
         hsf = self._hsf(part)
-        point = hsf.AddNewPointCoord(cx, cy, cz)
-
+        # Create circle for the torus profile (offset from center by major_radius)
+        circle_center = hsf.AddNewPointCoord(cx + major_radius, cy, cz)
+        # Use XY plane as support for the circle profile
+        plane_ref = self._ref(part, "xy")
+        circle = hsf.AddNewCircleCtrRad(part.CreateReferenceFromObject(circle_center),
+                                         plane_ref, False, minor_radius)
+        # Create axis of revolution (Z axis through center)
+        axis_bottom = hsf.AddNewPointCoord(cx, cy, cz - 10)
+        axis_top = hsf.AddNewPointCoord(cx, cy, cz + 10)
+        axis_line = hsf.AddNewLinePtPt(part.CreateReferenceFromObject(axis_bottom),
+                                        part.CreateReferenceFromObject(axis_top))
+        # Revolve the circle around the axis
         try:
-            torus = hsf.AddNewTorusPointRadius(
-                point, major_radius, minor_radius, angle_start, angle_end,
-            )
+            sweep_angle = (angle_end - angle_start) * 3.141592653589793 / 180
+            torus = hsf.AddNewRevol(part.CreateReferenceFromObject(circle),
+                                     part.CreateReferenceFromObject(axis_line),
+                                     sweep_angle)
         except Exception as e:
-            raise RuntimeError(format_catia_error("AddNewTorusPointRadius", e))
+            raise RuntimeError(format_catia_error("AddNewRevol", e))
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(part, hbody, torus, f"Torus({cx},{cy},{cz},{major_radius}mm,{minor_radius}mm)")
-        return f"Torus created: major={major_radius}mm, minor={minor_radius}mm, angle=({angle_start}°-{angle_end}°). Name: '{name}'"
+        return f"Torus created (via revolution): major={major_radius}mm, minor={minor_radius}mm, angle=({angle_start}°-{angle_end}°). Name: '{name}'"
 
     def _create_ruled(self, args: dict[str, Any]) -> str:
         """Create a ruled surface between two curves/edges."""
