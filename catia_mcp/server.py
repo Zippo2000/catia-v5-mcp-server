@@ -330,10 +330,10 @@ class CATIAMCPServer:
         # Create Streamable HTTP transport
         sht = StreamableHTTPServerTransport("/mcp")
 
-        # Build Starlette app — handle_request is already ASGI-compatible
+        # Build Starlette app — StreamableHTTPServerTransport.handle_request is an ASGI app
         app = Starlette(
             routes=[
-                Route("/mcp", endpoint=sht.handle_request, methods=["GET", "POST"]),
+                Mount("/mcp", app=sht.handle_request),
             ],
         )
 
