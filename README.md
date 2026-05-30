@@ -6,7 +6,7 @@ The first open-source MCP server for CATIA V5. Drive CATIA V5 CAD modeling from 
 
 ## What it does
 
-This MCP server exposes **83 tools** across 7 modules that let an LLM-driven client:
+This MCP server exposes **87 tools** across 7 modules that let an LLM-driven client:
 
 | Category | Tools | Examples |
 |----------|-------|----------|
@@ -15,7 +15,7 @@ This MCP server exposes **83 tools** across 7 modules that let an LLM-driven cli
 | 🔧 **Part Design** | 19 | Pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, shell, draft, lifting, sweep, loft, boolean |
 | 🎨 **GSD (Wireframe & Surface)** | 16 | Point, line, circle, plane, cylinder, fill, sweep, join, thicken, offset surface |
 | 📦 **Assembly** | 14 | Add components, constraints (fix/coincidence/offset/angle/contact/distance/tangent), move, remove |
-| 📏 **Measurement** | 6 | Distance, inertia, bounding box, parameters, update |
+| 📏 **Measurement** | 10 | Distance, inertia, bounding box, parameters, update, angle, area, length, interference |
 | 📤 **Export & View** | 4 | STEP/IGES/STL export, screenshots, view orientations |
 
 ### Requirements
@@ -244,10 +244,10 @@ catia-v5-mcp-server/
 │       ├── sketcher.py        # 2D sketching (14 tools)
 │       ├── part_design.py     # 3D part design (19 tools)
 │       ├── assembly.py        # Assembly/product (14 tools)
-│       ├── measurement.py     # Measurement & analysis (6 tools)
+│       ├── measurement.py     # Measurement & analysis (10 tools)
 │       ├── gsd.py             # Wireframe & surface (16 tools)
 │       └── export.py          # Export & view control (4 tools)
-├── tests/                     # pytest test suite (242 tests)
+├── tests/                     # pytest test suite (239 tests)
 │   ├── conftest.py            # Shared COM mocking infrastructure
 │   ├── test_*.py              # Module-specific tests
 │   └── test_sse.py            # SSE transport tests
@@ -371,7 +371,7 @@ All dimensions are in **millimeters**, angles in **degrees**.
 
 ---
 
-### 📏 Measurement Tools (6)
+### 📏 Measurement Tools (10)
 
 | Tool | Parameters | Required | Description |
 |------|------------|----------|-------------|
@@ -380,6 +380,14 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_get_bounding_box` | — | — | Get the bounding box of the active part. Returns min/max coordinates in mm. |
 | `catia_get_parameters` | `filter` | — | List all user-defined and computed parameters. Optional `filter` for partial name matching. |
 | `catia_set_parameter` | `name`, `value` | `name`, `value` | Set the value of a named parameter. Useful for parametric design. |
+| `catia_measure_angle` | `element1`, `element2` | `element1`, `element2` | Measure angle in degrees between two planar faces/planes. |
+| `catia_measure_area` | `element` | `element` | Measure surface area of a face, surface, or body in mm²/cm². |
+| `catia_measure_length` | `element` | `element` | Measure length of an edge, curve, or line in mm. |
+| `catia_measure_interference` | `element1`, `element2` | `element1`, `element2` | Check interference/overlap between two bodies. Negative distance = interference. |
+| `catia_measure_angle` | `element1`, `element2` | `element1`, `element2` | Measure angle in degrees between two planar faces/planes. |
+| `catia_measure_area` | `element` | `element` | Measure surface area of a face, surface, or body in mm²/cm². |
+| `catia_measure_length` | `element` | `element` | Measure length of an edge, curve, or line in mm. |
+| `catia_measure_interference` | `element1`, `element2` | `element1`, `element2` | Check interference/overlap between two bodies. Negative distance = interference. |
 | `catia_update_part` | — | — | Force update/rebuild of the active part. Recalculates all features. |
 
 ---

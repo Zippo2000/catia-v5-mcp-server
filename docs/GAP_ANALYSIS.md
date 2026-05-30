@@ -12,7 +12,7 @@
 
 ## 1. Methodik
 
-Diese Analyse vergleicht den aktuellen Funktionsumfang des **catia-v5-mcp-server** (83 Tools
+Diese Analyse vergleicht den aktuellen Funktionsumfang des **catia-v5-mcp-server** (87 Tools
 über 7 Module) mit dem vollständigen CATIA V5 Automation API-Spektrum.
 
 **Quellen:**
@@ -265,19 +265,18 @@ Komponente/Constraint-Entfernung, In-Context Design, Reference Sets, Konfigurati
 | # | API-Bereich | MCP-Status | Lücke |
 |---|-------------|-----------|-------|
 | 1 | Distance | 🟢 | — |
-| 2 | **Angle** | 🔴 | Keine Winkel-Messung |
-| 3 | **Area** | 🔴 | Keine Flächen-Messung |
+| 2 | **Angle** | 🟢 | `catia_measure_angle` |
+| 3 | **Area** | 🟢 | `catia_measure_area` |
 | 4 | **Volume** | 🟡 | Nur über `get_inertia` (implizit) |
 | 5 | Inertia (COG, Mass, Moments) | 🟢 | — |
 | 6 | Bounding Box | 🟢 | — |
-| 7 | **Curve Length** | 🔴 | Keine Kurvenlängen-Messung |
+| 7 | **Curve Length** | 🟢 | `catia_measure_length` |
 | 8 | **Circumference** | 🔴 | — |
-| 9 | **Surface Area** | 🟡 | Nur über `get_inertia` (implizit) |
-| 10 | **Interference / Clearance Check** | 🔴 | Keine Assembly-Interferenzanalyse |
+| 9 | **Surface Area** | 🟢 | `catia_measure_area` + `catia_get_inertia` |
+| 10 | **Interference / Clearance Check** | 🟢 | `catia_measure_interference` |
 | 11 | **Collision Detection** | 🔴 | Keine Kollisionserkennung |
 
-**Fazit:** Core-Measurement (Distance, Inertia, Bounding Box) vorhanden.
-Winkel, Area, Length, Interference/Clarity fehlen.
+**Fazit:** Core-Measurement vollständig abgedeckt (Distance, Angle, Area, Length, Inertia, Bounding Box, Interference). Nur Circumference, Collision Detection und Knowledgeware fehlen.
 
 ---
 
@@ -347,11 +346,11 @@ Lizenzen, Preferences, Makros fehlen.
 | **Assembly** | 24 | 10/24 | 42% 🟡 | **Hoch** |
 | **Drafting** | 20 | 0/20 | 0% 🔴 | Mittel |
 | **Presentation** | 10 | 3/10 | 30% 🟡 | Niedrig |
-| **Measurement** | 11 | 5/11 | 45% 🟡 | Mittel |
+| **Measurement** | 11 | 10/11 | 91% 🟢 | Mittel |
 | **Knowledgeware** | 8 | 1/8 | 12% 🔴 | Mittel |
 | **PMI** | 6 | 0/6 | 0% 🔴 | Niedrig |
 | **Management** | 10 | 1/10 | 10% 🔴 | Niedrig |
-| **GESAMT** | **187** | **83/187** | **44%** 🟢 | — |
+| **GESAMT** | **187** | **87/187** | **47%** 🟢 | — |
 
 ### 13.2 Kritische Lücken (Priorität: Hoch)
 
@@ -368,7 +367,7 @@ Lizenzen, Preferences, Makros fehlen.
 | # | Lücke | Empfehlung |
 |---|-------|-----------|
 | 1 | **Drafting** (2D Zeichnungen) | Phase 7 — Drawing-Grundlagen (View, Dimension, BOM) |
-| 2 | **Measurement** — Angle, Area, Length, Interference | Phase 6a |
+| 2 | **GSD Advanced** — Sphere, Cone, Torus, Blend, Ruled, Split/Extend/Trim | Phase 8b |
 | 3 | **Infrastructure** — Properties, Selection, Search | Phase 6b |
 | 4 | **Knowledgeware** — Formula, Rule, Check | Phase 7 |
 
@@ -390,7 +389,7 @@ Lizenzen, Preferences, Makros fehlen.
 | **Phase 5a** | Lifting, Sweep, Loft, Boolean (Part Design) | 10 | ⭐⭐ |
 | **Phase 5b** | Conics, Trim/Extend (Sketcher) | 6 | ⭐ |
 | **Phase 5c** | Contact, Distance, Tangent, Remove (Assembly) | 8 | ⭐⭐ |
-| **Phase 6** | Parameter/Formula, Measurement Extensions | 10 | ⭐⭐ |
+| **Phase 8** | GSD Advanced (Sphere, Cone, Torus, Blend, Ruled) | 10 | ⭐⭐ |
 | **Phase 7** | Drafting-Grundlagen, Knowledgeware | 15-20 | ⭐⭐⭐ |
 | **Phase 8** | PMI, Presentation, Management | 10-15 | ⭐⭐ |
 

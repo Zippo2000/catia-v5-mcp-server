@@ -237,6 +237,82 @@ class MeasurementTools:
                 },
             },
             {
+                "name": "catia_measure_angle",
+                "description": (
+                    "Measure the angle between two planar faces or planes. "
+                    "Returns the angle in degrees."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "element1": {
+                            "type": "string",
+                            "description": "Name of first planar element (face, plane)",
+                        },
+                        "element2": {
+                            "type": "string",
+                            "description": "Name of second planar element",
+                        },
+                    },
+                    "required": ["element1", "element2"],
+                },
+            },
+            {
+                "name": "catia_measure_area",
+                "description": (
+                    "Measure the surface area of a face, surface, or body. "
+                    "Returns area in mm² and cm²."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "element": {
+                            "type": "string",
+                            "description": "Name of the element to measure (face, surface, body)",
+                        },
+                    },
+                    "required": ["element"],
+                },
+            },
+            {
+                "name": "catia_measure_length",
+                "description": (
+                    "Measure the length of an edge, curve, or line. "
+                    "Returns length in mm."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "element": {
+                            "type": "string",
+                            "description": "Name of the element to measure (edge, curve, line)",
+                        },
+                    },
+                    "required": ["element"],
+                },
+            },
+            {
+                "name": "catia_measure_interference",
+                "description": (
+                    "Check for interference (overlap) between two bodies or solids. "
+                    "Returns the interference depth in mm (negative = no interference)."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "element1": {
+                            "type": "string",
+                            "description": "Name of first body/solid",
+                        },
+                        "element2": {
+                            "type": "string",
+                            "description": "Name of second body/solid",
+                        },
+                    },
+                    "required": ["element1", "element2"],
+                },
+            },
+            {
                 "name": "catia_update_part",
                 "description": "Force update/rebuild of the active part. Recalculates all features.",
                 "inputSchema": {
@@ -258,6 +334,14 @@ class MeasurementTools:
                 return self._get_parameters(arguments.get("filter"))
             case "catia_set_parameter":
                 return self._set_parameter(arguments["name"], arguments["value"])
+            case "catia_measure_angle":
+                return self._measure_angle(arguments["element1"], arguments["element2"])
+            case "catia_measure_area":
+                return self._measure_area(arguments["element"])
+            case "catia_measure_length":
+                return self._measure_length(arguments["element"])
+            case "catia_measure_interference":
+                return self._measure_interference(arguments["element1"], arguments["element2"])
             case "catia_update_part":
                 return self._update_part()
             case _:
@@ -430,6 +514,95 @@ class MeasurementTools:
 
         self.conn.refresh_display()
         return f"Parameter '{name}' changed: {old_value} -> {value}"
+
+    def _get_element_ref(self, element_name: str, part: Any) -> Any:
+        """Search for element by name and return a CATIA reference."""
+        sel = self.conn.hso
+        sel.Clear()
+        sel.Search(f"Name={element_name},all")
+        if sel.Count == 0:
+            raise RuntimeError(f"Element '{element_name}' not found")
+        return part.CreateReferenceFromObject(sel.Item(1).Value)
+
+    def _measure_angle(self, elem1_name: str, elem2_name: str) -> str:
+        self.conn.ensure_connected()
+        try:
+            spa = self.conn.app.GetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("GetWorkbench(SPAWorkbench)", e))
+        part = self.conn.get_active_part()
+        ref1 = self._get_element_ref(elem1_name, part)
+        ref2 = self._get_element_ref(elem2_name, part)
+        try:
+            measurable = spa.GetMeasurable(ref1)
+            angle_rad = measurable.GetAngle(ref2)
+            angle_deg = float(angle_rad * 180 / 3.141592653589793)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("GetAngle", e))
+        return (
+            f"Angle between '{elem1_name}' and '{elem2_name}': "
+            f"{angle_deg:.4f}° ({float(angle_rad):.6f} rad)"
+        )
+
+    def _measure_area(self, element_name: str) -> str:
+        self.conn.ensure_connected()
+        try:
+            spa = self.conn.app.GetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("GetWorkbench(SPAWorkbench)", e))
+        part = self.conn.get_active_part()
+        ref = self._get_element_ref(element_name, part)
+        try:
+            measurable = spa.GetMeasurable(ref)
+            area_mm2 = float(measurable.Area)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("Area", e))
+        return (
+            f"Area of '{element_name}': "
+            f"{area_mm2:.4f} mm² ({area_mm2 / 100:.4f} cm²)"
+        )
+
+    def _measure_length(self, element_name: str) -> str:
+        self.conn.ensure_connected()
+        try:
+            spa = self.conn.app.GetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("GetWorkbench(SPAWorkbench)", e))
+        part = self.conn.get_active_part()
+        ref = self._get_element_ref(element_name, part)
+        try:
+            measurable = spa.GetMeasurable(ref)
+            length_mm = float(measurable.Length)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("Length", e))
+        return (
+            f"Length of '{element_name}': "
+            f"{length_mm:.4f} mm ({length_mm / 10:.4f} cm)"
+        )
+
+    def _measure_interference(self, elem1_name: str, elem2_name: str) -> str:
+        self.conn.ensure_connected()
+        try:
+            spa = self.conn.app.GetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("GetWorkbench(SPAWorkbench)", e))
+        part = self.conn.get_active_part()
+        ref1 = self._get_element_ref(elem1_name, part)
+        ref2 = self._get_element_ref(elem2_name, part)
+        try:
+            measurable = spa.GetMeasurable(ref1)
+            distance = float(measurable.GetMinimumDistance(ref2))
+        except Exception as e:
+            raise RuntimeError(format_catia_error("GetMinimumDistance", e))
+        if distance < 0:
+            return (
+                f"⚠️  Interference detected between '{elem1_name}' and '{elem2_name}': "
+                f"{abs(distance):.4f} mm overlap"
+            )
+        return (
+            f"No interference between '{elem1_name}' and '{elem2_name}': "
+            f"clearance = {distance:.4f} mm"
+        )
 
     def _update_part(self) -> str:
         self.conn.ensure_connected()
