@@ -1170,6 +1170,7 @@ class GSDTools:
         dpart = self._dpart(part)
         point = hsf.AddNewPointCoord(cx, cy, cz)
 
+        dpart = self._dpart(part)
         # AddNewSphere: when axis is not needed (full sphere), pass None
         try:
             sphere = hsf.AddNewSphere(
@@ -1252,6 +1253,7 @@ class GSDTools:
         angle_end = float(args.get("angle_end", 360))
 
         hsf = self._hsf(part)
+        dpart = self._dpart(part)
         # Create circle for the torus profile
         circle_center = hsf.AddNewPointCoord(cx + major_radius, cy, cz)
         plane_ref = self._ref(part, "xy")
