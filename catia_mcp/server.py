@@ -196,11 +196,12 @@ class CATIAMCPServer:
 
         # Set up graceful shutdown
         loop = asyncio.get_running_loop()
-        loop.add_signal_handler(signal.SIGINT, self._shutdown)
         try:
+            loop.add_signal_handler(signal.SIGINT, self._shutdown)
             loop.add_signal_handler(signal.SIGTERM, self._shutdown)
-        except NotImplementedError:
-            pass  # Windows doesn't support SIGTERM
+        except (NotImplementedError, OSError):
+            # Windows doesn't support add_signal_handler
+            pass
 
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(
@@ -248,14 +249,20 @@ class CATIAMCPServer:
 
         # SSE connection handler: each GET /sse opens a new MCP session
         async def handle_sse(request):
-            async with sse.connect_sse(
-                request.scope, request.receive, request._send
-            ) as (read_stream, write_stream):
-                await self.server.run(
-                    read_stream,
-                    write_stream,
-                    self.server.create_initialization_options(),
-                )
+            try:
+                async with sse.connect_sse(
+                    request.scope, request.receive, request._send
+                ) as (read_stream, write_stream):
+                    await self.server.run(
+                        read_stream,
+                        write_stream,
+                        self.server.create_initialization_options(),
+                    )
+            except Exception:
+                # Client disconnected (ClosedResourceError, ConnectionResetError, etc.)
+                # This is normal when the MCP client opens a new SSE connection
+                # for each request instead of keeping one persistent connection.
+                pass
             # Return empty response to avoid NoneType error on disconnect
             return Response()
 
