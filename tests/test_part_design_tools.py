@@ -168,9 +168,9 @@ class TestExecuteRouting:
 
 
 class TestToolDefinitions:
-    def test_all_15_tools_defined(self, pd_tools):
+    def test_all_19_tools_defined(self, pd_tools):
         defs = pd_tools.get_tool_definitions()
-        assert len(defs) == 15
+        assert len(defs) == 19
 
     def test_pad_has_required_height(self, pd_tools):
         defs = pd_tools.get_tool_definitions()

@@ -70,20 +70,27 @@ Geometrical Sets, Selection, Timeline und Search fehlen.
 | 17 | **Shell** | 🟢 | — |
 | 18 | **Draft** | 🟢 | — |
 | 19 | **Thickness** | 🟢 | — |
-| 20 | **Lifting** (Variable-Thickness Extrusion) | 🔴 | Kein Lifting-Tool |
-| 21 | **Variable Section Sweep** | 🔴 | Kein VSS-Tool |
-| 22 | **Loft** | 🔴 | Kein Loft-Tool |
-| 23 | **Combine** (Sum/Difference on Bodies) | 🔴 | Keine Body-Combine |
-| 24 | **Split** (Split Body by Plane/Surface) | 🔴 | Keine Split-Operation |
-| 25 | **Reference Patterns** | 🔴 | Keine Referenz-Patterns |
-| 26 | **Multi-Direction Pattern** | 🔴 | Keine MD-Patterns |
-| 27 | **Semi-Constraints** | 🔴 | Keine Semi-Constraints-Unterstützung |
-| 28 | **Instant Design** | 🔴 | Kein Instant Design-Modus |
-| 29 | **Instant Features** (Quick Pad, etc.) | 🔴 | — |
-| 30 | **Multi-Sketch Pad/Pocket** | 🔴 | Keine Multi-Sketch-Features |
+| 20 | **Lifting** (Variable-Thickness Extrusion) | 🟢 | — |
+| 21 | **Variable Section Sweep** (VSS) | 🟢 | — |
+| 22 | **Loft** (Multi-Sketch) | 🟢 | — |
+| 23 | **Boolean Operations** (Union, Intersection, Difference) | 🟢 | — |
+| 24 | **PowerCopy** (Parametric Feature Template) | 🔴 | Keine PowerCopy-Unterstützung |
+| 25 | **PowerCopy Pattern** | 🔴 | — |
+| 26 | **Rectangular Pattern** | 🟢 | — |
+| 27 | **Circular Pattern** | 🟢 | — |
+| 28 | **Mirror** (Feature & Body) | 🟢 | — |
+| 29 | **Boolean Operations** (Union, Intersection, Difference) | 🟢 | — |
+| 30 | **Combine** (Sum/Difference on Bodies) | 🔴 | Keine Body-Combine |
+| 31 | **Split** (Split Body by Plane/Surface) | 🔴 | Keine Split-Operation |
+| 32 | **Reference Patterns** | 🔴 | Keine Referenz-Patterns |
+| 33 | **Multi-Direction Pattern** | 🔴 | Keine MD-Patterns |
+| 34 | **Semi-Constraints** | 🔴 | Keine Semi-Constraints-Unterstützung |
+| 35 | **Instant Design** | 🔴 | Kein Instant Design-Modus |
+| 36 | **Instant Features** (Quick Pad, etc.) | 🔴 | — |
+| 37 | **Multi-Sketch Pad/Pocket** | 🔴 | Keine Multi-Sketch-Features |
 
-**Fazit:** Die 15 aktuellen Part-Design-Tools decken die **Core-Features** gut ab.
-Fehlend sind fortgeschrittene Features (Lifting, Sweep, Loft, Boolean, PowerCopy, Split, Multi-Body).
+**Fazit:** Die 19 aktuellen Part-Design-Tools decken die **Core-Features** plus Lifting, Sweep, Loft und Boolean ab.
+Fehlend sind fortgeschrittene Features (PowerCopy, Split, Combine, Multi-Body, Instant Design).
 
 ---
 
@@ -330,7 +337,7 @@ Lizenzen, Preferences, Makros fehlen.
 | Workbench | CATIA API-Bereiche | MCP-Abgedeckt | Abdeckung | Priorität |
 |-----------|-------------------|--------------|-----------|-----------|
 | **Infrastructure** | 10 | 5/10 | 50% 🟡 | Mittel |
-| **Part Design** | 30 | 15/30 | 50% 🟡 | **Hoch** |
+| **Part Design** | 30 | 19/30 | 63% 🟡 | **Hoch** |
 | **Sketcher** | 22 | 11/22 | 50% 🟡 | **Hoch** |
 | **Wireframe & Surface (GSD)** | 36 | 0/36 | 0% 🔴 | **Hoch** |
 | **Assembly** | 24 | 10/24 | 42% 🟡 | **Hoch** |
@@ -340,16 +347,16 @@ Lizenzen, Preferences, Makros fehlen.
 | **Knowledgeware** | 8 | 1/8 | 12% 🔴 | Mittel |
 | **PMI** | 6 | 0/6 | 0% 🔴 | Niedrig |
 | **Management** | 10 | 1/10 | 10% 🔴 | Niedrig |
-| **GESAMT** | **187** | **44/187** | **24%** 🔴 | — |
+| **GESAMT** | **187** | **48/187** | **26%** 🔴 | — |
 
 ### 13.2 Kritische Lücken (Priorität: Hoch)
 
 | # | Lücke | Impact | Aufwand | Empfehlung |
 |---|-------|--------|---------|-----------|
-| 1 | **GSD (Wireframe & Surface)** — 36 API-Bereiche komplett fehlen | Sehr hoch — Surface Design ist Kern-Funktion für Automotive/Aerospace | Sehr hoch (36 neue Tools) | Phase 5 — GSD-Grundlagen (Plane, Line, Point, Surface primitives) |
-| 2 | **Part Design** — Lifting, Sweep, Loft, Boolean, PowerCopy fehlen | Hoch — Limitiert komplexe Part-Geometrien | Mittel (10 neue Tools) | Phase 5a — Lifting + Sweep + Loft |
-| 3 | **Sketcher** — Ellipse, Hyperbola, Parabel, Trim/Extend fehlen | Hoch — Limitiert Sketch-Flexibilität | Niedrig (5-6 neue Tools) | Phase 5b — Conics + Trim |
-| 4 | **Assembly** — Contact, Distance, Tangent, Remove Component/Constraint fehlen | Hoch — Limitiert Assembly-Engineering | Mittel (8 neue Tools) | Phase 5c — Advanced Constraints |
+| 1 | **GSD (Wireframe & Surface)** — 36 API-Bereiche komplett fehlen | Sehr hoch — Surface Design ist Kern-Funktion für Automotive/Aerospace | Sehr hoch (36 neue Tools) | Phase 6 — GSD-Grundlagen (Plane, Line, Point, Surface primitives) |
+| 2 | **Part Design** — PowerCopy, Split, Combine, Multi-Body fehlen | Hoch — Limitiert komplexe Part-Geometrien | Mittel (6 neue Tools) | Phase 5b — PowerCopy + Split + Combine |
+| 3 | **Sketcher** — Ellipse, Hyperbola, Parabel, Trim/Extend fehlen | Hoch — Limitiert Sketch-Flexibilität | Niedrig (5-6 neue Tools) | Phase 5c — Conics + Trim |
+| 4 | **Assembly** — Contact, Distance, Tangent, Remove Component/Constraint fehlen | Hoch — Limitiert Assembly-Engineering | Mittel (8 neue Tools) | Phase 5d — Advanced Constraints |
 | 5 | **Parameter/Formula** — Keine Parameter-Erstellung oder Formulas | Mittel-Hoch — Limitiert Parametric Design | Mittel (5 neue Tools) | Phase 6 |
 
 ### 13.3 Mäßige Lücken (Priorität: Mittel)

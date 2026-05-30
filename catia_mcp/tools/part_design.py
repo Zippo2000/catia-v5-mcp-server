@@ -1,7 +1,8 @@
 """Part Design tools for CATIA V5.
 
 3D feature creation: Pad, Pocket, Fillet, Chamfer, Shaft, Groove, Hole,
-RectPattern, CircPattern, Mirror, Rib, Slot, Shell, Thickness, Draft.
+RectPattern, CircPattern, Mirror, Rib, Slot, Shell, Thickness, Draft,
+Lifting, Sweep, Loft, Boolean.
 """
 
 from __future__ import annotations
@@ -366,6 +367,138 @@ class PartDesignTools:
                 },
             },
             {
+                "name": "catia_lifting",
+                "description": (
+                    "Create a Lifting (variable-thickness extrusion). "
+                    "Extrudes a sketch profile along a guiding curve with variable thickness. "
+                    "The sketch must be perpendicular to the guiding curve at the start point. "
+                    "Use this for curved extrusions with varying thickness (e.g., bent pipes, variable flanges)."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "guiding_curve": {
+                            "type": "string",
+                            "description": (
+                                "Name of the guiding curve/edge (e.g., 'Edge.1', 'Line.1'). "
+                                "The sketch profile is extruded along this curve. "
+                                "Use catia_list_edges or catia_list_features to find curve names."
+                            ),
+                        },
+                        "sketch_name": {
+                            "type": "string",
+                            "description": (
+                                "Name of the cross-section sketch. If not specified, uses the last created sketch. "
+                                "The sketch must be open (not closed) and perpendicular to the curve at its start."
+                            ),
+                        },
+                        "support": {
+                            "type": "string",
+                            "description": (
+                                "Optional name of a support curve/edge for thickness control. "
+                                "If provided, the distance from the support defines the variable thickness."
+                            ),
+                        },
+                    },
+                    "required": ["guiding_curve"],
+                },
+            },
+            {
+                "name": "catia_sweep",
+                "description": (
+                    "Create a Variable Section Sweep (VSS). "
+                    "Generates a 3D solid by sweeping a profile along a spine curve. "
+                    "Optionally a second profile (end section) and a direction curve can be provided "
+                    "for controlled sweep orientation."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "spine": {
+                            "type": "string",
+                            "description": (
+                                "Name of the spine/guide curve (e.g., 'Edge.1', 'Line.1'). "
+                                "The sweep follows this curve."
+                            ),
+                        },
+                        "section": {
+                            "type": "string",
+                            "description": (
+                                "Name of the start cross-section sketch or curve. "
+                                "If a sketch name is provided, it will be used as the profile."
+                            ),
+                        },
+                        "profile": {
+                            "type": "string",
+                            "description": (
+                                "Optional name of the end cross-section sketch or curve. "
+                                "If omitted, the start section is used along the entire spine (constant section)."
+                            ),
+                        },
+                        "direction": {
+                            "type": "string",
+                            "description": (
+                                "Optional name of a direction curve/edge that controls the "
+                                "profile orientation during sweep (normal to spine)."
+                            ),
+                        },
+                    },
+                    "required": ["spine", "section"],
+                },
+            },
+            {
+                "name": "catia_loft",
+                "description": (
+                    "Create a Loft feature from multiple sketches. "
+                    "Generates a smooth 3D surface/solid between 2 or more profile sketches. "
+                    "Sketches should be on parallel planes or different levels. "
+                    "The feature interpolates between all provided sketches."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "sketch_names": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": (
+                                "Ordered list of sketch names to loft through. "
+                                "Minimum 2 sketches required. "
+                                "Example: ['Sketch.1', 'Sketch.2'] or ['Sketch.1', 'Sketch.2', 'Sketch.3']"
+                            ),
+                        },
+                    },
+                    "required": ["sketch_names"],
+                },
+            },
+            {
+                "name": "catia_boolean",
+                "description": (
+                    "Perform a Boolean operation between two PartBodies. "
+                    "Supported operations: 'union' (merge), 'intersection' (common volume only), "
+                    "'difference' (subtract body2 from body1). "
+                    "Both bodies must exist in the same Part document."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "operation": {
+                            "type": "string",
+                            "description": "Boolean operation type",
+                            "enum": ["union", "intersection", "difference"],
+                        },
+                        "body1": {
+                            "type": "string",
+                            "description": "Name of the first body (target/result body)",
+                        },
+                        "body2": {
+                            "type": "string",
+                            "description": "Name of the second body (tool body)",
+                        },
+                    },
+                    "required": ["operation", "body1", "body2"],
+                },
+            },
+            {
                 "name": "catia_list_features",
                 "description": "List all features in the active Part Body with their names and types.",
                 "inputSchema": {
@@ -411,6 +544,14 @@ class PartDesignTools:
                 return self._draft(arguments)
             case "catia_thickness":
                 return self._thickness(arguments)
+            case "catia_lifting":
+                return self._lifting(arguments)
+            case "catia_sweep":
+                return self._sweep(arguments)
+            case "catia_loft":
+                return self._loft(arguments)
+            case "catia_boolean":
+                return self._boolean(arguments)
             case "catia_list_features":
                 return self._list_features()
             case "catia_list_edges":
@@ -501,6 +642,89 @@ class PartDesignTools:
         if shapes.Count == 0:
             raise RuntimeError("No features found in the active body.")
         return shapes.Item(shapes.Count)
+
+    def _resolve_geometry(self, name: str) -> Any:
+        """Resolve a geometry name to a CATIA object.
+
+        Searches in this order:
+        1. Body.Shapes (features, edges within shapes)
+        2. Body.Sketches
+        3. Part.Bodies (for body names)
+        4. Origin elements (planes, axes, lines)
+        5. HybridBodies (geometrical sets)
+        """
+        part = self.conn.get_active_part()
+        body = self.conn.get_active_part_body()
+
+        # 1. Try body shapes (features)
+        try:
+            shapes = body.Shapes
+            for i in range(1, shapes.Count + 1):
+                if shapes.Item(i).Name == name:
+                    return shapes.Item(i)
+        except Exception:
+            pass
+
+        # 2. Try body sketches
+        try:
+            sketches = body.Sketches
+            for i in range(1, sketches.Count + 1):
+                if sketches.Item(i).Name == name:
+                    return sketches.Item(i)
+        except Exception:
+            pass
+
+        # 3. Try bodies
+        try:
+            bodies = part.Bodies
+            for i in range(1, bodies.Count + 1):
+                if bodies.Item(i).Name == name:
+                    return bodies.Item(i)
+        except Exception:
+            pass
+
+        # 4. Try origin elements (planes, axes)
+        try:
+            origin_elements = self.conn.get_origin_elements()
+            for key, elem in origin_elements.items():
+                if elem.Name == name or key == name.lower():
+                    return elem
+        except Exception:
+            pass
+
+        # 5. Try HybridBodies (geometrical sets)
+        try:
+            hybrid_bodies = part.HybridBodies
+            for i in range(1, hybrid_bodies.Count + 1):
+                hb = hybrid_bodies.Item(i)
+                try:
+                    shapes = hb.HybridShapes
+                    for j in range(1, shapes.Count + 1):
+                        if shapes.Item(j).Name == name:
+                            return shapes.Item(j)
+                except Exception:
+                    pass
+                # Also check if the HB itself matches
+                if hb.Name == name:
+                    return hb
+        except Exception:
+            pass
+
+        # 6. Try Search on the part (fallback)
+        try:
+            hso = self.conn.hso
+            hso.Clear()
+            hso.Search(f"Name={name},all")
+            if hso.Count > 0:
+                return hso.Item(1).Value
+            hso.Clear()
+        except Exception:
+            pass
+
+        raise RuntimeError(
+            f"Geometry '{name}' not found in active Part (searched shapes, sketches, "
+            "bodies, origin elements, and geometrical sets)."
+        )
 
     def _pad(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
@@ -849,6 +1073,277 @@ class PartDesignTools:
         part.UpdateObject(thickness_feat)
         self.conn.refresh_display()
         return f"Thickness added: {offset} mm offset. Feature: '{thickness_feat.Name}'"
+
+    def _lifting(self, args: dict[str, Any]) -> str:
+        """Create a Lifting (variable-thickness extrusion along a curve).
+
+        CATIA API: ShapeFactory.AddNewLifting(GuideCurve, Sketch, Support=None)
+        The sketch profile is extruded along the guiding curve.  An optional
+        support curve controls the variable thickness (distance from support).
+        """
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+        body = self.conn.get_active_part_body()
+        sf = part.ShapeFactory
+
+        guiding_curve_name = args.get("guiding_curve")
+        if not guiding_curve_name:
+            raise RuntimeError("Lifting requires 'guiding_curve' (edge/curve name).")
+
+        sketch_name = validate_sketch_name(args.get("sketch_name"))
+        sketch = self._get_last_sketch(sketch_name, part)
+
+        support_name = args.get("support")
+
+        # Resolve guiding curve reference
+        try:
+            guiding_curve = self._resolve_geometry(guiding_curve_name)
+            guide_ref = part.CreateReferenceFromObject(guiding_curve)
+        except Exception as e:
+            raise RuntimeError(
+                f"Could not resolve guiding curve '{guiding_curve_name}': {e}\n"
+                "Use catia_list_edges or catia_list_features to find valid curve names."
+            ) from None
+
+        # Resolve optional support reference
+        support_ref = None
+        if support_name:
+            try:
+                support = self._resolve_geometry(support_name)
+                support_ref = part.CreateReferenceFromObject(support)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Could not resolve support '{support_name}': {e}"
+                ) from None
+
+        sketch_ref = part.CreateReferenceFromObject(sketch)
+
+        part.InWorkObject = body
+
+        try:
+            lifting = sf.AddNewLifting(guide_ref, sketch_ref, support_ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewLifting", e))
+
+        try:
+            part.UpdateObject(lifting)
+        except Exception as e:
+            raise RuntimeError(f"Failed to update lifting feature: {e}")
+
+        self.conn.refresh_display()
+        return f"Lifting created along '{guiding_curve_name}'. Feature: '{lifting.Name}'"
+
+    def _sweep(self, args: dict[str, Any]) -> str:
+        """Create a Variable Section Sweep (VSS).
+
+        CATIA API: ShapeFactory.AddNewVariableSectionShape(
+            i_spine, i_section, i_profile, i_direction)
+        Sweeps a profile along a spine curve.  Optionally a second profile
+        (end section) and a direction curve for orientation control.
+        """
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+        body = self.conn.get_active_part_body()
+        sf = part.ShapeFactory
+
+        spine_name = args.get("spine")
+        section_name = args.get("section")
+        if not spine_name:
+            raise RuntimeError("Sweep requires 'spine' (spine curve name).")
+        if not section_name:
+            raise RuntimeError("Sweep requires 'section' (start profile name).")
+
+        # Resolve spine reference
+        try:
+            spine = self._resolve_geometry(spine_name)
+            spine_ref = part.CreateReferenceFromObject(spine)
+        except Exception as e:
+            raise RuntimeError(
+                f"Could not resolve spine '{spine_name}': {e}\n"
+                "Use catia_list_edges or catia_list_features to find valid curve names."
+            ) from None
+
+        # Resolve section reference
+        try:
+            section = self._resolve_geometry(section_name)
+            section_ref = part.CreateReferenceFromObject(section)
+        except Exception as e:
+            raise RuntimeError(
+                f"Could not resolve section '{section_name}': {e}\n"
+                "Provide a valid sketch or curve name."
+            ) from None
+
+        # Resolve optional profile (end section)
+        profile_name = args.get("profile")
+        profile_ref = None
+        if profile_name:
+            try:
+                profile = self._resolve_geometry(profile_name)
+                profile_ref = part.CreateReferenceFromObject(profile)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Could not resolve profile '{profile_name}': {e}"
+                ) from None
+
+        # Resolve optional direction curve
+        direction_name = args.get("direction")
+        direction_ref = None
+        if direction_name:
+            try:
+                direction = self._resolve_geometry(direction_name)
+                direction_ref = part.CreateReferenceFromObject(direction)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Could not resolve direction '{direction_name}': {e}"
+                ) from None
+
+        part.InWorkObject = body
+
+        try:
+            sweep = sf.AddNewVariableSectionShape(
+                spine_ref, section_ref, profile_ref, direction_ref
+            )
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewVariableSectionShape", e))
+
+        try:
+            part.UpdateObject(sweep)
+        except Exception as e:
+            raise RuntimeError(f"Failed to update sweep feature: {e}")
+
+        self.conn.refresh_display()
+        return f"Sweep (VSS) created along '{spine_name}'. Feature: '{sweep.Name}'"
+
+    def _loft(self, args: dict[str, Any]) -> str:
+        """Create a Loft from multiple sketches.
+
+        CATIA API: ShapeFactory.AddNewLoft(i_references: list[Reference])
+        Generates a smooth solid between 2 or more profile sketches.
+        """
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+        body = self.conn.get_active_part_body()
+        sf = part.ShapeFactory
+
+        sketch_names = args.get("sketch_names", [])
+        if not isinstance(sketch_names, list):
+            raise RuntimeError("Loft requires 'sketch_names' as a list of strings.")
+        if len(sketch_names) < 2:
+            raise RuntimeError(
+                "Loft requires at least 2 sketches. "
+                "Provide a list like ['Sketch.1', 'Sketch.2']."
+            )
+
+        # Build list of references from each sketch
+        references = []
+        for name in sketch_names:
+            if not isinstance(name, str) or not name.strip():
+                raise RuntimeError(
+                    f"Invalid sketch name in list: '{name}'. Must be non-empty strings."
+                )
+            try:
+                sketch = self._get_last_sketch(name, part)
+                ref = part.CreateReferenceFromObject(sketch)
+                references.append(ref)
+            except RuntimeError:
+                # Sketch not found — re-raise with context
+                raise RuntimeError(
+                    f"Could not resolve sketch '{name}' for loft. "
+                    "Make sure all sketches exist and are closed."
+                ) from None
+
+        part.InWorkObject = body
+
+        try:
+            loft = sf.AddNewLoft(references)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewLoft", e))
+
+        try:
+            part.UpdateObject(loft)
+        except Exception as e:
+            raise RuntimeError(f"Failed to update loft feature: {e}")
+
+        self.conn.refresh_display()
+        names_str = ", ".join(sketch_names)
+        return f"Loft created from {len(sketch_names)} sketches ([{names_str}]). Feature: '{loft.Name}'"
+
+    def _boolean(self, args: dict[str, Any]) -> str:
+        """Perform a Boolean operation between two PartBodies.
+
+        CATIA API: ShapeFactory.AddOperation(i_shape, i_other_body, i_mode)
+        Modes: catBooleanUnion (0), catBooleanCut (1), catBooleanIntersect (2)
+        """
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+        sf = part.ShapeFactory
+
+        operation = args.get("operation")
+        body1_name = args.get("body1")
+        body2_name = args.get("body2")
+
+        if not operation:
+            raise RuntimeError("Boolean requires 'operation' (union, intersection, or difference).")
+        if not body1_name:
+            raise RuntimeError("Boolean requires 'body1' (target body name).")
+        if not body2_name:
+            raise RuntimeError("Boolean requires 'body2' (tool body name).")
+
+        if operation not in ("union", "intersection", "difference"):
+            raise RuntimeError(
+                f"Invalid boolean operation '{operation}'. "
+                "Must be one of: 'union', 'intersection', 'difference'."
+            )
+
+        if body1_name == body2_name:
+            raise RuntimeError(
+                f"Boolean operation cannot use the same body for both arguments "
+                f"('{body1_name}'). Use two different bodies."
+            )
+
+        # Map operation string to CATIA mode
+        mode_map = {
+            "union": 0,          # catBooleanUnion
+            "difference": 1,     # catBooleanCut
+            "intersection": 2,   # catBooleanIntersect
+        }
+        mode = mode_map[operation]
+
+        # Resolve bodies
+        try:
+            bodies = part.Bodies
+            body1 = bodies.Item(body1_name)
+        except Exception as e:
+            raise RuntimeError(
+                f"Body '{body1_name}' not found in Part. {e}\n"
+                "Use catia_list_features to check body names."
+            ) from None
+
+        try:
+            body2 = bodies.Item(body2_name)
+        except Exception as e:
+            raise RuntimeError(
+                f"Body '{body2_name}' not found in Part. {e}\n"
+                "Use catia_list_features to check body names."
+            ) from None
+
+        try:
+            boolean = sf.AddOperation(body1, body2, mode)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddOperation", e))
+
+        try:
+            part.UpdateObject(boolean)
+        except Exception as e:
+            raise RuntimeError(f"Failed to update boolean feature: {e}")
+
+        self.conn.refresh_display()
+        op_label = {
+            "union": "Union (merge)",
+            "difference": "Difference (cut)",
+            "intersection": "Intersection",
+        }[operation]
+        return f"Boolean {op_label}: '{body1_name}' ◦ '{body2_name}'. Feature: '{boolean.Name}'"
 
     def _list_features(self) -> str:
         self.conn.ensure_connected()

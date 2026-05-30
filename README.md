@@ -6,13 +6,13 @@ The first open-source MCP server for CATIA V5. Drive CATIA V5 CAD modeling from 
 
 ## What it does
 
-This MCP server exposes **55 tools** across 6 modules that let an LLM-driven client:
+This MCP server exposes **59 tools** across 6 modules that let an LLM-driven client:
 
 | Category | Tools | Examples |
 |----------|-------|----------|
 | 📄 **Document Management** | 10 | Create/open/save/close parts and assemblies, list documents |
 | ✏️ **2D Sketching** | 11 | Lines, rectangles, circles, arcs, splines, points, constraints |
-| 🔧 **Part Design** | 15 | Pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, shell, draft |
+| 🔧 **Part Design** | 19 | Pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, shell, draft, lifting, sweep, loft, boolean |
 | 📦 **Assembly** | 9 | Add components, constraints (fix/coincidence/offset/angle), move |
 | 📏 **Measurement** | 6 | Distance, inertia, bounding box, parameters, update |
 | 📤 **Export & View** | 4 | STEP/IGES/STL export, screenshots, view orientations |
@@ -324,7 +324,7 @@ All dimensions are in **millimeters**, angles in **degrees**.
 
 ---
 
-### 🔧 Part Design Tools (15)
+### 🔧 Part Design Tools (19)
 
 | Tool | Parameters | Required | Description |
 |------|------------|----------|-------------|
@@ -341,6 +341,10 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_shell` | `thickness`, `faces_to_remove` | `thickness` | Hollow out a solid, leaving walls of specified thickness. Optionally remove faces for openings. |
 | `catia_draft` | `angle`, `face_name`, `pulling_direction` | `angle` | Add draft angle for mold-release. Tapers faces relative to a pulling direction. |
 | `catia_thickness` | `offset`, `face_name` | `offset` | Offset faces inward (negative) or outward (positive). |
+| `catia_lifting` | `guiding_curve`, `sketch_name`, `support` | `guiding_curve` | Variable-thickness extrusion along a curve. The sketch profile is swept along the guide curve with optional support for thickness control. |
+| `catia_sweep` | `spine`, `section`, `profile`, `direction` | `spine`, `section` | Variable Section Sweep (VSS) — sweep a profile along a spine curve. Optional end profile and direction curve. |
+| `catia_loft` | `sketch_names` (list) | `sketch_names` | Create a smooth solid between 2+ sketches. `sketch_names` is an ordered list like `['Sketch.1', 'Sketch.2']`. |
+| `catia_boolean` | `operation`, `body1`, `body2` | all | Boolean operation between two bodies. `operation`: `union` (merge), `difference` (cut), `intersection` (common volume). |
 | `catia_list_features` | — | — | List all features in the active Part Body with names and types. |
 | `catia_list_edges` | — | — | List all edges of the active solid body for use with fillet/chamfer. |
 
@@ -448,6 +452,7 @@ This project is open-source. Contributions welcome:
 - **Drawing** tools (2D drafting)
 - **Knowledgeware** (formulas, rules, check)
 - **pycatia backend** as alternative to raw win32com
+- **Assembly** extensions (Contact, Distance, Tangent constraints, In-Context Design)
 - **3DEXPERIENCE** CATIA support
 - **Windows integration tests** with real CATIA
 

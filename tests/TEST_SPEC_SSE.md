@@ -45,7 +45,7 @@ alle zu testenden Bereiche und Fälle.
 
 | # | Test | Erwartetes Verhalten |
 |---|------|---------------------|
-| 5.1 | SSE-Mode listet gleiche Tools wie stdio | `list_tools` returns 55+ tools |
+| 5.1 | SSE-Mode listet gleiche Tools wie stdio | `list_tools` returns 59+ tools |
 | 5.2 | Tool-Routing funktioniert im SSE-Modus | `catia_connect`, `catia_pad`, etc. werden korrekt geroutet |
 
 ## 6. Edge Cases
