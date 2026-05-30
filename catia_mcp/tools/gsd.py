@@ -720,17 +720,23 @@ class GSDTools:
 
     @staticmethod
     def _hsf(part: Any) -> Any:
-        """Get HybridShapeFactory, wrapped in dynamic.Dispatch on Windows for late binding."""
-        hsf = part.HybridShapeFactory
+        """Get HybridShapeFactory via late binding on the Part object.
+
+        Wrapping the gencache proxy in dynamic.Dispatch doesn't work because
+        the proxy is already a Python object, not a raw COM pointer.
+        Instead, dispatch on the Part itself and access HybridShapeFactory
+        through the late-bound wrapper.
+        """
         try:
             import win32com.client.dynamic
-            return win32com.client.dynamic.Dispatch(hsf)
+            dp = win32com.client.dynamic.Dispatch(part)
+            return dp.HybridShapeFactory
         except ImportError:
             # Linux / test env — no win32com, return raw
-            return hsf
+            return part.HybridShapeFactory
         except Exception:
-            # Dispatch failed for other reasons — fall back to raw
-            return hsf
+            # Fallback to raw gencache proxy
+            return part.HybridShapeFactory
 
     def _get_or_create_set(self, part: Any, set_name: str | None) -> Any:
         """Return an existing HybridBody by name, or create one."""
