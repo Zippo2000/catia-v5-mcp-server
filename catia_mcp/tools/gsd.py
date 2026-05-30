@@ -920,7 +920,8 @@ class GSDTools:
 
         plane_ref = self._ref(part, support)
         hsf = self._hsf(part)
-        circle = hsf.AddNewCircleCtrRad(center, plane_ref, False, radius)
+        circle = hsf.AddNewCircleCtrRad(self._ref_geom(self._dpart(part), center),
+                                       plane_ref, False, radius)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(
