@@ -2,11 +2,12 @@
 
 Main entry point. Exposes all CATIA V5 automation tools via the
 Model Context Protocol (MCP) for use with Claude Desktop, Claude Code,
-vLLM.rs, LM Studio, and any other MCP-compatible client.
+vLLM.rs, LM Studio, Open WebUI, and any other MCP-compatible client.
 
 Usage:
-    python -m catia_mcp.server         # stdio (Claude Desktop/Code)
-    python -m catia_mcp.server --sse   # SSE over HTTP (vLLM, LM Studio, etc.)
+    python -m catia_mcp                     # stdio (Claude Desktop/Code, default)
+    python -m catia_mcp --sse               # SSE over HTTP (Hermes, vLLM, LM Studio)
+    python -m catia_mcp --streamable-http   # Streamable HTTP (Open WebUI)
     # or
     catia-mcp  (if installed via pip)
 """
@@ -53,7 +54,8 @@ logger = logging.getLogger("catia_mcp")
 
 # ── CLI Arguments ──
 DEFAULT_SSE_HOST = "0.0.0.0"
-DEFAULT_SSE_PORT = 8765
+DEFAULT_SSE_PORT = 3000
+DEFAULT_STREAMABLE_HTTP_PORT = 3001
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -64,28 +66,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     transport = parser.add_mutually_exclusive_group()
     transport.add_argument(
-        "--stdio",
-        action="store_true",
-        default=False,
-        help="Run as stdio MCP server (default, for Claude Desktop/Code)",
-    )
-    transport.add_argument(
         "--sse",
         action="store_true",
         default=False,
-        help="Run as SSE MCP server over HTTP (for vLLM, LM Studio, etc.)",
+        help="Run as SSE MCP server over HTTP (for Hermes, vLLM, LM Studio)",
+    )
+    transport.add_argument(
+        "--streamable-http",
+        action="store_true",
+        default=False,
+        help="Run as Streamable HTTP MCP server (for Open WebUI)",
     )
     parser.add_argument(
         "--host",
         type=str,
         default=DEFAULT_SSE_HOST,
-        help=f"SSE bind host (default: {DEFAULT_SSE_HOST})",
+        help=f"HTTP bind host (default: {DEFAULT_SSE_HOST})",
     )
     parser.add_argument(
         "--port",
         type=int,
         default=DEFAULT_SSE_PORT,
         help=f"SSE bind port (default: {DEFAULT_SSE_PORT})",
+    )
+    parser.add_argument(
+        "--shport",
+        type=int,
+        default=DEFAULT_STREAMABLE_HTTP_PORT,
+        help=f"Streamable HTTP bind port (default: {DEFAULT_STREAMABLE_HTTP_PORT})",
     )
     return parser.parse_args(argv)
 
@@ -217,7 +225,7 @@ class CATIAMCPServer:
             GET  /sse         → SSE stream (server → client)
             POST /messages/   → Client messages (client → server)
 
-        Compatible with vLLM.rs, LM Studio, Open WebUI, Cursor, and any
+        Compatible with Hermes, vLLM.rs, LM Studio, Cursor, and any
         MCP client that supports the SSE transport.
         """
         import uvicorn
@@ -288,16 +296,80 @@ class CATIAMCPServer:
                 pass
             logger.info("SSE server shutdown complete")
 
-    async def run(self, transport: str = "stdio", host: str = DEFAULT_SSE_HOST, port: int = DEFAULT_SSE_PORT) -> None:
+    async def run_streamable_http(self, host: str = DEFAULT_SSE_HOST, port: int = DEFAULT_STREAMABLE_HTTP_PORT) -> None:
+        """Run the MCP server over Streamable HTTP (RFC-compatible MCP HTTP transport).
+
+        Creates a single ASGI endpoint:
+            POST /mcp  → Client messages (bidirectional via HTTP)
+            GET  /mcp  → SSE stream for server-to-client messages
+
+        Compatible with Open WebUI and any MCP client that supports
+        the Streamable HTTP transport.
+        """
+        import uvicorn
+        from starlette.applications import Starlette
+        from starlette.routing import Route
+
+        from mcp.server.streamable_http import StreamableHTTPServerTransport
+
+        pd_source = inspect.getsourcefile(PartDesignTools)
+        pad_source = inspect.getsource(PartDesignTools._pad)
+        has_inworkobject = "InWorkObject" in pad_source
+
+        logger.info("=" * 60)
+        logger.info("Starting CATIA V5 MCP Server (Streamable HTTP)...")
+        logger.info("Transport: Streamable HTTP")
+        logger.info("Host: %s, Port: %d", host, port)
+        logger.info("Endpoint: http://%s:%d/mcp", host, port)
+        logger.info("PartDesignTools source: %s", pd_source)
+        logger.info("_pad has InWorkObject: %s", has_inworkobject)
+        logger.info("Registered %d tools across %d modules",
+                     len(self._tool_router), len(self._tool_modules))
+        logger.info("=" * 60)
+
+        # Create Streamable HTTP transport
+        sht = StreamableHTTPServerTransport("/mcp")
+
+        # Build Starlette app — handle_request is already ASGI-compatible
+        app = Starlette(
+            routes=[
+                Route("/mcp", endpoint=sht.handle_request, methods=["GET", "POST"]),
+            ],
+        )
+
+        # uvicorn handles signals (SIGINT/SIGTERM) and graceful shutdown
+        config = uvicorn.Config(app, host=host, port=port, log_level="info")
+        srv = uvicorn.Server(config)
+
+        try:
+            await srv.serve()
+        finally:
+            # Clean up CATIA connection on server exit
+            try:
+                self.connection.disconnect()
+            except Exception:
+                pass
+            logger.info("Streamable HTTP server shutdown complete")
+
+    async def run(
+        self,
+        transport: str = "stdio",
+        host: str = DEFAULT_SSE_HOST,
+        port: int = DEFAULT_SSE_PORT,
+        shport: int = DEFAULT_STREAMABLE_HTTP_PORT,
+    ) -> None:
         """Run the MCP server with the specified transport.
 
         Args:
-            transport: "stdio" or "sse"
-            host: SSE bind host (ignored for stdio)
-            port: SSE bind port (ignored for stdio)
+            transport: "stdio", "sse", or "streamable_http"
+            host: HTTP bind host (ignored for stdio)
+            port: SSE bind port (ignored for stdio and streamable_http)
+            shport: Streamable HTTP bind port (ignored for stdio and sse)
         """
         if transport == "sse":
             await self.run_sse(host, port)
+        elif transport == "streamable_http":
+            await self.run_streamable_http(host, shport)
         else:
             await self.run_stdio()
 
@@ -324,6 +396,8 @@ def main() -> None:
 
     if args.sse:
         asyncio.run(server.run(transport="sse", host=args.host, port=args.port))
+    elif args.streamable_http:
+        asyncio.run(server.run(transport="streamable_http", host=args.host, shport=args.shport))
     else:
         asyncio.run(server.run(transport="stdio"))
 

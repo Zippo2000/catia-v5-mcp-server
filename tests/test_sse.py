@@ -31,24 +31,26 @@ class TestCLIParseArgs:
     def test_default_is_stdio(self):
         from catia_mcp.server import parse_args
         args = parse_args([])
-        assert args.stdio is False
-        assert args.sse is False
+        assert args.sse is False  # default = stdio
+        assert args.streamable_http is False
         assert args.host == "0.0.0.0"
-        assert args.port == 8765
+        assert args.port == 3000
+        assert args.shport == 3001
 
     def test_sse_flag(self):
         from catia_mcp.server import parse_args
         args = parse_args(["--sse"])
         assert args.sse is True
-        assert args.stdio is False
+        assert args.streamable_http is False
         assert args.host == "0.0.0.0"
-        assert args.port == 8765
+        assert args.port == 3000
 
-    def test_stdio_flag(self):
+    def test_streamable_http_flag(self):
         from catia_mcp.server import parse_args
-        args = parse_args(["--stdio"])
-        assert args.stdio is True
+        args = parse_args(["--streamable-http"])
+        assert args.streamable_http is True
         assert args.sse is False
+        assert args.shport == 3001
 
     def test_custom_host_and_port(self):
         from catia_mcp.server import parse_args
@@ -57,10 +59,15 @@ class TestCLIParseArgs:
         assert args.host == "127.0.0.1"
         assert args.port == 9999
 
-    def test_mutually_exclusive_stdio_and_sse(self):
+    def test_mutually_exclusive_sse_and_streamable_http(self):
         from catia_mcp.server import parse_args
         with pytest.raises(SystemExit):
-            parse_args(["--stdio", "--sse"])
+            parse_args(["--sse", "--streamable-http"])
+
+    def test_custom_shport(self):
+        from catia_mcp.server import parse_args
+        args = parse_args(["--streamable-http", "--shport", "8080"])
+        assert args.shport == 8080
 
     def test_invalid_port_type(self):
         from catia_mcp.server import parse_args
@@ -68,9 +75,10 @@ class TestCLIParseArgs:
             parse_args(["--port", "abc"])
 
     def test_defaults_constants(self):
-        from catia_mcp.server import DEFAULT_SSE_HOST, DEFAULT_SSE_PORT
+        from catia_mcp.server import DEFAULT_SSE_HOST, DEFAULT_SSE_PORT, DEFAULT_STREAMABLE_HTTP_PORT
         assert DEFAULT_SSE_HOST == "0.0.0.0"
-        assert DEFAULT_SSE_PORT == 8765
+        assert DEFAULT_SSE_PORT == 3000
+        assert DEFAULT_STREAMABLE_HTTP_PORT == 3001
 
 
 # ─── 2. Transport Selection in main() ──────────────────────────────────
