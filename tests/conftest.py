@@ -23,6 +23,15 @@ def _install_com_mocks():
     mock_win32com.client.dynamic = MagicMock()
     # Make Dispatch() return its argument unchanged (pass-through for late binding)
     mock_win32com.client.dynamic.Dispatch.side_effect = lambda obj: obj
+    # Only set EnsureDispatch mock on FIRST install (not on pytest_runtest_setup retries)
+    # Connection tests override this per-test and we must not clobber their overrides
+    if not getattr(mock_win32com.client.gencache.EnsureDispatch, '_conftest_mocked', False):
+        def _mock_ensure_dispatch(obj_or_progid):
+            if isinstance(obj_or_progid, str):
+                raise RuntimeError("ProgID not available in test environment")
+            return obj_or_progid
+        mock_win32com.client.gencache.EnsureDispatch.side_effect = _mock_ensure_dispatch
+        mock_win32com.client.gencache.EnsureDispatch._conftest_mocked = True
 
     sys.modules["pythoncom"] = mock_pythoncom
     sys.modules["win32com"] = mock_win32com
@@ -46,11 +55,18 @@ def pytest_configure(config):
 
 
 def pytest_runtest_setup(item):
-    """Before each test, ensure COM mocks are still in place."""
+    """Before each test, ensure COM mocks are still in place.
+
+    IMPORTANT: Only reinstall if sys.modules was cleared (e.g., by a test).
+    Do NOT reinstall normally — connection tests set their own EnsureDispatch
+    behavior that must survive test boundaries.
+    """
     if "pythoncom" not in sys.modules:
+        # Full reinstall needed — modules were cleared
         _install_com_mocks()
-
-
-def pytest_runtest_teardown(item):
-    """After each test, re-inject mocks (some tests may delete sys.modules entries)."""
-    _install_com_mocks()
+    elif "catia_mcp.connection" in sys.modules:
+        # Modules still exist but catia_mcp modules may need refresh
+        # Only refresh non-test modules, preserving per-test mock overrides
+        for mod in list(sys.modules.keys()):
+            if mod.startswith("catia_mcp") and "test_" not in mod:
+                del sys.modules[mod]

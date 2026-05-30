@@ -11,6 +11,7 @@ HybridShapeFactory.
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any
 
 from catia_mcp.connection import CATIAConnection
@@ -821,16 +822,18 @@ class GSDTools:
     def _ref(self, part: Any, name: str) -> Any:
         """Create a Reference from a geometry name or standard element.
 
-        IMPORTANT: If part is already a dynamic.Dispatch wrapper, use it directly.
-        Calling dynamic.Dispatch(dynamic.Dispatch(...)) breaks COM interface resolution,
-        resulting in <unknown>.ZAxis errors on OriginElements.
+        CRITICAL: OriginElements must be accessed via gencache proxy (not dynamic.Dispatch)
+        because child COM properties of a dynamic.Dispatch parent resolve as <unknown>.
+        CreateReferenceFromObject/Geometry must be called on dynamic.Dispatch to avoid
+        gencache proxy limitations.
         """
         import win32com.client
 
-        # Use _dpart to handle both gencache and already-wrapped cases
+        # dpart for CreateReferenceFrom... calls (late binding required)
         dpart = self._dpart(part)
 
-        # Standard planes and axes via OriginElements
+        # Standard planes and axes via OriginElements — MUST use gencache proxy
+        # to access OriginElements, not dynamic.Dispatch (which returns <unknown>)
         plane_map = {"xy": "PlaneXY", "yz": "PlaneYZ", "zx": "PlaneZX"}
         axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
         lookup = name.lower().strip()
@@ -838,7 +841,12 @@ class GSDTools:
         if lookup in plane_map or lookup in axis_map:
             key = plane_map.get(lookup, axis_map.get(lookup))
             try:
-                oe = dpart.OriginElements
+                # Get OriginElements from the gencache proxy (part), not dpart
+                # For dynamic.Dispatch parts, re-wrap via gencache
+                gc_part = part
+                if type(part).__module__ and 'dynamic' in type(part).__module__:
+                    gc_part = win32com.client.gencache.EnsureDispatch(part)
+                oe = gc_part.OriginElements
                 elem = getattr(oe, key)
                 return dpart.CreateReferenceFromObject(elem)
             except Exception as e:
@@ -1277,10 +1285,16 @@ class GSDTools:
         return f"Cone created (via revolution): base={base_radius}mm, top={top_radius}mm, height={height}mm, angle={angle}°. Name: '{name}'"
 
     def _create_torus(self, args: dict[str, Any]) -> str:
-        """Create a torus (ring) surface via AddNewRevol (AddNewTorusPointRadius does not exist in CATIA API).
-        
-        Creates a torus by revolving a circle around an axis parallel to Z.
-        The axis passes through (cx, cy) and the circle is centered at (cx+major, cy, cz).
+        """Create a torus (ring) surface via AddNewRevol.
+
+        No AddNewTorus exists in the CATIA API. A torus is created by
+        revolving a circle (the minor profile) around an axis.
+
+        The axis is created as an infinite line using the Z-axis direction,
+        passing through (cx, cy, cz). The profile circle is offset by
+        major_radius from the axis in the X direction.
+
+        CRITICAL: AddNewRevol expects angles in RADIANS, not degrees.
         """
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
@@ -1291,38 +1305,47 @@ class GSDTools:
         major_radius = validate_positive_float(args.get("major_radius"), "major_radius")
         minor_radius = validate_positive_float(args.get("minor_radius"), "minor_radius")
 
-        angle_start = float(args.get("angle_start", 0))
-        angle_end = float(args.get("angle_end", 360))
+        # AddNewRevol requires RADIAN angles
+        angle_start = math.radians(float(args.get("angle_start", 0)))
+        angle_end = math.radians(float(args.get("angle_end", 360)))
 
         hsf = self._hsf(part)
         dpart = self._dpart(part)
-        # Create circle for the torus profile
+
+        # Profile circle: centered at (cx+major, cy, cz) with minor_radius
         circle_center = hsf.AddNewPointCoord(cx + major_radius, cy, cz)
         plane_ref = self._ref(part, "xy")
-        circle = hsf.AddNewCircleCtrRad(self._ref_geom(self._dpart(part), circle_center),
-                                         plane_ref, False, minor_radius)
-        axis_bottom = hsf.AddNewPointCoord(cx, cy, cz - 20)
-        axis_top = hsf.AddNewPointCoord(cx, cy, cz + 20)
-        axis_line = hsf.AddNewLinePtPt(self._ref_geom(self._dpart(part), axis_bottom),
-                                        self._ref_geom(self._dpart(part), axis_top))
+        circle = hsf.AddNewCircleCtrRad(
+            self._ref_geom(dpart, circle_center), plane_ref, False, minor_radius
+        )
+
+        # Axis of revolution: infinite line through (cx, cy, cz) along Z
+        axis_point = hsf.AddNewPointCoord(cx, cy, cz)
+        axis_dir = self._ref(part, "z")
+        axis_line = hsf.AddNewLinePtDir(
+            self._ref_geom(dpart, axis_point), axis_dir
+        )
+
         try:
             torus = hsf.AddNewRevol(
-                self._ref_geom(self._dpart(part), circle),
-                float(angle_start),
-                float(angle_end),
-                self._ref_geom(self._dpart(part), axis_line),
+                self._ref_geom(dpart, circle),
+                angle_start,
+                angle_end,
+                self._ref_geom(dpart, axis_line),
             )
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewRevol", e))
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         try:
-            name = self._append_and_update(part, hbody, torus, f"Torus({cx},{cy},{cz},{major_radius}mm,{minor_radius}mm)")
+            name = self._append_and_update(
+                part, hbody, torus,
+                f"Torus({cx},{cy},{cz},{major_radius}mm,{minor_radius}mm)",
+            )
         except Exception as e:
-            # If the torus fails to update, try appending without auto-update
             hbody.AppendHybridShape(torus)
             name = f"Torus({cx},{cy},{cz},{major_radius}mm,{minor_radius}mm)"
-        return f"Torus created (via revolution): major={major_radius}mm, minor={minor_radius}mm, angle=({angle_start}°-{angle_end}°). Name: '{name}'"
+        return f"Torus created (via revolution): major={major_radius}mm, minor={minor_radius}mm, angle=({math.degrees(angle_start):.1f}°-{math.degrees(angle_end):.1f}°). Name: '{name}'"
 
     def _create_ruled(self, args: dict[str, Any]) -> str:
         """Create a ruled surface between two curves/edges."""
