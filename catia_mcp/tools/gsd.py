@@ -832,8 +832,10 @@ class GSDTools:
         # dpart for CreateReferenceFrom... calls (late binding required)
         dpart = self._dpart(part)
 
-        # Standard planes and axes via OriginElements — MUST use gencache proxy
-        # to access OriginElements, not dynamic.Dispatch (which returns <unknown>)
+        # Standard planes and axes via OriginElements.
+        # OriginElements must be accessed on a gencache proxy (not dynamic.Dispatch).
+        # get_active_part() returns dynamic.Dispatch(doc).Part, so we must re-wrap
+        # via gencache.EnsureDispatch to get a proper proxy that exposes OriginElements.
         plane_map = {"xy": "PlaneXY", "yz": "PlaneYZ", "zx": "PlaneZX"}
         axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
         lookup = name.lower().strip()
@@ -841,11 +843,7 @@ class GSDTools:
         if lookup in plane_map or lookup in axis_map:
             key = plane_map.get(lookup, axis_map.get(lookup))
             try:
-                # Get OriginElements from the gencache proxy (part), not dpart
-                # For dynamic.Dispatch parts, re-wrap via gencache
-                gc_part = part
-                if type(part).__module__ and 'dynamic' in type(part).__module__:
-                    gc_part = win32com.client.gencache.EnsureDispatch(part)
+                gc_part = win32com.client.gencache.EnsureDispatch(part)
                 oe = gc_part.OriginElements
                 elem = getattr(oe, key)
                 return dpart.CreateReferenceFromObject(elem)
