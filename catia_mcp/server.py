@@ -31,13 +31,17 @@ from catia_mcp.tools.sketcher import SketcherTools
 
 # ── Logging ──
 import os
-_log_dir = os.path.dirname(os.path.abspath(__file__))
-_log_path = os.path.join(_log_dir, "..", "catia_mcp.log")
+import tempfile
+import atexit
+
+_log_dir = os.path.join(tempfile.gettempdir(), "catia-mcp")
+os.makedirs(_log_dir, exist_ok=True)
+_log_path = os.path.join(_log_dir, "catia_mcp.log")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     handlers=[
-        logging.FileHandler(os.path.normpath(_log_path), encoding="utf-8"),
+        logging.FileHandler(_log_path, encoding="utf-8"),
         logging.StreamHandler(sys.stderr),
     ],
 )

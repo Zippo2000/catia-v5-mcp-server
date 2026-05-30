@@ -77,7 +77,7 @@ else
         mv "$INSTALL_DIR" "${INSTALL_DIR}.bak.$(date +%s)"
     fi
     echo "  Cloning from GitHub..."
-    git clone https://github.com/daiemon12/catia-v5-mcp-server.git "$INSTALL_DIR"
+    git clone https://github.com/Zippo2000/catia-v5-mcp-server.git "$INSTALL_DIR"
     cd "$INSTALL_DIR"
 fi
 
