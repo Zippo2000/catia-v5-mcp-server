@@ -17,12 +17,12 @@ This MCP server exposes **55 tools** across 6 modules that let Claude:
 | 📏 **Measurement** | 6 | Distance, inertia, bounding box, parameters, update |
 | 📤 **Export & View** | 4 | STEP/IGES/STL export, screenshots, view orientations |
 
-## Requirements
+### Requirements
 
 - **Windows** (COM automation is Windows-only)
 - **CATIA V5** R2016+ installed and licensed
 - **Python 3.10+**
-- **Claude Desktop** or **Claude Code**
+- **Claude Desktop**, **Claude Code**, or **LM Studio** (see below)
 
 ## Installation
 
@@ -98,6 +98,78 @@ Or with an absolute path to the project:
 claude mcp add catia-v5 python -- -m catia_mcp
 ```
 
+### LM Studio (with remote vLLM or other local LLM)
+
+**This setup lets you use the CATIA MCP Server with any local LLM running on another machine (e.g. vLLM on a Linux server), using LM Studio as the bridge.**
+
+```
+┌─────────────────────────────────────────┐
+│           Windows Client                │
+│                                         │
+│  LM Studio (Browser-Interface)          │
+│       │                                 │
+│       ├── SSE ──→ catia_mcp :8765       │
+│       │              │ COM              │
+│       │              ▼                  │
+│       │          CATIA V5               │
+│       │                                 │
+│       └── OpenAI API ──→ 192.168.177.44:8010
+│                                   │
+└────────────────────────┬───────────┘
+                         │ LAN
+              ┌──────────▼──────────┐
+              │    Linux Server     │
+              │    vLLM :8010       │
+              │  Qwen3.6-27B-INT4   │
+              └─────────────────────┘
+```
+
+**Step 1: Start the MCP server in SSE mode on Windows**
+
+```bash
+# In your activated virtual environment:
+python -m catia_mcp --sse --host 0.0.0.0 --port 8765
+```
+
+The server will output:
+```
+INFO:     Started server process [1234]
+INFO:     Waiting for connections at http://0.0.0.0:8765/sse
+```
+
+Leave this terminal window open — the server runs in the foreground.
+
+**Step 2: Configure LM Studio**
+
+1. Open LM Studio and navigate to **Local Server** → **MCP Tools** (left sidebar)
+
+2. **Add the MCP server:**
+   - **Name:** `catia-v5`
+   - **Type:** `SSE`
+   - **URL:** `http://localhost:8765/sse`
+
+3. Configure the **LLM backend:**
+   - Go to **Local Server** → **Settings**
+   - **LLM Provider:** `Remote OpenAI-compatible`
+   - **Base URL:** `http://192.168.177.44:8010/v1`
+   - **Model:** `Qwen3.6-27B-AutoRound-INT4` (or whatever your vLLM serves)
+   - **API Key:** (leave empty if vLLM doesn't require one)
+
+4. Click **Start Server** and open the chat interface
+
+5. Start chatting — LM Studio will route tool calls to CATIA via SSE and LLM responses via vLLM
+
+**SSE server CLI options:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--sse` | — | Start in SSE transport mode instead of stdio |
+| `--host` | `0.0.0.0` | Bind address (use `0.0.0.0` for LAN access) |
+| `--port` | `8765` | Port number for the SSE HTTP server |
+| `--stdio` | — | Explicit stdio mode (default; for Claude Desktop/Code) |
+
+> **Note:** The SSE server binds to `0.0.0.0` by default, making it accessible from other machines on your LAN. If you want local-only access, use `--host 127.0.0.1`.
+
 ### Standalone (for testing)
 
 ```bash
@@ -110,9 +182,14 @@ catia-mcp
 
 1. **Start CATIA V5** — make sure it is running before using the server. The server will auto-connect to a running instance or attempt to launch one.
 
-2. **Open Claude Desktop** — in a new conversation, ask Claude to work with CATIA.
+2. **Start the server:**
 
-3. **Start with `catia_connect`** — Claude will call this automatically when needed.
+   - **Claude Desktop / Claude Code**: The server starts automatically via stdio
+   - **LM Studio / remote LLM**: Run `python -m catia_mcp --sse` (see Configuration section above)
+
+3. **Open your client** and ask Claude to work with CATIA.
+
+4. **Start with `catia_connect`** — Claude will call this automatically when needed.
 
 ## Usage Examples
 
@@ -152,7 +229,7 @@ catia-v5-mcp-server/
 ├── catia_mcp/
 │   ├── __init__.py
 │   ├── __main__.py            # python -m catia_mcp entry point
-│   ├── server.py              # MCP Server — tool registration & routing
+│   ├── server.py              # MCP Server — tool registration & routing (stdio + SSE)
 │   ├── connection.py          # COM connection manager (auto-connect, reconnect, shutdown)
 │   ├── utils.py               # Shared validation utilities
 │   └── tools/
@@ -163,14 +240,17 @@ catia-v5-mcp-server/
 │       ├── assembly.py        # Assembly/product (9 tools)
 │       ├── measurement.py     # Measurement & analysis (6 tools)
 │       └── export.py          # Export & view control (4 tools)
-├── tests/                     # pytest test suite (55+ tests)
+├── tests/                     # pytest test suite (154 tests)
 │   ├── conftest.py            # Shared COM mocking infrastructure
-│   └── test_*.py              # Module-specific tests
+│   ├── test_*.py              # Module-specific tests
+│   └── test_sse.py            # SSE transport tests
 ├── pyproject.toml
 └── README.md
 ```
 
 ### Data flow
+
+**Stdio mode** (Claude Desktop / Claude Code):
 
 ```
 Claude (Desktop/Code)
@@ -186,6 +266,16 @@ catia_mcp/tools/*.py  (Tool modules)
     │ win32com.client (COM Automation)
     ▼
 CATIA V5 Application
+```
+
+**SSE mode** (LM Studio / vLLM.rs / remote LLM):
+
+```
+LM Studio (Browser)
+    │
+    ├── SSE HTTP ──→ catia_mcp --sse :8765 ──→ CATIA V5
+    │
+    └── OpenAI API ──→ vLLM (remote) :8010
 ```
 
 ## Complete Tool Reference
@@ -293,7 +383,7 @@ All dimensions are in **millimeters**, angles in **degrees**.
 
 ## Testing
 
-This project includes a comprehensive pytest test suite (55+ tests) with mocked COM, so tests run on any OS without CATIA installed:
+This project includes a comprehensive pytest test suite (154 tests) with mocked COM, so tests run on any OS without CATIA installed:
 
 ```bash
 pip install -e ".[dev]"
