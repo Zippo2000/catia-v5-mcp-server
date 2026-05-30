@@ -1,0 +1,71 @@
+{
+  "AddNewSphere": {
+    "params": [
+      "center (Reference)",
+      "axis (Reference)",
+      "radius (double)",
+      "beginParallelAngle (double)",
+      "endParallelAngle (double)",
+      "beginMeridianAngle (double)",
+      "endMeridianAngle (double)"
+    ],
+    "returns": "HybridShapeSphere",
+    "description": "Creates a new Sphere within the current body."
+  },
+  "AddNewCylinder": {
+    "params": [
+      "center (Reference)",
+      "radius (double)",
+      "firstLength (double)",
+      "secondLength (double)",
+      "direction (HybridShapeDirection)"
+    ],
+    "returns": "HybridShapeCylinder",
+    "description": "Creates a new Cylinder within the current body."
+  },
+  "AddNewLinePtPt": {
+    "params": [
+      "ptOrigine (Reference)",
+      "ptExtremite (Reference)"
+    ],
+    "returns": "HybridShapeLinePtPt",
+    "description": "Creates a new point-point line within the current body."
+  },
+  "AddNewCircleCtrRad": {
+    "params": [
+      "center (Reference)",
+      "support (Reference)",
+      "geodesic (boolean)",
+      "radius (double)"
+    ],
+    "returns": "HybridShapeCircle",
+    "description": "Creates a circle by center, support plane, geodesic, and radius."
+  },
+  "AddNewCircle3Points": {
+    "params": [
+      "point1 (Reference)",
+      "point2 (Reference)",
+      "point3 (Reference)"
+    ],
+    "returns": "HybridShapeCircle",
+    "description": "Creates a circle from 3 points."
+  },
+  "AddNewPlaneOffset": {
+    "params": [
+      "plane (Reference)",
+      "offset (double)",
+      "orientation (boolean)"
+    ],
+    "returns": "HybridShapePlane",
+    "description": "Creates an offset plane."
+  },
+  "AddNewPointCoord": {
+    "params": [
+      "x (double)",
+      "y (double)",
+      "z (double)"
+    ],
+    "returns": "HybridShapePoint",
+    "description": "Creates a point by coordinates."
+  }
+}
