@@ -306,9 +306,9 @@ class CATIAMCPServer:
         Compatible with Open WebUI and any MCP client that supports
         the Streamable HTTP transport.
         """
+        import contextlib
+
         import uvicorn
-        from starlette.applications import Starlette
-        from starlette.routing import Mount
 
         from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
@@ -327,19 +327,36 @@ class CATIAMCPServer:
                      len(self._tool_router), len(self._tool_modules))
         logger.info("=" * 60)
 
-        # StreamableHTTPSessionManager is the ASGI app that handles sessions,
-        # routing, and the run() lifecycle for Streamable HTTP transport.
+        # StreamableHTTPSessionManager requires its run() to be called as a lifespan
+        # context manager before handle_request() can process HTTP requests.
+        # We wrap it in a minimal ASGI app that delegates to the session manager.
         session_manager = StreamableHTTPSessionManager(self.server)
 
-        # Build Starlette app — session_manager.handle_request is the ASGI endpoint
-        app = Starlette(
-            routes=[
-                Mount("/mcp", app=session_manager.handle_request),
-            ],
-        )
+        @contextlib.asynccontextmanager
+        async def lifespan(app):
+            async with session_manager.run():
+                yield
 
-        # uvicorn handles signals (SIGINT/SIGTERM) and graceful shutdown
-        config = uvicorn.Config(app, host=host, port=port, log_level="info")
+        async def asgi_app(scope, receive, send):
+            if scope["type"] == "lifespan":
+                # Handle lifespan events
+                message = await receive()
+                if message["type"] == "lifespan.startup":
+                    async with session_manager.run():
+                        await send({"type": "lifespan.startup.complete"})
+                        message = await receive()
+                        if message["type"] == "lifespan.shutdown":
+                            await send({"type": "lifespan.shutdown.complete"})
+                return
+            await session_manager.handle_request(scope, receive, send)
+
+        config = uvicorn.Config(
+            asgi_app,
+            host=host,
+            port=port,
+            log_level="info",
+            lifespan="on",
+        )
         srv = uvicorn.Server(config)
 
         try:
