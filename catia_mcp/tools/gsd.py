@@ -723,7 +723,11 @@ class GSDTools:
         """Get HybridShapeFactory via late binding on the Part object."""
         try:
             import win32com.client.dynamic
-            dp = win32com.client.dynamic.Dispatch(part)
+            # Use _dpart pattern to avoid double-wrapping
+            if hasattr(part, '_username_'):
+                dp = part
+            else:
+                dp = win32com.client.dynamic.Dispatch(part)
             return dp.HybridShapeFactory
         except ImportError:
             return part.HybridShapeFactory
@@ -732,7 +736,16 @@ class GSDTools:
 
     @staticmethod
     def _dpart(part: Any) -> Any:
-        """Get late-bound wrapper for the Part, avoiding gencache proxy issues."""
+        """Get late-bound wrapper for the Part, avoiding gencache proxy issues.
+
+        If part is already a dynamic.Dispatch wrapper, return as-is.
+        Double-wrapping (dynamic.Dispatch(dynamic.Dispatch(...))) crashes.
+        """
+        # Check if already a dynamic.Dispatch object (has _username_ attr)
+        if hasattr(part, '_username_') or (
+            hasattr(part, '__com_object__') and hasattr(part, '_username_')
+        ):
+            return part
         try:
             import win32com.client.dynamic
             return win32com.client.dynamic.Dispatch(part)
@@ -805,16 +818,14 @@ class GSDTools:
     def _ref(self, part: Any, name: str) -> Any:
         """Create a Reference from a geometry name or standard element.
 
-        Uses dynamic.Dispatch(part) for all COM calls to avoid gencache proxy
-        issues with OriginElements and CreateReferenceFromObject/Geometry.
-
-        See scripting4v5.com 'When to use CreateReference':
-        - CreateReferenceFromObject: for AnyObject (OriginElements.PlaneXY, etc.)
-        - CreateReferenceFromGeometry: for HybridShape objects (points, lines, circles)
-        - CreateReferenceFromName: for string path labels (internal CATIA format)
+        IMPORTANT: If part is already a dynamic.Dispatch wrapper, use it directly.
+        Calling dynamic.Dispatch(dynamic.Dispatch(...)) breaks COM interface resolution,
+        resulting in <unknown>.ZAxis errors on OriginElements.
         """
         import win32com.client
-        dpart = win32com.client.dynamic.Dispatch(part)
+
+        # Use _dpart to handle both gencache and already-wrapped cases
+        dpart = self._dpart(part)
 
         # Standard planes and axes via OriginElements
         plane_map = {"xy": "PlaneXY", "yz": "PlaneYZ", "zx": "PlaneZX"}
