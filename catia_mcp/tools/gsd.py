@@ -790,16 +790,28 @@ class GSDTools:
 
         if lookup in plane_map or lookup in axis_map:
             key = plane_map.get(lookup, axis_map.get(lookup))
+            # Try gencache first
             try:
                 oe = part.OriginElements
                 elem = getattr(oe, key)
-                # OriginElements return AnyObject -> use CreateReferenceFromObject
                 return part.CreateReferenceFromObject(elem)
-            except Exception as e:
-                raise RuntimeError(
-                    f"Cannot reference '{name}': Failed to access part.OriginElements.{key}. "
-                    f"Try creating a new Part document. Original error: {e}"
-                ) from e
+            except (AttributeError, Exception):
+                pass
+            # Fallback: use dynamic.Dispatch on the part to access OriginElements
+            # This is needed when the gencache proxy doesn't have OriginElements cached
+            try:
+                import win32com.client.dynamic
+                dpart = win32com.client.dynamic.Dispatch(part)
+                oe = dpart.OriginElements
+                elem = getattr(oe, key)
+                return part.CreateReferenceFromObject(elem)
+            except Exception:
+                pass
+            raise RuntimeError(
+                f"Cannot reference '{name}': Failed to access OriginElements.{key}. "
+                f"The gencache for CATIA's OriginElements may need regeneration. "
+                f"Try: import win32com.client; win32com.client.gencache.EnsureDispatch('CATIA.Application')"
+            )
 
         # Search HybridShapes (points, lines, circles, etc.)
         obj = self._find_shape(part, name)
