@@ -308,9 +308,9 @@ class CATIAMCPServer:
         """
         import uvicorn
         from starlette.applications import Starlette
-        from starlette.routing import Mount, Route
+        from starlette.routing import Mount
 
-        from mcp.server.streamable_http import StreamableHTTPServerTransport
+        from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
         pd_source = inspect.getsourcefile(PartDesignTools)
         pad_source = inspect.getsource(PartDesignTools._pad)
@@ -327,13 +327,14 @@ class CATIAMCPServer:
                      len(self._tool_router), len(self._tool_modules))
         logger.info("=" * 60)
 
-        # Create Streamable HTTP transport
-        sht = StreamableHTTPServerTransport("/mcp")
+        # StreamableHTTPSessionManager is the ASGI app that handles sessions,
+        # routing, and the run() lifecycle for Streamable HTTP transport.
+        session_manager = StreamableHTTPSessionManager(self.server)
 
-        # Build Starlette app — StreamableHTTPServerTransport.handle_request is an ASGI app
+        # Build Starlette app — session_manager.handle_request is the ASGI endpoint
         app = Starlette(
             routes=[
-                Mount("/mcp", app=sht.handle_request),
+                Mount("/mcp", app=session_manager.handle_request),
             ],
         )
 
