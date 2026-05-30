@@ -178,11 +178,10 @@ class DocumentTools:
     def _new_part(self, name: str | None = None) -> str:
         self.conn.ensure_connected()
         docs = self.conn.documents
+        # Use EnsureDispatch to get a proper gencache proxy that exposes .Part
         raw_doc = docs.Add("Part")
-        # Documents.Add() returns a gencache dispatch proxy that may not expose
-        # .Part. Wrap in dynamic.Dispatch for late binding.
-        import win32com.client.dynamic
-        doc = win32com.client.dynamic.Dispatch(raw_doc)
+        import win32com.client
+        doc = win32com.client.gencache.EnsureDispatch(raw_doc)
         if name:
             try:
                 doc.Part.Name = name
@@ -195,9 +194,9 @@ class DocumentTools:
     def _new_product(self, name: str | None = None) -> str:
         self.conn.ensure_connected()
         docs = self.conn.documents
+        import win32com.client
         raw_doc = docs.Add("Product")
-        import win32com.client.dynamic
-        doc = win32com.client.dynamic.Dispatch(raw_doc)
+        doc = win32com.client.gencache.EnsureDispatch(raw_doc)
         if name:
             doc.Product.Name = name
         product_name = doc.Product.Name
@@ -209,10 +208,10 @@ class DocumentTools:
         file_path = validate_file_path(file_path, "file_path")
         file_path = self.conn.normalize_path(file_path)
         docs = self.conn.documents
+        import win32com.client
         try:
             raw_doc = docs.Open(file_path)
-            import win32com.client.dynamic
-            doc = win32com.client.dynamic.Dispatch(raw_doc)
+            doc = win32com.client.gencache.EnsureDispatch(raw_doc)
         except Exception as e:
             raise RuntimeError(format_catia_error("OpenDocument", e))
         return f"Opened document: '{doc.Name}' from {file_path}"

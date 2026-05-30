@@ -777,21 +777,31 @@ class GSDTools:
         """Create a Reference from a geometry name or standard element."""
         import win32com.client
 
-        # Standard planes and axes via OriginElements (works with dynamic.Dispatch)
-        try:
-            oe = part.OriginElements
-            plane_map = {"xy": "PlaneXY", "yz": "PlaneYZ", "zx": "PlaneZX"}
-            axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
-            lookup = name.lower().strip()
+        # Standard planes and axes — try multiple approaches for compatibility
+        plane_map = {"xy": "PlaneXY", "yz": "PlaneYZ", "zx": "PlaneZX"}
+        axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
+        lookup = name.lower().strip()
 
-            if lookup in plane_map:
-                elem = getattr(oe, plane_map[lookup])
+        if lookup in plane_map or lookup in axis_map:
+            key = plane_map.get(lookup, axis_map.get(lookup))
+            # Try gencache: part.OriginElements.PlaneXY
+            try:
+                oe = part.OriginElements
+                elem = getattr(oe, key)
                 return part.CreateReferenceFromObject(elem)
-            if lookup in axis_map:
-                elem = getattr(oe, axis_map[lookup])
-                return part.CreateReferenceFromObject(elem)
-        except Exception:
-            pass
+            except AttributeError:
+                # dynamic.Dispatch doesn't expose OriginElements.PlaneXY
+                # Try: part.CreateReferenceFromObject(part.PlaneXY)
+                try:
+                    elem = getattr(part, key)
+                    return part.CreateReferenceFromObject(elem)
+                except AttributeError:
+                    pass
+            # Last resort: try CreateReferenceFromName
+            try:
+                return part.CreateReferenceFromName(key)
+            except Exception:
+                pass
 
         # Search HybridShapes
         obj = self._find_shape(part, name)
