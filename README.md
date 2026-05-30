@@ -6,13 +6,14 @@ The first open-source MCP server for CATIA V5. Drive CATIA V5 CAD modeling from 
 
 ## What it does
 
-This MCP server exposes **59 tools** across 6 modules that let an LLM-driven client:
+This MCP server exposes **75 tools** across 7 modules that let an LLM-driven client:
 
 | Category | Tools | Examples |
 |----------|-------|----------|
 | 📄 **Document Management** | 10 | Create/open/save/close parts and assemblies, list documents |
 | ✏️ **2D Sketching** | 11 | Lines, rectangles, circles, arcs, splines, points, constraints |
 | 🔧 **Part Design** | 19 | Pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, shell, draft, lifting, sweep, loft, boolean |
+| 🎨 **GSD (Wireframe & Surface)** | 16 | Point, line, circle, plane, cylinder, fill, sweep, join, thicken, offset surface |
 | 📦 **Assembly** | 9 | Add components, constraints (fix/coincidence/offset/angle), move |
 | 📏 **Measurement** | 6 | Distance, inertia, bounding box, parameters, update |
 | 📤 **Export & View** | 4 | STEP/IGES/STL export, screenshots, view orientations |
@@ -241,11 +242,12 @@ catia-v5-mcp-server/
 │       ├── __init__.py
 │       ├── document.py        # Document management (10 tools)
 │       ├── sketcher.py        # 2D sketching (11 tools)
-│       ├── part_design.py     # 3D part design (15 tools)
+│       ├── part_design.py     # 3D part design (19 tools)
 │       ├── assembly.py        # Assembly/product (9 tools)
 │       ├── measurement.py     # Measurement & analysis (6 tools)
+│       ├── gsd.py             # Wireframe & surface (16 tools)
 │       └── export.py          # Export & view control (4 tools)
-├── tests/                     # pytest test suite (154 tests)
+├── tests/                     # pytest test suite (205 tests)
 │   ├── conftest.py            # Shared COM mocking infrastructure
 │   ├── test_*.py              # Module-specific tests
 │   └── test_sse.py            # SSE transport tests
@@ -388,11 +390,32 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_set_view` | `view` | `view` | Set view orientation: `front`, `back`, `top`, `bottom`, `left`, `right`, `isometric`. |
 | `catia_fit_all` | — | — | Fit all geometry in the current 3D view (zoom to fit). |
 
+### 🎨 GSD (Wireframe & Surface) Tools (16)
+
+| Tool | Parameters | Required | Description |
+|------|------------|----------|-------------|
+| `catia_create_geometrical_set` | `name` | `name` | Create a new Geometrical Set (HybridBody) for wireframe/surface geometry. |
+| `catia_create_point_coord` | `x`, `y`, `z`, `set_name` | `x`, `y`, `z` | Create a point by 3D coordinates (mm). |
+| `catia_create_line_2points` | `point1_name`, `point2_name`, `set_name` | `point1_name`, `point2_name` | Create a line defined by two named points. |
+| `catia_create_line_point_direction` | `point_name`, `direction`, `set_name` | `point_name`, `direction` | Create a line through a point along an axis or plane normal (x/y/z/xy/yz/zx). |
+| `catia_create_circle_center_radius` | `center_name`, `radius`, `support_plane`, `set_name` | `center_name`, `radius` | Create a circle by center point and radius on a support plane. |
+| `catia_create_plane_offset` | `reference_plane`, `offset`, `set_name` | `reference_plane`, `offset` | Create a plane parallel to a reference plane with an offset distance. |
+| `catia_create_cylinder` | `center_name`, `axis`, `radius`, `height`, `set_name` | `center_name`, `axis`, `radius`, `height` | Create a cylinder defined by center, axis, radius, and height. |
+| `catia_list_geometrical_sets` | — | — | List all Geometrical Sets in the active Part with shape counts. |
+| `catia_create_plane_3points` | `point1_name`, `point2_name`, `point3_name`, `set_name` | `point1_name`, `point2_name`, `point3_name` | Create a plane defined by three named points. |
+| `catia_create_fill` | `contour_names`, `set_name` | `contour_names` | Create a fill surface bounded by one or more contour curves. |
+| `catia_create_sweep` | `spine_name`, `section_name`, `set_name` | `spine_name`, `section_name` | Create a swept surface by moving a profile along a spine curve. |
+| `catia_create_rotational_surface` | `axis_name`, `profile_name`, `angle`, `set_name` | `axis_name`, `profile_name` | Create a rotational surface by revolving a profile around an axis. |
+| `catia_create_offset_surface` | `surface_name`, `distance`, `set_name` | `surface_name`, `distance` | Create an offset surface at a given distance (negative = reverse side). |
+| `catia_create_join` | `surface_names`, `set_name` | `surface_names` | Join multiple surfaces into a single connected element. |
+| `catia_create_thicken` | `surface_name`, `thickness`, `set_name` | `surface_name`, `thickness` | Thicken a surface into a solid shell. |
+| `catia_create_surface_from_contours` | `contour_names`, `set_name` | `contour_names` | Create a multi-section surface (loft) spanning multiple contour profiles. |
+
 ---
 
 ## Testing
 
-This project includes a comprehensive pytest test suite (154 tests) with mocked COM, so tests run on any OS without CATIA installed:
+This project includes a comprehensive pytest test suite (205 tests) with mocked COM, so tests run on any OS without CATIA installed:
 
 ```bash
 pip install -e ".[dev]"

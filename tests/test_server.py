@@ -33,7 +33,7 @@ class TestServerToolCount:
     def test_tool_router_has_all_modules(self):
         from catia_mcp.server import CATIAMCPServer
         server = CATIAMCPServer()
-        assert len(server._tool_modules) == 6
+        assert len(server._tool_modules) == 7
 
 
 class TestToolRouting:

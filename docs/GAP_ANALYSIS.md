@@ -12,8 +12,8 @@
 
 ## 1. Methodik
 
-Diese Analyse vergleicht den aktuellen Funktionsumfang des **catia-v5-mcp-server** (55 Tools
-über 6 Module) mit dem vollständigen CATIA V5 Automation API-Spektrum.
+Diese Analyse vergleicht den aktuellen Funktionsumfang des **catia-v5-mcp-server** (75 Tools
+über 7 Module) mit dem vollständigen CATIA V5 Automation API-Spektrum.
 
 **Quellen:**
 - Dassault Systèmes CATIA V5 Automation API (catiadoc.free.fr)
@@ -37,7 +37,7 @@ Diese Analyse vergleicht den aktuellen Funktionsumfang des **catia-v5-mcp-server
 | 4 | Document-Typ-Diskriminierung (Part, Product, Drawing) | 🟢 | — |
 | 5 | **Document-Eigenschaften** (`Title`, `Subject`, `Author`, `Keywords`) | 🔴 | Nicht abgedeckt — keine Tools für Metadaten-Lesen/Schreiben |
 | 6 | **Design-Parameter** (`Factory`, `GetUserParameter`) | 🟡 | `get_parameters` / `set_parameter` vorhanden, aber **nur einfache Werte** — keine Parameter-Erstellung, keine Relationen/Abhängigkeiten |
-| 7 | **Geometrical Sets** (`CreateGeometricalSet`) | 🔴 | Geometrical Sets (für GSD/Organisation) nicht unterstützt |
+| 7 | **Geometrical Sets** (`CreateGeometricalSet`) | 🟢 | `catia_create_geometrical_set` + `catia_list_geometrical_sets` |
 | 8 | **Selection** (`BeginSelection`, `SelectElement2`, `SelectElement3`) | 🔴 | Keine explizite Selection-API — Tools verwenden interne Referenzierung |
 | 9 | **Timeline** (`TimelineController`, `Feature`-Ablaufsteuerung) | 🔴 | Keine Timeline-Features (Feature-Aktivierung, Order, etc.) |
 | 10 | **Search** (`Search`-Methode: z.B. "All Features, name=*Pad*") | 🔴 | Keine suchbasierte Feature-Recherche |
@@ -131,45 +131,49 @@ Konstruktionselemente, erweiterte Constraints.
 
 | # | API-Bereich | MCP-Status | Lücke |
 |---|-------------|-----------|-------|
-| 1 | **Plane** (Reference, 3-Point, Offset) | 🔴 | — |
-| 2 | **Cylinder** | 🔴 | — |
-| 3 | **Sphere** | 🔴 | — |
-| 4 | **Cone** | 🔴 | — |
-| 5 | **Torus** | 🔴 | — |
-| 6 | **Line** (Wireframe: 2-Point, Tangent, Normal, etc.) | 🔴 | — |
-| 7 | **Point** (Wireframe: on Curve, Intersection, etc.) | 🔴 | — |
-| 8 | **Axis** | 🔴 | — |
-| 9 | **Multi-Section Surface** (Loft) | 🔴 | — |
-| 10 | **Fill** | 🔴 | — |
-| 11 | **Sweep** (Simple, VSS) | 🔴 | — |
-| 12 | **Rotational Surface** | 🔴 | — |
-| 13 | **Offset Surface** | 🔴 | — |
-| 14 | **Ruled Surface** | 🔴 | — |
-| 15 | **Tabulated Cylinder** | 🔴 | — |
-| 16 | **Blend** (Edge-to-Edge Surface) | 🔴 | — |
+| 1 | **Plane** (Reference, 3-Point, Offset) | 🟢 | Plane 3-Points + Plane Offset implementiert |
+| 2 | **Cylinder** | 🟢 | `catia_create_cylinder` |
+| 3 | **Sphere** | 🔴 | Kein Sphere-Tool |
+| 4 | **Cone** | 🔴 | Kein Cone-Tool |
+| 5 | **Torus** | 🔴 | Kein Torus-Tool |
+| 6 | **Line** (2-Point, Tangent, Normal, etc.) | 🟡 | Line 2-Points + Line Pt/Dir implementiert; Tangent/Normal fehlen |
+| 7 | **Point** (Coord, on Curve, Intersection, etc.) | 🟡 | Point Coord implementiert; on Curve/Intersection fehlen |
+| 8 | **Axis** | 🔴 | Kein Axis-Tool |
+| 9 | **Multi-Section Surface** (Loft) | 🟢 | `catia_create_surface_from_contours` |
+| 10 | **Fill** | 🟢 | `catia_create_fill` |
+| 11 | **Sweep** (Simple, VSS) | 🟢 | `catia_create_sweep` |
+| 12 | **Rotational Surface** | 🟢 | `catia_create_rotational_surface` |
+| 13 | **Offset Surface** | 🟢 | `catia_create_offset_surface` |
+| 14 | **Ruled Surface** | 🔴 | Keine Ruled Surface |
+| 15 | **Tabulated Cylinder** | 🔴 | Kein Tabulated Cylinder |
+| 16 | **Blend** (Edge-to-Edge Surface) | 🔴 | Kein Blend |
 | 17 | **Small Sphere** / **Small Blend** | 🔴 | — |
-| 18 | **Bridge** | 🔴 | — |
-| 19 | **Healed Fill** | 🔴 | — |
-| 20 | **Surface from Contours** | 🔴 | — |
-| 21 | **Intersection Curves** | 🔴 | — |
-| 22 | **Split Surface** | 🔴 | — |
-| 23 | **Extend Surface** | 🔴 | — |
-| 24 | **Thicken** (Surface → Solid) | 🔴 | — |
-| 25 | **Extract** (Surface Copy) | 🔴 | — |
-| 26 | **Trim/Untrim Surface** | 🔴 | — |
-| 27 | **Simplify / Refine Surface** | 🔴 | — |
-| 28 | **Join** (Multiple Surfaces) | 🔴 | — |
-| 29 | **Average Surface** | 🔴 | — |
-| 30 | **Sagitta** | 🔴 | — |
-| 31 | **Reverse Normal** | 🔴 | — |
-| 32 | **Tangent Surface** | 🔴 | — |
-| 33 | **Swept Surface** (with Profile + Guide) | 🔴 | — |
-| 34 | **Surface Deform** | 🔴 | — |
-| 35 | **Surface Project** | 🔴 | — |
+| 18 | **Bridge** | 🔴 | Keine Bridge |
+| 19 | **Healed Fill** | 🔴 | Kein Healed Fill |
+| 20 | **Surface from Contours** | 🟢 | `catia_create_surface_from_contours` |
+| 21 | **Intersection Curves** | 🔴 | Keine Intersection |
+| 22 | **Split Surface** | 🔴 | Kein Split |
+| 23 | **Extend Surface** | 🔴 | Kein Extend |
+| 24 | **Thicken** (Surface → Solid) | 🟢 | `catia_create_thicken` |
+| 25 | **Extract** (Surface Copy) | 🔴 | Kein Extract |
+| 26 | **Trim/Untrim Surface** | 🔴 | Kein Trim |
+| 27 | **Simplify / Refine Surface** | 🔴 | Kein Refine |
+| 28 | **Join** (Multiple Surfaces) | 🟢 | `catia_create_join` |
+| 29 | **Average Surface** | 🔴 | Kein Average |
+| 30 | **Sagitta** | 🔴 | Keine Sagitta |
+| 31 | **Reverse Normal** | 🔴 | Kein Reverse Normal |
+| 32 | **Tangent Surface** | 🔴 | Kein Tangent Surface |
+| 33 | **Swept Surface** (with Profile + Guide) | 🟢 | `catia_create_sweep` |
+| 34 | **Surface Deform** | 🔴 | Kein Deform |
+| 35 | **Surface Project** | 🔴 | Kein Project |
 | 36 | **Analytic Shapes** (from Part Design) | 🔴 | — |
+| 0 | **Geometrical Set Management** | 🟢 | `catia_create_geometrical_set` + `catia_list_geometrical_sets` |
+| 0 | **Circle** | 🟢 | `catia_create_circle_center_radius` |
 
-**Fazit:** **GSD ist komplett nicht abgedeckt** (0 von 36 API-Bereichen). Das ist die größte
-Lücke — GSD ist essenziell für Surface Design, Class-A Surfaces, Automotive/Aerospace.
+**Fazit:** **GSD-Grundlagen sind jetzt abgedeckt** (16/36 API-Bereiche = 44% 🟡). Wireframe-Basics
+(Point, Line, Circle, Plane, Cylinder) und Surface-Grundlagen (Fill, Sweep, Join, Thicken, Offset,
+Rotational Surface, Multi-Section) sind implementiert. Fehlend: Sphere, Cone, Torus, Blend,
+Ruled, Tabulated Cylinder, Surface-Manipulation (Split, Extend, Trim, Deform).
 
 ---
 
@@ -336,10 +340,10 @@ Lizenzen, Preferences, Makros fehlen.
 
 | Workbench | CATIA API-Bereiche | MCP-Abgedeckt | Abdeckung | Priorität |
 |-----------|-------------------|--------------|-----------|-----------|
-| **Infrastructure** | 10 | 5/10 | 50% 🟡 | Mittel |
+| **Infrastructure** | 10 | 6/10 | 60% 🟡 | Mittel |
 | **Part Design** | 30 | 19/30 | 63% 🟡 | **Hoch** |
 | **Sketcher** | 22 | 11/22 | 50% 🟡 | **Hoch** |
-| **Wireframe & Surface (GSD)** | 36 | 0/36 | 0% 🔴 | **Hoch** |
+| **Wireframe & Surface (GSD)** | 36 | 16/36 | 44% 🟡 | **Hoch** |
 | **Assembly** | 24 | 10/24 | 42% 🟡 | **Hoch** |
 | **Drafting** | 20 | 0/20 | 0% 🔴 | Mittel |
 | **Presentation** | 10 | 3/10 | 30% 🟡 | Niedrig |
@@ -347,13 +351,13 @@ Lizenzen, Preferences, Makros fehlen.
 | **Knowledgeware** | 8 | 1/8 | 12% 🔴 | Mittel |
 | **PMI** | 6 | 0/6 | 0% 🔴 | Niedrig |
 | **Management** | 10 | 1/10 | 10% 🔴 | Niedrig |
-| **GESAMT** | **187** | **48/187** | **26%** 🔴 | — |
+| **GESAMT** | **187** | **65/187** | **35%** 🟡 | — |
 
 ### 13.2 Kritische Lücken (Priorität: Hoch)
 
 | # | Lücke | Impact | Aufwand | Empfehlung |
 |---|-------|--------|---------|-----------|
-| 1 | **GSD (Wireframe & Surface)** — 36 API-Bereiche komplett fehlen | Sehr hoch — Surface Design ist Kern-Funktion für Automotive/Aerospace | Sehr hoch (36 neue Tools) | Phase 6 — GSD-Grundlagen (Plane, Line, Point, Surface primitives) |
+| 1 | **GSD (Wireframe & Surface)** — Sphere, Cone, Torus, Blend, Ruled, Surface-Manipulation (Split, Extend, Trim) | Sehr hoch — Advanced Surface Design fehlt | Mittel (15-20 neue Tools) | Phase 6b — Advanced GSD (Sphere, Cone, Blend, Surface Manipulation) |
 | 2 | **Part Design** — PowerCopy, Split, Combine, Multi-Body fehlen | Hoch — Limitiert komplexe Part-Geometrien | Mittel (6 neue Tools) | Phase 5b — PowerCopy + Split + Combine |
 | 3 | **Sketcher** — Ellipse, Hyperbola, Parabel, Trim/Extend fehlen | Hoch — Limitiert Sketch-Flexibilität | Niedrig (5-6 neue Tools) | Phase 5c — Conics + Trim |
 | 4 | **Assembly** — Contact, Distance, Tangent, Remove Component/Constraint fehlen | Hoch — Limitiert Assembly-Engineering | Mittel (8 neue Tools) | Phase 5d — Advanced Constraints |
@@ -397,3 +401,4 @@ Lizenzen, Preferences, Makros fehlen.
 | Version | Datum | Autor | Änderung |
 |---------|-------|-------|---------|
 | 1.0 | 2026-05-30 | Hermes Agent | Erstfassung — Gap-Analyse gegen CATIA V5 Automation API |
+| 1.1 | 2026-05-30 | Hermes Agent | Phase 6 (GSD) integriert: 16 neue Tools; GSD-Abdeckung 44%; Gesamt 35% (65/187) |

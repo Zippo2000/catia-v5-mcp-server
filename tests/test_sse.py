@@ -259,7 +259,7 @@ class TestSSEToolIntegration:
         """All 6 tool modules are initialized."""
         from catia_mcp.server import CATIAMCPServer
         srv = CATIAMCPServer()
-        assert len(srv._tool_modules) == 6
+        assert len(srv._tool_modules) == 7
 
 
 # ─── 6. Edge Cases ────────────────────────────────────────────────────
