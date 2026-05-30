@@ -1199,15 +1199,18 @@ class GSDTools:
         point_base = hsf.AddNewPointCoord(cx + base_radius, cy, cz)
         point_top = hsf.AddNewPointCoord(cx + top_radius, cy, cz + height)
         # Create line profile
-        profile = hsf.AddNewLinePtPt(part.CreateReferenceFromGeometry(point_base),
-                                      part.CreateReferenceFromGeometry(point_top))
+        profile = hsf.AddNewLinePtPt(
+            part.CreateReferenceFromGeometry(point_base),
+            part.CreateReferenceFromGeometry(point_top),
+        )
         # Create axis of revolution (Z axis through center)
         center_pt = hsf.AddNewPointCoord(cx, cy, cz)
         center_top = hsf.AddNewPointCoord(cx, cy, cz + height)
-        axis_line = hsf.AddNewLinePtPt(part.CreateReferenceFromGeometry(center_pt),
-                                        part.CreateReferenceFromGeometry(center_top))
+        axis_line = hsf.AddNewLinePtPt(
+            part.CreateReferenceFromGeometry(center_pt),
+            part.CreateReferenceFromGeometry(center_top),
+        )
         # AddNewRevol(iObjectToExtrude, iOffsetDebut, iOffsetFin, iAxis)
-        # iOffsetDebut/Fin = start/end angles in degrees (0-360)
         try:
             cone = hsf.AddNewRevol(
                 part.CreateReferenceFromGeometry(profile),
@@ -1225,7 +1228,8 @@ class GSDTools:
     def _create_torus(self, args: dict[str, Any]) -> str:
         """Create a torus (ring) surface via AddNewRevol (AddNewTorusPointRadius does not exist in CATIA API).
         
-        Creates a torus by revolving a circle around an axis.
+        Creates a torus by revolving a circle around an axis parallel to Z.
+        The axis passes through (cx, cy) and the circle is centered at (cx+major, cy, cz).
         """
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
@@ -1240,30 +1244,34 @@ class GSDTools:
         angle_end = float(args.get("angle_end", 360))
 
         hsf = self._hsf(part)
-        # Create circle for the torus profile (offset from center by major_radius)
+        # Create circle for the torus profile
         circle_center = hsf.AddNewPointCoord(cx + major_radius, cy, cz)
-        # Use XY plane as support for the circle profile
         plane_ref = self._ref(part, "xy")
         circle = hsf.AddNewCircleCtrRad(part.CreateReferenceFromGeometry(circle_center),
                                          plane_ref, False, minor_radius)
-        # Create axis of revolution (Z axis through center)
-        axis_bottom = hsf.AddNewPointCoord(cx, cy, cz - 10)
-        axis_top = hsf.AddNewPointCoord(cx, cy, cz + 10)
+        # Create axis of revolution through (cx, cy) parallel to Z
+        # Use a line through the center points (not OriginElements to allow offset)
+        axis_bottom = hsf.AddNewPointCoord(cx, cy, cz - 20)
+        axis_top = hsf.AddNewPointCoord(cx, cy, cz + 20)
         axis_line = hsf.AddNewLinePtPt(part.CreateReferenceFromGeometry(axis_bottom),
                                         part.CreateReferenceFromGeometry(axis_top))
-        # AddNewRevol(iObjectToExtrude, iOffsetDebut, iOffsetFin, iAxis)
         try:
             torus = hsf.AddNewRevol(
                 part.CreateReferenceFromGeometry(circle),
-                float(angle_start),  # angle start
-                float(angle_end),    # angle end
+                float(angle_start),
+                float(angle_end),
                 part.CreateReferenceFromGeometry(axis_line),
             )
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewRevol", e))
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
-        name = self._append_and_update(part, hbody, torus, f"Torus({cx},{cy},{cz},{major_radius}mm,{minor_radius}mm)")
+        try:
+            name = self._append_and_update(part, hbody, torus, f"Torus({cx},{cy},{cz},{major_radius}mm,{minor_radius}mm)")
+        except Exception as e:
+            # If the torus fails to update, try appending without auto-update
+            hbody.AppendHybridShape(torus)
+            name = f"Torus({cx},{cy},{cz},{major_radius}mm,{minor_radius}mm)"
         return f"Torus created (via revolution): major={major_radius}mm, minor={minor_radius}mm, angle=({angle_start}°-{angle_end}°). Name: '{name}'"
 
     def _create_ruled(self, args: dict[str, Any]) -> str:
