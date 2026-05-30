@@ -984,12 +984,14 @@ class GSDTools:
             )
 
         hsf = self._hsf(part)
-        # AddNewCylinder(center_ref, radius, length1, length2)
-        # length1 = -Z direction, length2 = +Z direction (per CATIA doc)
-        # The cylinder axis is the Z-axis of the reference system at the center point
-        # For now: create cylinder along Z axis at the point
+        # AddNewCylinder(center, radius, firstLen, secondLen, iDirection)
+        # iDirection must be a HybridShapeDirection, not a Reference
+        # Created via AddNewDirection(axis_ref) per catiadoc
+        axis_name = args.get("axis", "z").lower().strip()
+        axis_ref = self._ref(part, axis_name)
+        direction = hsf.AddNewDirection(axis_ref)
         half_h = height / 2.0
-        cylinder = hsf.AddNewCylinder(center, radius, -half_h, half_h)
+        cylinder = hsf.AddNewCylinder(center, radius, -half_h, half_h, direction)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(
