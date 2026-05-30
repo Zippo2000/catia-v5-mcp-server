@@ -1,12 +1,12 @@
 # CATIA V5 MCP Server
 
-> Connect Claude AI to Dassault Systèmes CATIA V5 via the Model Context Protocol (MCP).
+> Connect AI to Dassault Systèmes CATIA V5 via the Model Context Protocol (MCP).
 
-The first open-source MCP server for CATIA V5. Drive CATIA V5 CAD modeling from Claude Desktop or Claude Code using natural language.
+The first open-source MCP server for CATIA V5. Drive CATIA V5 CAD modeling from Claude Desktop, Claude Code, LM Studio, vLLM.rs, or any other MCP-compatible client using natural language.
 
 ## What it does
 
-This MCP server exposes **55 tools** across 6 modules that let Claude:
+This MCP server exposes **55 tools** across 6 modules that let an LLM-driven client:
 
 | Category | Tools | Examples |
 |----------|-------|----------|
@@ -34,7 +34,7 @@ cd catia-v5-mcp-server
 bash setup.sh
 ```
 
-The `setup.sh` script handles virtual environment creation, dependency installation, Claude Desktop configuration, and verification.
+The `setup.sh` script handles virtual environment creation and dependency installation.
 
 ### Option 2: Manual installation
 
@@ -113,7 +113,7 @@ claude mcp add catia-v5 python -- -m catia_mcp
 │       │              ▼                  │
 │       │          CATIA V5               │
 │       │                                 │
-│       └── OpenAI API ──→ 192.168.177.44:8010
+│       └── OpenAI API ──→ <vllm-server>:8010
 │                                   │
 └────────────────────────┬───────────┘
                          │ LAN
@@ -139,6 +139,11 @@ INFO:     Waiting for connections at http://0.0.0.0:8765/sse
 
 Leave this terminal window open — the server runs in the foreground.
 
+> **Firewall note:** If Windows Firewall blocks incoming connections on port 8765, allow the port:
+> ```powershell
+> New-NetFirewallRule -DisplayName "catia_mcp SSE" -Direction Inbound -LocalPort 8765 -Protocol TCP -Action Allow
+> ```
+
 **Step 2: Configure LM Studio**
 
 1. Open LM Studio and navigate to **Local Server** → **MCP Tools** (left sidebar)
@@ -151,7 +156,7 @@ Leave this terminal window open — the server runs in the foreground.
 3. Configure the **LLM backend:**
    - Go to **Local Server** → **Settings**
    - **LLM Provider:** `Remote OpenAI-compatible`
-   - **Base URL:** `http://192.168.177.44:8010/v1`
+   - **Base URL:** `http://<vllm-server-ip>:8010/v1`
    - **Model:** `Qwen3.6-27B-AutoRound-INT4` (or whatever your vLLM serves)
    - **API Key:** (leave empty if vLLM doesn't require one)
 
@@ -187,9 +192,9 @@ catia-mcp
    - **Claude Desktop / Claude Code**: The server starts automatically via stdio
    - **LM Studio / remote LLM**: Run `python -m catia_mcp --sse` (see Configuration section above)
 
-3. **Open your client** and ask Claude to work with CATIA.
+3. **Open your client** and ask the LLM to work with CATIA.
 
-4. **Start with `catia_connect`** — Claude will call this automatically when needed.
+4. **Start with `catia_connect`** — the model will call this automatically when needed.
 
 ## Usage Examples
 
@@ -197,7 +202,7 @@ catia-mcp
 
 > "Create a new CATIA part. Draw a 100×60 mm rectangle centered at the origin on the XY plane, then extrude it 40 mm."
 
-Claude will call:
+The model will call:
 ```
 catia_new_part()
 catia_create_sketch(plane="xy")
@@ -414,9 +419,17 @@ Create or open a document first using `catia_new_part`, `catia_new_product`, or 
 
 Some measurement methods (`get_inertia`, `get_bounding_box`) use ByRef arrays. The server includes fallback strategies (early binding → late binding → property access). If issues persist, try `pycatia` as an alternative backend.
 
+### SSE connection fails
+
+1. Make sure the SSE server is running: `python -m catia_mcp --sse`
+2. Check Windows Firewall — port 8765 must be allowed for inbound TCP
+3. Verify you activated the virtual environment before starting the server
+4. Confirm LM Studio (or your MCP client) is pointing to the correct URL: `http://localhost:8765/sse` or `http://<windows-ip>:8765/sse` for remote access
+5. Check the log file at `%TEMP%\catia-mcp\catia_mcp.log` for connection errors
+
 ### Server not starting
 
-Check the log file at `catia_mcp/catia_mcp.log` for detailed error output.
+Check the log file at `%TEMP%\catia-mcp\catia_mcp.log` (Windows) or `$TEMP/catia-mcp/catia_mcp.log` for detailed error output.
 
 ## Robustness Features
 
