@@ -774,41 +774,39 @@ class GSDTools:
         return None
 
     def _ref(self, part: Any, name: str) -> Any:
-        """Create a Reference from a geometry name or standard element."""
+        """Create a Reference from a geometry name or standard element.
+
+        IMPORTANT: For standard planes/axes, uses CreateReferenceFromObject
+        on OriginElements (NOT CreateReferenceFromName, which requires
+        CATIA's internal object path format and fails for simple names).
+        See: scripting4v5.com 'When to use CreateReference'.
+        """
         import win32com.client
 
-        # Standard planes and axes — try multiple approaches for compatibility
+        # Standard planes and axes via OriginElements.PlaneXY / OriginElements.XAxis
         plane_map = {"xy": "PlaneXY", "yz": "PlaneYZ", "zx": "PlaneZX"}
         axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
         lookup = name.lower().strip()
 
         if lookup in plane_map or lookup in axis_map:
             key = plane_map.get(lookup, axis_map.get(lookup))
-            # Try gencache: part.OriginElements.PlaneXY
             try:
                 oe = part.OriginElements
                 elem = getattr(oe, key)
                 return part.CreateReferenceFromObject(elem)
-            except AttributeError:
-                # dynamic.Dispatch doesn't expose OriginElements.PlaneXY
-                # Try: part.CreateReferenceFromObject(part.PlaneXY)
-                try:
-                    elem = getattr(part, key)
-                    return part.CreateReferenceFromObject(elem)
-                except AttributeError:
-                    pass
-            # Last resort: try CreateReferenceFromName
-            try:
-                return part.CreateReferenceFromName(key)
-            except Exception:
-                pass
+            except Exception as e:
+                raise RuntimeError(
+                    f"Cannot reference '{name}': Failed to access part.OriginElements.{key}. "
+                    f"This usually means the gencache proxy is corrupted. "
+                    f"Try creating a new Part document. Original error: {e}"
+                ) from e
 
         # Search HybridShapes
         obj = self._find_shape(part, name)
         if obj:
             return part.CreateReferenceFromObject(obj)
 
-        # Fallback: try name as-is
+        # Fallback: try name as-is (for user-created named geometry)
         return part.CreateReferenceFromName(name)
 
     def _append_and_update(
@@ -955,12 +953,14 @@ class GSDTools:
             )
 
         hsf = self._hsf(part)
-        # Build axis reference
-        axis_ref = self._ref(part, axis)
-        # AddNewCylinder(center, radius, firstLen, secondLen, direction)
-        # firstLen and secondLen are in opposite directions along the axis
+        # AddNewCylinder(center_ref, radius, length1, length2)
+        # length1 = -Z direction, length2 = +Z direction (per CATIA doc)
+        # The cylinder axis is the Z-axis of the reference system at the center point
+        # To orient along arbitrary axis, we need a different approach
+        # For now: create cylinder along Z axis at the point
+        cyl_ref = part.CreateReferenceFromObject(center)
         half_h = height / 2.0
-        cylinder = hsf.AddNewCylinder(center, radius, half_h, half_h, axis_ref)
+        cylinder = hsf.AddNewCylinder(cyl_ref, radius, -half_h, half_h)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(
@@ -1157,14 +1157,18 @@ class GSDTools:
         hsf = self._hsf(part)
         point = hsf.AddNewPointCoord(cx, cy, cz)
 
-        # Create Z axis reference as default sphere axis
+        # AddNewSphere: when axis is not needed (full sphere), pass None
+        # pycatia example: add_new_sphere(center_ref, None, radius, begin_par, end_par, begin_mer, end_mer)
         try:
-            z_axis_ref = self._ref(part, "z")
-        except Exception:
-            z_axis_ref = self._ref(part, "z_axis")
-        try:
-            sphere = hsf.AddNewSphere(point, z_axis_ref, radius,
-                angle_start, angle_end, lat_start, lat_end)
+            sphere = hsf.AddNewSphere(
+                part.CreateReferenceFromObject(point),
+                None,  # axis not needed for full sphere
+                radius,
+                angle_start,
+                angle_end,
+                lat_start,
+                lat_end,
+            )
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewSphere", e))
 
@@ -1201,12 +1205,21 @@ class GSDTools:
         center_top = hsf.AddNewPointCoord(cx, cy, cz + height)
         axis_line = hsf.AddNewLinePtPt(part.CreateReferenceFromObject(center_pt),
                                         part.CreateReferenceFromObject(center_top))
-        # Revolve the profile around the axis
+        # AddNewRevol(profile, offStart, offEnd, angleStart, angleEnd, axis, type, sym, limit, limiter)
+        # type=0 (regular), sym=0 (no symmetry), limit=0 (no limit)
         try:
-            angle_rad = angle * 3.141592653589793 / 180
-            cone = hsf.AddNewRevol(part.CreateReferenceFromObject(profile),
-                                    part.CreateReferenceFromObject(axis_line),
-                                    angle_rad)
+            cone = hsf.AddNewRevol(
+                part.CreateReferenceFromObject(profile),
+                0.0,  # offset debut
+                0.0,  # offset fin
+                0.0,  # angle debut
+                float(angle),  # angle fin (degrees)
+                part.CreateReferenceFromObject(axis_line),
+                0,    # revolution type (regular)
+                0,    # symmetry type
+                0,    # limit type
+                None, # limiter
+            )
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewRevol", e))
 
@@ -1243,12 +1256,20 @@ class GSDTools:
         axis_top = hsf.AddNewPointCoord(cx, cy, cz + 10)
         axis_line = hsf.AddNewLinePtPt(part.CreateReferenceFromObject(axis_bottom),
                                         part.CreateReferenceFromObject(axis_top))
-        # Revolve the circle around the axis
+        # AddNewRevol(profile, offStart, offEnd, angleStart, angleEnd, axis, type, sym, limit, limiter)
         try:
-            sweep_angle = (angle_end - angle_start) * 3.141592653589793 / 180
-            torus = hsf.AddNewRevol(part.CreateReferenceFromObject(circle),
-                                     part.CreateReferenceFromObject(axis_line),
-                                     sweep_angle)
+            torus = hsf.AddNewRevol(
+                part.CreateReferenceFromObject(circle),
+                0.0,  # offset debut
+                0.0,  # offset fin
+                float(angle_start),  # angle debut
+                float(angle_end),    # angle fin
+                part.CreateReferenceFromObject(axis_line),
+                0,    # revolution type (regular)
+                0,    # symmetry type
+                0,    # limit type
+                None, # limiter
+            )
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewRevol", e))
 
