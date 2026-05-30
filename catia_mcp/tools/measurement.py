@@ -10,6 +10,133 @@ from typing import Any
 
 from catia_mcp.connection import CATIAConnection
 
+# ── ByRef array helpers for win32com late binding ──
+#
+# CATIA's MeasurablePart interface methods (GetCOG, GetInertia, GetBoundingBox)
+# accept output arrays via ByRef.  win32com.client late binding cannot pass
+# mutable arrays, so we use early binding (DispatchWithSpecs) when available,
+# otherwise fall back to reading individual properties that don't require ByRef.
+
+def _get_cog_com(measurable: Any) -> tuple[float, float, float]:
+    """Return center-of-gravity via win32com Dispatch.
+
+    Uses early-binding dispatch to satisfy the ByRef requirement.
+    Falls back to reading COG properties directly.
+    """
+    try:
+        import pythoncom
+        import win32com.client
+        # Create a DispatchWithSpecs to get a typed interface
+        dws = win32com.client.dynamic.DispatchWithSpecs(measurable._oleobj_.QueryInterface(
+            pythoncom.IID_IDispatch, pythoncom.IID_IDispatch))
+        cog = [0.0, 0.0, 0.0]
+        dws.GetCOG(cog)
+        return float(cog[0]), float(cog[1]), float(cog[2])
+    except Exception:
+        pass
+
+    # Fallback: read individual COG properties
+    try:
+        cog = [0.0, 0.0, 0.0]
+        measurable.GetCOG(cog)
+        return float(cog[0]), float(cog[1]), float(cog[2])
+    except Exception:
+        pass
+
+    # Last resort: use COG property (CATIA R26+)
+    try:
+        cog_prop = measurable.COG
+        return float(cog_prop[0]), float(cog_prop[1]), float(cog_prop[2])
+    except Exception:
+        raise RuntimeError(
+            "Could not read center of gravity. "
+            "ByRef array support may require early binding or pycatia."
+        )
+
+
+def _get_inertia_com(measurable: Any) -> list[list[float]]:
+    """Return 3x3 inertia matrix via win32com Dispatch.
+
+    Uses early-binding dispatch to satisfy the ByRef requirement.
+    Falls back to reading individual inertia properties.
+    """
+    try:
+        import pythoncom
+        import win32com.client
+        dws = win32com.client.dynamic.DispatchWithSpecs(measurable._oleobj_.QueryInterface(
+            pythoncom.IID_IDispatch, pythoncom.IID_IDispatch))
+        inertia = [0.0] * 9
+        dws.GetInertia(inertia)
+        return [
+            [float(inertia[0]), float(inertia[1]), float(inertia[2])],
+            [float(inertia[3]), float(inertia[4]), float(inertia[5])],
+            [float(inertia[6]), float(inertia[7]), float(inertia[8])],
+        ]
+    except Exception:
+        pass
+
+    # Fallback: late binding (may work on some CATIA versions)
+    try:
+        inertia = [0.0] * 9
+        measurable.GetInertia(inertia)
+        return [
+            [float(inertia[0]), float(inertia[1]), float(inertia[2])],
+            [float(inertia[3]), float(inertia[4]), float(inertia[5])],
+            [float(inertia[6]), float(inertia[7]), float(inertia[8])],
+        ]
+    except Exception:
+        pass
+
+    # Last resort: individual properties
+    try:
+        inertia_prop = measurable.Inertia
+        return [
+            [float(inertia_prop[0]), float(inertia_prop[1]), float(inertia_prop[2])],
+            [float(inertia_prop[3]), float(inertia_prop[4]), float(inertia_prop[5])],
+            [float(inertia_prop[6]), float(inertia_prop[7]), float(inertia_prop[8])],
+        ]
+    except Exception:
+        raise RuntimeError(
+            "Could not read inertia matrix. "
+            "ByRef array support may require early binding or pycatia."
+        )
+
+
+def _get_bounding_box_com(measurable: Any) -> list[float]:
+    """Return bounding box (6 floats) via win32com Dispatch.
+
+    Uses early-binding dispatch to satisfy the ByRef requirement.
+    Falls back to reading individual bounding box properties.
+    """
+    try:
+        import pythoncom
+        import win32com.client
+        dws = win32com.client.dynamic.DispatchWithSpecs(measurable._oleobj_.QueryInterface(
+            pythoncom.IID_IDispatch, pythoncom.IID_IDispatch))
+        bbox = [0.0] * 6
+        dws.GetBoundingBox(bbox)
+        return [float(bbox[i]) for i in range(6)]
+    except Exception:
+        pass
+
+    # Fallback: late binding (may work on some CATIA versions)
+    try:
+        bbox = [0.0] * 6
+        measurable.GetBoundingBox(bbox)
+        return [float(bbox[i]) for i in range(6)]
+    except Exception:
+        pass
+
+    # Last resort: individual properties
+    try:
+        bbox_prop = measurable.BoundingBox
+        return [float(bbox_prop[i]) for i in range(6)]
+    except Exception:
+        raise RuntimeError(
+            "Could not read bounding box. "
+            "ByRef array support may require early binding or pycatia."
+        )
+
 
 class MeasurementTools:
     """Tools for measurement and analysis in CATIA V5."""
@@ -94,7 +221,7 @@ class MeasurementTools:
                     "properties": {
                         "name": {
                             "type": "string",
-                            "description": "Full parameter name (e.g., 'Part1\\\\Pad.1\\\\FirstLimit\\\\Length')",
+                            "description": "Full parameter name (e.g., 'Part1\\\\\\\\Pad.1\\\\\\\\FirstLimit\\\\\\\\Length')",
                         },
                         "value": {
                             "type": "number",
@@ -171,27 +298,26 @@ class MeasurementTools:
         result: dict[str, Any] = {}
 
         try:
-            result["volume_mm3"] = round(measurable.Volume, 4)
-            result["volume_cm3"] = round(measurable.Volume / 1000, 4)
+            result["volume_mm3"] = round(float(measurable.Volume), 4)
+            result["volume_cm3"] = round(float(measurable.Volume) / 1000, 4)
         except Exception:
             pass
 
         try:
-            result["area_mm2"] = round(measurable.Area, 4)
-            result["area_cm2"] = round(measurable.Area / 100, 4)
+            result["area_mm2"] = round(float(measurable.Area), 4)
+            result["area_cm2"] = round(float(measurable.Area) / 100, 4)
         except Exception:
             pass
 
         try:
-            cog = [0.0, 0.0, 0.0]
-            measurable.GetCOG(cog)
+            cog_x, cog_y, cog_z = _get_cog_com(measurable)
             result["center_of_gravity_mm"] = {
-                "x": round(cog[0], 4),
-                "y": round(cog[1], 4),
-                "z": round(cog[2], 4),
+                "x": round(cog_x, 4),
+                "y": round(cog_y, 4),
+                "z": round(cog_z, 4),
             }
-        except Exception:
-            pass
+        except Exception as e:
+            result["center_of_gravity_mm"] = {"error": str(e)}
 
         if density:
             if "volume_mm3" not in result:
@@ -206,15 +332,12 @@ class MeasurementTools:
             result["density_kg_m3"] = density
 
         try:
-            inertia = [0.0] * 9
-            measurable.GetInertia(inertia)
+            inertia = _get_inertia_com(measurable)
             result["inertia_matrix"] = [
-                [round(inertia[0], 4), round(inertia[1], 4), round(inertia[2], 4)],
-                [round(inertia[3], 4), round(inertia[4], 4), round(inertia[5], 4)],
-                [round(inertia[6], 4), round(inertia[7], 4), round(inertia[8], 4)],
+                [round(v, 4) for v in row] for row in inertia
             ]
-        except Exception:
-            pass
+        except Exception as e:
+            result["inertia_matrix"] = {"error": str(e)}
 
         return json.dumps(result, indent=2)
 
@@ -227,8 +350,10 @@ class MeasurementTools:
 
         measurable = spa.GetMeasurable(ref)
 
-        bbox = [0.0] * 6  # xmin, ymin, zmin, xmax, ymax, zmax
-        measurable.GetBoundingBox(bbox)
+        try:
+            bbox = _get_bounding_box_com(measurable)
+        except Exception as e:
+            return json.dumps({"error": str(e)}, indent=2)
 
         result = {
             "min": {"x": round(bbox[0], 4), "y": round(bbox[1], 4), "z": round(bbox[2], 4)},

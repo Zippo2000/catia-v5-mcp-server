@@ -88,6 +88,48 @@ class CATIAConnection:
                 "Make sure CATIA V5 is installed and licensed on this machine."
             ) from e
 
+    def reconnect(self) -> str:
+        """Try to reconnect to a running CATIA instance after a crash.
+
+        First clears any stale references, then tries to attach again.
+        Returns a status message string.
+        """
+        if not HAS_COM:
+            raise RuntimeError(
+                "pywin32 is not installed. Install it with: pip install pywin32"
+            )
+
+        # Release stale reference
+        self.app = None
+
+        # Ensure COM is initialized for this thread
+        if not self._initialized_com:
+            pythoncom.CoInitialize()
+            self._initialized_com = True
+
+        # Try to attach to a running CATIA instance
+        try:
+            self.app = win32com.client.GetActiveObject(self.CATIA_PROGID)
+            version = self._get_version()
+            logger.info("Reconnected to running CATIA V5 instance (%s)", version)
+            return f"Reconnected to running CATIA V5 instance ({version})"
+        except Exception:
+            logger.info("No running CATIA instance found for reconnection")
+
+        # Fallback: try launching a new one
+        try:
+            self.app = win32com.client.Dispatch(self.CATIA_PROGID)
+            self.app.Visible = True
+            version = self._get_version()
+            logger.info("Launched new CATIA V5 instance after reconnect (%s)", version)
+            return f"Launched new CATIA V5 instance ({version})"
+        except Exception as e:
+            self.app = None
+            raise RuntimeError(
+                f"Failed to reconnect to CATIA V5: {e}\n"
+                "Start CATIA V5 manually and try again."
+            ) from e
+
     def disconnect(self) -> str:
         """Disconnect from CATIA V5 (does not close CATIA)."""
         if self.app is not None:
@@ -101,9 +143,14 @@ class CATIAConnection:
         return "Disconnected from CATIA V5"
 
     def ensure_connected(self) -> None:
-        """Ensure we have an active CATIA connection, connecting if needed."""
+        """Ensure we have an active CATIA connection, reconnecting if needed."""
         if not self.is_connected:
-            self.connect()
+            # If we had a connection that's now stale, try to reconnect first
+            try:
+                self.reconnect()
+            except Exception:
+                # If reconnect fails, fall back to normal connect
+                self.connect()
 
     def _get_version(self) -> str:
         """Get CATIA version string."""
