@@ -6,14 +6,14 @@ The first open-source MCP server for CATIA V5. Drive CATIA V5 CAD modeling from 
 
 ## What it does
 
-This MCP server exposes **91 tools** across 7 modules that let an LLM-driven client:
+This MCP server exposes **95 tools** across 7 modules that let an LLM-driven client:
 
 | Category | Tools | Examples |
 |----------|-------|----------|
 | 📄 **Document Management** | 10 | Create/open/save/close parts and assemblies, list documents |
 | ✏️ **2D Sketching** | 14 | Lines, rectangles, circles, arcs, splines, points, constraints, ellipse, hyperbola, parabola |
 | 🔧 **Part Design** | 19 | Pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, shell, draft, lifting, sweep, loft, boolean |
-| 🎨 **GSD (Wireframe & Surface)** | 16 | Point, line, circle, plane, cylinder, fill, sweep, join, thicken, offset surface |
+| 🎨 **GSD (Wireframe & Surface)** | 24 | Point, line, circle, plane, cylinder, fill, sweep, join, thicken, offset, sphere, cone, torus, ruled, blend, split, extend, trim |
 | 📦 **Assembly** | 14 | Add components, constraints (fix/coincidence/offset/angle/contact/distance/tangent), move, remove |
 | 📏 **Measurement** | 10 | Distance, inertia, bounding box, parameters, update, angle, area, length, interference |
 | 📤 **Export & View** | 4 | STEP/IGES/STL export, screenshots, view orientations |
@@ -308,7 +308,7 @@ All dimensions are in **millimeters**, angles in **degrees**.
 
 ---
 
-### ✏️ Sketcher Tools (11)
+### ✏️ Sketcher Tools (14)
 
 | Tool | Parameters | Required | Description |
 |------|------------|----------|-------------|
@@ -352,7 +352,7 @@ All dimensions are in **millimeters**, angles in **degrees**.
 
 ---
 
-### 📦 Assembly Tools (9)
+### 📦 Assembly Tools (14)
 
 | Tool | Parameters | Required | Description |
 |------|------------|----------|-------------|
@@ -384,10 +384,6 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_measure_area` | `element` | `element` | Measure surface area of a face, surface, or body in mm²/cm². |
 | `catia_measure_length` | `element` | `element` | Measure length of an edge, curve, or line in mm. |
 | `catia_measure_interference` | `element1`, `element2` | `element1`, `element2` | Check interference/overlap between two bodies. Negative distance = interference. |
-| `catia_measure_angle` | `element1`, `element2` | `element1`, `element2` | Measure angle in degrees between two planar faces/planes. |
-| `catia_measure_area` | `element` | `element` | Measure surface area of a face, surface, or body in mm²/cm². |
-| `catia_measure_length` | `element` | `element` | Measure length of an edge, curve, or line in mm. |
-| `catia_measure_interference` | `element1`, `element2` | `element1`, `element2` | Check interference/overlap between two bodies. Negative distance = interference. |
 | `catia_update_part` | — | — | Force update/rebuild of the active part. Recalculates all features. |
 
 ---
@@ -401,7 +397,7 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_set_view` | `view` | `view` | Set view orientation: `front`, `back`, `top`, `bottom`, `left`, `right`, `isometric`. |
 | `catia_fit_all` | — | — | Fit all geometry in the current 3D view (zoom to fit). |
 
-### 🎨 GSD (Wireframe & Surface) Tools (16)
+### 🎨 GSD (Wireframe & Surface) Tools (24)
 
 | Tool | Parameters | Required | Description |
 |------|------------|----------|-------------|
@@ -421,12 +417,20 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_create_join` | `surface_names`, `set_name` | `surface_names` | Join multiple surfaces into a single connected element. |
 | `catia_create_thicken` | `surface_name`, `thickness`, `set_name` | `surface_name`, `thickness` | Thicken a surface into a solid shell. |
 | `catia_create_surface_from_contours` | `contour_names`, `set_name` | `contour_names` | Create a multi-section surface (loft) spanning multiple contour profiles. |
+| `catia_create_sphere` | `cx`, `cy`, `cz`, `radius`, `angle_start`, `angle_end`, `lat_start`, `lat_end`, `set_name` | `cx`, `cy`, `cz`, `radius` | Create a spherical surface. Full sphere by default; use angles for partial. |
+| `catia_create_cone` | `cx`, `cy`, `cz`, `base_radius`, `height`, `top_radius`, `angle`, `set_name` | `cx`, `cy`, `cz`, `base_radius`, `height` | Create a conical surface. Default: full cone (360°). Truncated cone via top_radius. |
+| `catia_create_torus` | `cx`, `cy`, `cz`, `major_radius`, `minor_radius`, `angle_start`, `angle_end`, `set_name` | `cx`, `cy`, `cz`, `major_radius`, `minor_radius` | Create a toroidal (ring) surface. Full torus by default. |
+| `catia_create_ruled` | `profile1`, `profile2`, `set_name` | `profile1`, `profile2` | Create a ruled surface between two curves or edges. |
+| `catia_create_blend` | `edge_or_curve_name`, `radius`, `set_name` | `edge_or_curve_name`, `radius` | Create a blend (fillet) on an edge or curve with specified radius. |
+| `catia_split_surface` | `surface_name`, `tool_name`, `set_name` | `surface_name`, `tool_name` | Split a surface using a cutting element (plane, curve, or surface). |
+| `catia_extend_surface` | `surface_name`, `distance`, `set_name` | `surface_name` | Extend a surface beyond its current boundary. Default distance: 10 mm. |
+| `catia_trim_surface` | `surface_name`, `tool_name`, `keep_part`, `set_name` | `surface_name`, `tool_name` | Trim a surface using a cutting element, keeping part 1 or 2. |
 
 ---
 
 ## Testing
 
-This project includes a comprehensive pytest test suite (205 tests) with mocked COM, so tests run on any OS without CATIA installed:
+This project includes a comprehensive pytest test suite (255 tests) with mocked COM, so tests run on any OS without CATIA installed:
 
 ```bash
 pip install -e ".[dev]"

@@ -12,7 +12,7 @@
 
 ## 1. Methodik
 
-Diese Analyse vergleicht den aktuellen Funktionsumfang des **catia-v5-mcp-server** (87 Tools
+Diese Analyse vergleicht den aktuellen Funktionsumfang des **catia-v5-mcp-server** (91 Tools
 über 7 Module) mit dem vollständigen CATIA V5 Automation API-Spektrum.
 
 **Quellen:**
@@ -341,16 +341,16 @@ Lizenzen, Preferences, Makros fehlen.
 |-----------|-------------------|--------------|-----------|-----------|
 | **Infrastructure** | 10 | 6/10 | 60% 🟡 | Mittel |
 | **Part Design** | 30 | 19/30 | 63% 🟡 | **Hoch** |
-| **Sketcher** | 22 | 11/22 | 50% 🟡 | **Hoch** |
-| **Wireframe & Surface (GSD)** | 36 | 16/36 | 44% 🟡 | **Hoch** |
-| **Assembly** | 24 | 10/24 | 42% 🟡 | **Hoch** |
+| **Sketcher** | 22 | 14/22 | 64% 🟡 | **Hoch** |
+| **Wireframe & Surface (GSD)** | 36 | 24/36 | 67% 🟡 | **Hoch** |
+| **Assembly** | 24 | 14/24 | 58% 🟡 | **Hoch** |
 | **Drafting** | 20 | 0/20 | 0% 🔴 | Mittel |
 | **Presentation** | 10 | 3/10 | 30% 🟡 | Niedrig |
 | **Measurement** | 11 | 10/11 | 91% 🟢 | Mittel |
 | **Knowledgeware** | 8 | 1/8 | 12% 🔴 | Mittel |
 | **PMI** | 6 | 0/6 | 0% 🔴 | Niedrig |
 | **Management** | 10 | 1/10 | 10% 🔴 | Niedrig |
-| **GESAMT** | **187** | **87/187** | **47%** 🟢 | — |
+| **GESAMT** | **187** | **95/187** | **51%** 🟡 | — |
 
 ### 13.2 Kritische Lücken (Priorität: Hoch)
 

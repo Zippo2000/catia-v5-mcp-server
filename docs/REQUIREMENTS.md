@@ -3,8 +3,8 @@
 | Feld | Wert |
 |------|------|
 | **Dokument-ID** | REQ-001 |
-| **Version** | 1.0 |
-| **Status** | Entwurf |
+| **Version** | 1.7 |
+| **Status** | Freigegeben |
 | **Letzte Änderung** | 2026-05-30 |
 | **Projekt** | catia-v5-mcp-server |
 | **Software-Version** | 0.1.0 |
