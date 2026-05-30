@@ -777,15 +777,18 @@ class GSDTools:
         """Create a Reference from a geometry name or standard element."""
         import win32com.client
 
-        # Standard planes and axes
-        plane_map = {"xy": "xy_plane", "yz": "yz_plane", "zx": "zx_plane"}
-        axis_map = {"x": "x_axis", "y": "y_axis", "z": "z_axis"}
+        # Standard planes and axes — use direct COM properties, not CreateReferenceFromName
+        # (which requires the exact naming from the type library and may fail on some CATIA versions)
+        plane_map = {"xy": "PlaneXY", "yz": "PlaneYZ", "zx": "PlaneZX"}
+        axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
         lookup = name.lower().strip()
 
         if lookup in plane_map:
-            return part.CreateReferenceFromName(plane_map[lookup])
+            elem = getattr(part, plane_map[lookup])
+            return part.CreateReferenceFromObject(elem)
         if lookup in axis_map:
-            return part.CreateReferenceFromName(axis_map[lookup])
+            elem = getattr(part, axis_map[lookup])
+            return part.CreateReferenceFromObject(elem)
 
         # Search HybridShapes
         obj = self._find_shape(part, name)
@@ -866,10 +869,7 @@ class GSDTools:
                 f"Invalid direction '{direction}'. Must be one of: x, y, z, xy, yz, zx"
             )
 
-        if direction in ("xy", "yz", "zx"):
-            dir_ref = part.CreateReferenceFromName(f"{direction}_plane")
-        else:
-            dir_ref = part.CreateReferenceFromName(f"{direction}_axis")
+        dir_ref = self._ref(part, direction)
 
         hsf = self._hsf(part)
         line = hsf.AddNewLinePtDir(pt, dir_ref)
