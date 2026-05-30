@@ -987,11 +987,9 @@ class GSDTools:
         # AddNewCylinder(center_ref, radius, length1, length2)
         # length1 = -Z direction, length2 = +Z direction (per CATIA doc)
         # The cylinder axis is the Z-axis of the reference system at the center point
-        # To orient along arbitrary axis, we need a different approach
         # For now: create cylinder along Z axis at the point
-        cyl_ref = self._ref_geom(self._dpart(part), center)
         half_h = height / 2.0
-        cylinder = hsf.AddNewCylinder(cyl_ref, radius, -half_h, half_h)
+        cylinder = hsf.AddNewCylinder(center, radius, -half_h, half_h)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(
