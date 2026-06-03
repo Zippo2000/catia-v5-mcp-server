@@ -6,6 +6,7 @@ from catia_mcp.tools.part_design import PartDesignTools
 from catia_mcp.tools.assembly import AssemblyTools
 from catia_mcp.tools.measurement import MeasurementTools
 from catia_mcp.tools.export import ExportTools
+from catia_mcp.tools.gsd import GSDTools
 
 __all__ = [
     "DocumentTools",
@@ -14,4 +15,5 @@ __all__ = [
     "AssemblyTools",
     "MeasurementTools",
     "ExportTools",
+    "GSDTools",
 ]

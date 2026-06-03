@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import inspect
 import logging
 import signal
 import sys
@@ -54,7 +53,7 @@ logger = logging.getLogger("catia_mcp")
 
 # ── CLI Arguments ──
 DEFAULT_SSE_HOST = "0.0.0.0"
-DEFAULT_SSE_PORT = 3000
+DEFAULT_SSE_PORT = 8765
 DEFAULT_STREAMABLE_HTTP_PORT = 3001
 
 
@@ -190,14 +189,8 @@ class CATIAMCPServer:
 
     async def run_stdio(self) -> None:
         """Run the MCP server over stdio (Claude Desktop / Claude Code)."""
-        pd_source = inspect.getsourcefile(PartDesignTools)
-        pad_source = inspect.getsource(PartDesignTools._pad)
-        has_inworkobject = "InWorkObject" in pad_source
-
         logger.info("=" * 60)
         logger.info("Starting CATIA V5 MCP Server (stdio)...")
-        logger.info("PartDesignTools source: %s", pd_source)
-        logger.info("_pad has InWorkObject: %s", has_inworkobject)
         logger.info("Registered %d tools across %d modules",
                      len(self._tool_router), len(self._tool_modules))
         logger.info("=" * 60)
@@ -236,18 +229,12 @@ class CATIAMCPServer:
 
         from mcp.server.sse import SseServerTransport
 
-        pd_source = inspect.getsourcefile(PartDesignTools)
-        pad_source = inspect.getsource(PartDesignTools._pad)
-        has_inworkobject = "InWorkObject" in pad_source
-
         logger.info("=" * 60)
         logger.info("Starting CATIA V5 MCP Server (SSE)...")
         logger.info("Transport: SSE over HTTP")
         logger.info("Host: %s, Port: %d", host, port)
         logger.info("SSE endpoint:  http://%s:%d/sse", host, port)
         logger.info("Message endpoint: http://%s:%d/messages/", host, port)
-        logger.info("PartDesignTools source: %s", pd_source)
-        logger.info("_pad has InWorkObject: %s", has_inworkobject)
         logger.info("Registered %d tools across %d modules",
                      len(self._tool_router), len(self._tool_modules))
         logger.info("=" * 60)
@@ -312,17 +299,11 @@ class CATIAMCPServer:
 
         from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
-        pd_source = inspect.getsourcefile(PartDesignTools)
-        pad_source = inspect.getsource(PartDesignTools._pad)
-        has_inworkobject = "InWorkObject" in pad_source
-
         logger.info("=" * 60)
         logger.info("Starting CATIA V5 MCP Server (Streamable HTTP)...")
         logger.info("Transport: Streamable HTTP")
         logger.info("Host: %s, Port: %d", host, port)
         logger.info("Endpoint: http://%s:%d/mcp", host, port)
-        logger.info("PartDesignTools source: %s", pd_source)
-        logger.info("_pad has InWorkObject: %s", has_inworkobject)
         logger.info("Registered %d tools across %d modules",
                      len(self._tool_router), len(self._tool_modules))
         logger.info("=" * 60)

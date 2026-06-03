@@ -5,13 +5,14 @@
 #
 #  What this does:
 #    1. Create virtual environment
-#    2. Install dependencies (mcp, pywin32 on Windows, SSE packages)
+#    2. Install dependencies (mcp, pywin32, pycatia, SSE, Streamable HTTP)
 #    3. Verify installation
 #
 #  After setup, configure your MCP client (see README):
 #    - Claude Desktop  → %APPDATA%\Claude\claude_desktop_config.json
 #    - Claude Code     → claude mcp add catia-v5 python -- -m catia_mcp
 #    - LM Studio       → python -m catia_mcp --sse
+#    - Open WebUI      → python -m catia_mcp --streamable-http
 # ============================================================================
 
 set -e
@@ -86,7 +87,7 @@ else
 fi
 
 python -m pip install --upgrade pip setuptools wheel 2>/dev/null || true
-python -m pip install -e . 2>/dev/null || true
+python -m pip install -e ".[dev]" 2>/dev/null || true
 echo -e "${GREEN}  Done${NC}"
 
 # ── Step 4: Verify ──
@@ -110,10 +111,22 @@ else
     echo -e "${YELLOW}  pywin32 (COM) ......... SKIPPED (requires Windows)${NC}"
 fi
 
+if python -c "import pycatia" 2>/dev/null; then
+    echo -e "${GREEN}  pycatia ............... OK${NC}"
+else
+    echo -e "${YELLOW}  pycatia ............... SKIPPED (requires Windows)${NC}"
+fi
+
 if python -c "import sse_starlette" 2>/dev/null; then
     echo -e "${GREEN}  sse-starlette ......... OK${NC}"
 else
     echo -e "${YELLOW}  sse-starlette ......... SKIPPED (optional - needed for SSE mode)${NC}"
+fi
+
+if python -c "import uvicorn" 2>/dev/null; then
+    echo -e "${GREEN}  uvicorn ............... OK${NC}"
+else
+    echo -e "${YELLOW}  uvicorn ............... SKIPPED (optional - needed for HTTP modes)${NC}"
 fi
 
 echo ""
@@ -127,6 +140,7 @@ echo "  2. Configure your MCP client (see README):"
 echo "     - Claude Desktop  → edit %APPDATA%\\Claude\\claude_desktop_config.json"
 echo "     - Claude Code     → claude mcp add catia-v5 python -- -m catia_mcp"
 echo "     - LM Studio       → python -m catia_mcp --sse"
+echo "     - Open WebUI      → python -m catia_mcp --streamable-http"
 echo ""
 echo -e "  ${CYAN}Manual test:${NC}"
 echo "  python -m catia_mcp"

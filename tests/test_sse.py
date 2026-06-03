@@ -34,7 +34,7 @@ class TestCLIParseArgs:
         assert args.sse is False  # default = stdio
         assert args.streamable_http is False
         assert args.host == "0.0.0.0"
-        assert args.port == 3000
+        assert args.port == 8765
         assert args.shport == 3001
 
     def test_sse_flag(self):
@@ -43,7 +43,7 @@ class TestCLIParseArgs:
         assert args.sse is True
         assert args.streamable_http is False
         assert args.host == "0.0.0.0"
-        assert args.port == 3000
+        assert args.port == 8765
 
     def test_streamable_http_flag(self):
         from catia_mcp.server import parse_args
@@ -77,7 +77,7 @@ class TestCLIParseArgs:
     def test_defaults_constants(self):
         from catia_mcp.server import DEFAULT_SSE_HOST, DEFAULT_SSE_PORT, DEFAULT_STREAMABLE_HTTP_PORT
         assert DEFAULT_SSE_HOST == "0.0.0.0"
-        assert DEFAULT_SSE_PORT == 3000
+        assert DEFAULT_SSE_PORT == 8765
         assert DEFAULT_STREAMABLE_HTTP_PORT == 3001
 
 
@@ -304,5 +304,3 @@ class TestSSEEdgeCases:
 
 
 # ─── Helpers ───────────────────────────────────────────────────────────
-
-import asyncio

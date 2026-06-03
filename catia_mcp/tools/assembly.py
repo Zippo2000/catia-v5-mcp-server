@@ -18,6 +18,17 @@ from catia_mcp.utils import (
 )
 
 
+def _is_pycatia(obj: Any) -> bool:
+    """Check if obj is a pycatia-wrapped object (not a mock or win32com proxy)."""
+    if obj is None:
+        return False
+    cls_name = type(obj).__name__
+    if cls_name in ('MagicMock', 'NonCallableMagicMock', 'AsyncMock'):
+        return False
+    mod = type(obj).__module__
+    return mod is not None and mod.startswith('pycatia')
+
+
 class AssemblyTools:
     """Tools for assembly (Product) operations in CATIA V5."""
 
@@ -379,7 +390,11 @@ class AssemblyTools:
 
     def _fix_constraint(self, component_name: str) -> str:
         product = self.conn.get_active_product()
-        constraints = product.Connections("CATIAConstraints")
+        # pycatia: product.constraints, win32com: product.Connections("CATIAConstraints")
+        if _is_pycatia(product):
+            constraints = product.constraints
+        else:
+            constraints = product.Connections("CATIAConstraints")
 
         try:
             component = product.Products.Item(component_name)
@@ -397,7 +412,10 @@ class AssemblyTools:
 
     def _coincidence_constraint(self, args: dict[str, Any]) -> str:
         product = self.conn.get_active_product()
-        constraints = product.Connections("CATIAConstraints")
+        if _is_pycatia(product):
+            constraints = product.constraints
+        else:
+            constraints = product.Connections("CATIAConstraints")
 
         comp1 = product.Products.Item(args["component1"])
         comp2 = product.Products.Item(args["component2"])
@@ -414,7 +432,10 @@ class AssemblyTools:
 
     def _offset_constraint(self, args: dict[str, Any]) -> str:
         product = self.conn.get_active_product()
-        constraints = product.Connections("CATIAConstraints")
+        if _is_pycatia(product):
+            constraints = product.constraints
+        else:
+            constraints = product.Connections("CATIAConstraints")
 
         comp1 = product.Products.Item(args["component1"])
         comp2 = product.Products.Item(args["component2"])
@@ -434,7 +455,10 @@ class AssemblyTools:
 
     def _angle_constraint(self, args: dict[str, Any]) -> str:
         product = self.conn.get_active_product()
-        constraints = product.Connections("CATIAConstraints")
+        if _is_pycatia(product):
+            constraints = product.constraints
+        else:
+            constraints = product.Connections("CATIAConstraints")
 
         comp1 = product.Products.Item(args["component1"])
         comp2 = product.Products.Item(args["component2"])
@@ -512,7 +536,10 @@ class AssemblyTools:
 
     def _contact_constraint(self, args: dict[str, Any]) -> str:
         product = self.conn.get_active_product()
-        constraints = product.Connections("CATIAConstraints")
+        if _is_pycatia(product):
+            constraints = product.constraints
+        else:
+            constraints = product.Connections("CATIAConstraints")
         comp1 = product.Products.Item(args["component1"])
         comp2 = product.Products.Item(args["component2"])
         try:
@@ -527,7 +554,10 @@ class AssemblyTools:
 
     def _distance_constraint(self, args: dict[str, Any]) -> str:
         product = self.conn.get_active_product()
-        constraints = product.Connections("CATIAConstraints")
+        if _is_pycatia(product):
+            constraints = product.constraints
+        else:
+            constraints = product.Connections("CATIAConstraints")
         comp1 = product.Products.Item(args["component1"])
         comp2 = product.Products.Item(args["component2"])
         distance = validate_positive_float(args["distance"], "distance")
@@ -544,7 +574,10 @@ class AssemblyTools:
 
     def _tangent_constraint(self, args: dict[str, Any]) -> str:
         product = self.conn.get_active_product()
-        constraints = product.Connections("CATIAConstraints")
+        if _is_pycatia(product):
+            constraints = product.constraints
+        else:
+            constraints = product.Connections("CATIAConstraints")
         comp1 = product.Products.Item(args["component1"])
         comp2 = product.Products.Item(args["component2"])
         try:
@@ -572,7 +605,10 @@ class AssemblyTools:
 
     def _remove_constraint(self, constraint_name: str) -> str:
         product = self.conn.get_active_product()
-        constraints = product.Connections("CATIAConstraints")
+        if _is_pycatia(product):
+            constraints = product.constraints
+        else:
+            constraints = product.Connections("CATIAConstraints")
         found = False
         for i in range(1, constraints.Count + 1):
             cst = constraints.Item(i)
@@ -620,7 +656,10 @@ class AssemblyTools:
 
     def _list_constraints(self) -> str:
         product = self.conn.get_active_product()
-        constraints = product.Connections("CATIAConstraints")
+        if _is_pycatia(product):
+            constraints = product.constraints
+        else:
+            constraints = product.Connections("CATIAConstraints")
 
         cst_list = []
         for i in range(1, constraints.Count + 1):

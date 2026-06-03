@@ -31,9 +31,11 @@ class TestEntryPoints:
         from catia_mcp.tools.assembly import AssemblyTools
         from catia_mcp.tools.measurement import MeasurementTools
         from catia_mcp.tools.export import ExportTools
+        from catia_mcp.tools.gsd import GSDTools
         assert PartDesignTools is not None
         assert SketcherTools is not None
         assert DocumentTools is not None
         assert AssemblyTools is not None
         assert MeasurementTools is not None
         assert ExportTools is not None
+        assert GSDTools is not None

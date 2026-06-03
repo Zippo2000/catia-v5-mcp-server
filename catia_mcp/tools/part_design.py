@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from catia_mcp.connection import CATIAConnection
+from catia_mcp.connection import HAS_PYCATIA
 from catia_mcp.utils import (
     format_catia_error,
     validate_non_negative_float,
@@ -711,15 +711,16 @@ class PartDesignTools:
             pass
 
         # 6. Try Search on the part (fallback)
+        hso = self.conn.hso
+        hso.Clear()
         try:
-            hso = self.conn.hso
-            hso.Clear()
             hso.Search(f"Name={name},all")
             if hso.Count > 0:
                 return hso.Item(1).Value
-            hso.Clear()
         except Exception:
             pass
+        finally:
+            hso.Clear()  # Always clean up, even on exception
 
         raise RuntimeError(
             f"Geometry '{name}' not found in active Part (searched shapes, sketches, "
@@ -729,16 +730,24 @@ class PartDesignTools:
     def _pad(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
 
-        part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-
-        try:
-            sf = part.ShapeFactory
-        except Exception as e:
-            raise RuntimeError(
-                f"Could not access ShapeFactory from part: {e}\n"
-                "Ensure the active document is a valid Part document."
-            )
+        # Use pycatia backend when available, win32com fallback
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            try:
+                sf = part.ShapeFactory
+            except Exception as e:
+                raise RuntimeError(
+                    f"Could not access ShapeFactory from part: {e}\n"
+                    "Ensure the active document is a valid Part document."
+                )
+            part.InWorkObject = body
 
         sketch_name = validate_sketch_name(args.get("sketch_name"))
         sketch = self._get_last_sketch(sketch_name, part)
@@ -754,8 +763,6 @@ class PartDesignTools:
         direction = args.get("direction", "normal")
         symmetric = args.get("symmetric", False)
 
-        part.InWorkObject = body
-
         try:
             pad = sf.AddNewPad(sketch, height)
         except Exception as e:
@@ -769,7 +776,10 @@ class PartDesignTools:
             pad.IsSymmetric = True
 
         try:
-            part.UpdateObject(pad)
+            if has_pycatia:
+                part.update_object(pad)
+            else:
+                part.UpdateObject(pad)
         except Exception as e:
             raise RuntimeError(f"Failed to update pad feature: {e}")
 
@@ -778,15 +788,21 @@ class PartDesignTools:
 
     def _pocket(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
 
         sketch_name = validate_sketch_name(args.get("sketch_name"))
         sketch = self._get_last_sketch(sketch_name, part)
         depth = validate_positive_float(args["depth"], "depth")
-
-        part.InWorkObject = body
 
         try:
             pocket = sf.AddNewPocket(sketch, depth)
@@ -796,21 +812,30 @@ class PartDesignTools:
         if args.get("direction") == "reverse":
             pocket.DirectionOrientation = 1
 
-        part.UpdateObject(pocket)
+        if has_pycatia:
+            part.update_object(pocket)
+        else:
+            part.UpdateObject(pocket)
         self.conn.refresh_display()
         return f"Pocket created: {depth} mm deep. Feature: '{pocket.Name}'"
 
     def _shaft(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
 
         sketch_name = validate_sketch_name(args.get("sketch_name"))
         sketch = self._get_last_sketch(sketch_name, part)
         angle = validate_positive_float(args.get("angle", 360), "angle")
-
-        part.InWorkObject = body
 
         try:
             shaft = sf.AddNewShaft(sketch)
@@ -818,21 +843,30 @@ class PartDesignTools:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
         shaft.FirstAngle = angle
 
-        part.UpdateObject(shaft)
+        if has_pycatia:
+            part.update_object(shaft)
+        else:
+            part.UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
 
     def _groove(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
 
         sketch_name = validate_sketch_name(args.get("sketch_name"))
         sketch = self._get_last_sketch(sketch_name, part)
         angle = validate_positive_float(args.get("angle", 360), "angle")
-
-        part.InWorkObject = body
 
         try:
             groove = sf.AddNewGroove(sketch)
@@ -840,41 +874,69 @@ class PartDesignTools:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
         groove.FirstAngle = angle
 
-        part.UpdateObject(groove)
+        if has_pycatia:
+            part.update_object(groove)
+        else:
+            part.UpdateObject(groove)
         self.conn.refresh_display()
         return f"Groove (revolution cut) created: {angle}°. Feature: '{groove.Name}'"
 
     def _fillet(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            sf = part.shape_factory
+        else:
+            part = self.conn.get_active_part()
+            sf = part.ShapeFactory
 
         radius = validate_positive_float(args["radius"], "radius")
+        edge_name = args.get("edge_name")
+
+        if edge_name:
+            target = self._resolve_geometry(edge_name)
+        else:
+            target = self._get_last_shape()
 
         try:
             fillet = sf.AddNewSolidEdgeFilletWithConstantRadius(
-                self._get_last_shape(),
+                target,
                 1,       # catTangencyFilletEdgePropagation
                 radius,
             )
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewSolidEdgeFilletWithConstantRadius", e))
 
-        part.UpdateObject(fillet)
+        if has_pycatia:
+            part.update_object(fillet)
+        else:
+            part.UpdateObject(fillet)
         self.conn.refresh_display()
         return f"Fillet created: R{radius} mm. Feature: '{fillet.Name}'"
 
     def _chamfer(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            sf = part.shape_factory
+        else:
+            part = self.conn.get_active_part()
+            sf = part.ShapeFactory
 
         length = validate_positive_float(args["length"], "length")
         angle = validate_positive_float(args.get("angle", 45), "angle")
+        edge_name = args.get("edge_name")
+
+        if edge_name:
+            target = self._resolve_geometry(edge_name)
+        else:
+            target = self._get_last_shape()
 
         try:
             chamfer = sf.AddNewChamfer(
-                self._get_last_shape(),
+                target,
                 1,       # catTangencyChamferPropagation
                 0,       # catLengthAngleChamfer mode
                 length,
@@ -883,22 +945,29 @@ class PartDesignTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewChamfer", e))
 
-        part.UpdateObject(chamfer)
+        if has_pycatia:
+            part.update_object(chamfer)
         self.conn.refresh_display()
         return f"Chamfer created: {length} mm at {angle}°. Feature: '{chamfer.Name}'"
 
     def _hole(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
 
         sketch_name = validate_sketch_name(args.get("sketch_name"))
         sketch = self._get_last_sketch(sketch_name, part)
         diameter = validate_positive_float(args["diameter"], "diameter")
         depth = validate_positive_float(args["depth"], "depth")
-
-        part.InWorkObject = body
 
         try:
             hole = sf.AddNewHoleFromSketch(sketch, depth)
@@ -910,14 +979,22 @@ class PartDesignTools:
         if args.get("threaded", False):
             hole.ThreadingMode = 1
 
-        part.UpdateObject(hole)
+        if has_pycatia:
+            part.update_object(hole)
+        else:
+            part.UpdateObject(hole)
         self.conn.refresh_display()
         return f"Hole created: D{diameter} mm, depth {depth} mm. Feature: '{hole.Name}'"
 
     def _rect_pattern(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            sf = part.shape_factory
+        else:
+            part = self.conn.get_active_part()
+            sf = part.ShapeFactory
 
         feature = self._get_last_shape(args.get("feature_name"))
         d1_count = validate_positive_int(args["dir1_count"], "dir1_count")
@@ -936,7 +1013,10 @@ class PartDesignTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewRectPattern", e))
 
-        part.UpdateObject(pattern)
+        if has_pycatia:
+            part.update_object(pattern)
+        else:
+            part.UpdateObject(pattern)
         self.conn.refresh_display()
         return (
             f"Rectangular pattern created: {d1_count}x{d2_count}, "
@@ -945,8 +1025,13 @@ class PartDesignTools:
 
     def _circ_pattern(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            sf = part.shape_factory
+        else:
+            part = self.conn.get_active_part()
+            sf = part.ShapeFactory
 
         feature = self._get_last_shape(args.get("feature_name"))
         count = validate_positive_int(args["count"], "count")
@@ -967,7 +1052,10 @@ class PartDesignTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewCircPattern", e))
 
-        part.UpdateObject(pattern)
+        if has_pycatia:
+            part.update_object(pattern)
+        else:
+            part.UpdateObject(pattern)
         self.conn.refresh_display()
         return (
             f"Circular pattern created: {count} instances, "
@@ -976,8 +1064,13 @@ class PartDesignTools:
 
     def _mirror(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            sf = part.shape_factory
+        else:
+            part = self.conn.get_active_part()
+            sf = part.ShapeFactory
 
         plane_key = validate_plane(args["plane"])
         planes = self.conn.get_origin_elements()
@@ -990,14 +1083,22 @@ class PartDesignTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewMirror", e))
 
-        part.UpdateObject(mirror)
+        if has_pycatia:
+            part.update_object(mirror)
+        else:
+            part.UpdateObject(mirror)
         self.conn.refresh_display()
         return f"Mirror created about {plane_key.upper()} plane. Feature: '{mirror.Name}'"
 
     def _shell(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            sf = part.shape_factory
+        else:
+            part = self.conn.get_active_part()
+            sf = part.ShapeFactory
 
         thickness = validate_positive_float(args["thickness"], "thickness")
 
@@ -1010,25 +1111,36 @@ class PartDesignTools:
         if faces_to_remove:
             sel = self.conn.hso
             sel.Clear()
-            for face_name in faces_to_remove:
-                sel.Search(f"Name={face_name},all")
-                if sel.Count > 0:
-                    try:
-                        shell.AddFaceToRemove(
-                            part.CreateReferenceFromObject(sel.Item(1).Value)
-                        )
-                    except Exception:
-                        pass
+            try:
+                for face_name in faces_to_remove:
+                    sel.Search(f"Name={face_name},all")
+                    if sel.Count > 0:
+                        try:
+                            shell.AddFaceToRemove(
+                                part.CreateReferenceFromObject(sel.Item(1).Value)
+                            )
+                        except Exception:
+                            pass
+                    sel.Clear()
+            finally:
                 sel.Clear()
 
-        part.UpdateObject(shell)
+        if has_pycatia:
+            part.update_object(shell)
+        else:
+            part.UpdateObject(shell)
         self.conn.refresh_display()
         return f"Shell created: {thickness} mm wall thickness. Feature: '{shell.Name}'"
 
     def _draft(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            sf = part.shape_factory
+        else:
+            part = self.conn.get_active_part()
+            sf = part.ShapeFactory
 
         angle = validate_non_negative_float(args["angle"], "angle")
 
@@ -1054,14 +1166,22 @@ class PartDesignTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewDraft", e))
 
-        part.UpdateObject(draft)
+        if has_pycatia:
+            part.update_object(draft)
+        else:
+            part.UpdateObject(draft)
         self.conn.refresh_display()
         return f"Draft created: {angle}° angle. Feature: '{draft.Name}'"
 
     def _thickness(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            sf = part.shape_factory
+        else:
+            part = self.conn.get_active_part()
+            sf = part.ShapeFactory
 
         offset = validate_non_negative_float(args["offset"], "offset")
         shape_ref = part.CreateReferenceFromObject(self._get_last_shape())
@@ -1070,7 +1190,10 @@ class PartDesignTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewThickness", e))
 
-        part.UpdateObject(thickness_feat)
+        if has_pycatia:
+            part.update_object(thickness_feat)
+        else:
+            part.UpdateObject(thickness_feat)
         self.conn.refresh_display()
         return f"Thickness added: {offset} mm offset. Feature: '{thickness_feat.Name}'"
 
@@ -1082,9 +1205,17 @@ class PartDesignTools:
         support curve controls the variable thickness (distance from support).
         """
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
 
         guiding_curve_name = args.get("guiding_curve")
         if not guiding_curve_name:
@@ -1118,15 +1249,16 @@ class PartDesignTools:
 
         sketch_ref = part.CreateReferenceFromObject(sketch)
 
-        part.InWorkObject = body
-
         try:
             lifting = sf.AddNewLifting(guide_ref, sketch_ref, support_ref)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewLifting", e))
 
         try:
-            part.UpdateObject(lifting)
+            if has_pycatia:
+                part.update_object(lifting)
+            else:
+                part.UpdateObject(lifting)
         except Exception as e:
             raise RuntimeError(f"Failed to update lifting feature: {e}")
 
@@ -1142,9 +1274,17 @@ class PartDesignTools:
         (end section) and a direction curve for orientation control.
         """
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
 
         spine_name = args.get("spine")
         section_name = args.get("section")
@@ -1197,8 +1337,6 @@ class PartDesignTools:
                     f"Could not resolve direction '{direction_name}': {e}"
                 ) from None
 
-        part.InWorkObject = body
-
         try:
             sweep = sf.AddNewVariableSectionShape(
                 spine_ref, section_ref, profile_ref, direction_ref
@@ -1207,7 +1345,10 @@ class PartDesignTools:
             raise RuntimeError(format_catia_error("AddNewVariableSectionShape", e))
 
         try:
-            part.UpdateObject(sweep)
+            if has_pycatia:
+                part.update_object(sweep)
+            else:
+                part.UpdateObject(sweep)
         except Exception as e:
             raise RuntimeError(f"Failed to update sweep feature: {e}")
 
@@ -1221,9 +1362,17 @@ class PartDesignTools:
         Generates a smooth solid between 2 or more profile sketches.
         """
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        body = self.conn.get_active_part_body()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
 
         sketch_names = args.get("sketch_names", [])
         if not isinstance(sketch_names, list):
@@ -1252,15 +1401,16 @@ class PartDesignTools:
                     "Make sure all sketches exist and are closed."
                 ) from None
 
-        part.InWorkObject = body
-
         try:
             loft = sf.AddNewLoft(references)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewLoft", e))
 
         try:
-            part.UpdateObject(loft)
+            if has_pycatia:
+                part.update_object(loft)
+            else:
+                part.UpdateObject(loft)
         except Exception as e:
             raise RuntimeError(f"Failed to update loft feature: {e}")
 
@@ -1275,8 +1425,13 @@ class PartDesignTools:
         Modes: catBooleanUnion (0), catBooleanCut (1), catBooleanIntersect (2)
         """
         self.conn.ensure_connected()
-        part = self.conn.get_active_part()
-        sf = part.ShapeFactory
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            sf = part.shape_factory
+        else:
+            part = self.conn.get_active_part()
+            sf = part.ShapeFactory
 
         operation = args.get("operation")
         body1_name = args.get("body1")
@@ -1333,7 +1488,10 @@ class PartDesignTools:
             raise RuntimeError(format_catia_error("AddOperation", e))
 
         try:
-            part.UpdateObject(boolean)
+            if has_pycatia:
+                part.update_object(boolean)
+            else:
+                part.UpdateObject(boolean)
         except Exception as e:
             raise RuntimeError(f"Failed to update boolean feature: {e}")
 

@@ -20,6 +20,16 @@ try:
 except ImportError:
     HAS_COM = False
 
+# pycatia import (optional, preferred backend)
+try:
+    import pycatia
+    import pycatia.hydro_shape_interfaces
+    import pycatia.part_interfaces
+    import pycatia.in_interfaces
+    HAS_PYCATIA = True
+except ImportError:
+    HAS_PYCATIA = False
+
 
 def _normalize_path(path: str) -> str:
     """Normalize file paths for Windows CATIA.
@@ -335,3 +345,52 @@ class CATIAConnection:
         Converts forward slashes to backslashes, which CATIA expects.
         """
         return _normalize_path(path)
+
+    # ── pycatia backend ──────────────────────────────────────────────────────
+
+    def _get_pycatia(self) -> Any:
+        """Get the pycatia CATIA application wrapper (lazy init)."""
+        if not HAS_PYCATIA:
+            raise RuntimeError("pycatia is not installed")
+        if self.app is None:
+            self.ensure_connected()
+        import pycatia
+        return pycatia.CATIA(self.app)
+
+    def get_active_part_pycatia(self) -> Any:
+        """Get the active part as a pycatia PartInterface."""
+        if not HAS_PYCATIA:
+            raise RuntimeError("pycatia is not installed")
+        import pycatia
+        catia = self._get_pycatia()
+        return pycatia.part_interfaces.Part(catia.active_document.part)
+
+    def get_active_product_pycatia(self) -> Any:
+        """Get the active product as a pycatia ProductInterface."""
+        if not HAS_PYCATIA:
+            raise RuntimeError("pycatia is not installed")
+        import pycatia
+        catia = self._get_pycatia()
+        return pycatia.product_structure_interfaces.Product(catia.active_document.product)
+
+    def get_hsf_pycatia(self) -> Any:
+        """Get the HybridShapeFactory via pycatia."""
+        if not HAS_PYCATIA:
+            raise RuntimeError("pycatia is not installed")
+        part = self.get_active_part_pycatia()
+        return part.hybrid_shape_factory
+
+    def get_origin_elements_pycatia(self) -> Any:
+        """Get OriginElements via pycatia."""
+        if not HAS_PYCATIA:
+            raise RuntimeError("pycatia is not installed")
+        part = self.get_active_part_pycatia()
+        return part.origin_elements
+
+    def get_spa_workbench_pycatia(self) -> Any:
+        """Get the SPA Workbench via pycatia (for measurable)."""
+        if not HAS_PYCATIA:
+            raise RuntimeError("pycatia is not installed")
+        import pycatia
+        catia = self._get_pycatia()
+        return catia.get_workbench("SPAWorkbench")

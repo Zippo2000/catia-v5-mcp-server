@@ -16,12 +16,23 @@ from catia_mcp.utils import (
     validate_plane,
 )
 
+
+def _is_pycatia(obj: Any) -> bool:
+    """Check if obj is a pycatia-wrapped object (not a mock or win32com proxy)."""
+    if obj is None:
+        return False
+    cls_name = type(obj).__name__
+    if cls_name in ('MagicMock', 'NonCallableMagicMock', 'AsyncMock'):
+        return False
+    mod = type(obj).__module__
+    return mod is not None and mod.startswith('pycatia')
+
+
 # Plane name mapping
 PLANE_MAP = {
     "xy": "PlaneXY",
     "yz": "PlaneYZ",
     "zx": "PlaneZX",
-    "xz": "PlaneZX",  # alias
 }
 
 
@@ -389,10 +400,13 @@ class SketcherTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("CreateSketch", e))
 
-        # Open the sketch for editing
+        # Open the sketch for editing — pycatia preferred
         self._active_sketch = sketch
         try:
-            self._active_factory = sketch.OpenEdition()
+            if _is_pycatia(sketch):
+                self._active_factory = sketch.open_edition()
+            else:
+                self._active_factory = sketch.OpenEdition()
         except Exception as e:
             raise RuntimeError(format_catia_error("OpenSketchEdition", e))
 
@@ -403,10 +417,17 @@ class SketcherTools:
         self._ensure_sketch_open()
         sketch = self._active_sketch
         try:
-            sketch.CloseEdition()
+            if _is_pycatia(sketch):
+                sketch.close_edition()
+            else:
+                sketch.CloseEdition()
         except Exception as e:
             raise RuntimeError(format_catia_error("CloseSketch", e))
-        self.conn.get_active_part().Update()
+        part = self.conn.get_active_part()
+        if _is_pycatia(part):
+            part.update()
+        else:
+            part.Update()
         self._active_sketch = None
         self._active_factory = None
         self.conn.refresh_display()
