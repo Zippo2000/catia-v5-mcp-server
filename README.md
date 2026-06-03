@@ -6,12 +6,12 @@ The first open-source MCP server for CATIA V5. Drive CATIA V5 CAD modeling from 
 
 ## What it does
 
-This MCP server exposes **95 tools** across 7 modules that let an LLM-driven client:
+This MCP server exposes **96 tools** across 7 modules that let an LLM-driven client:
 
 | Category | Tools | Examples |
 |----------|-------|----------|
 | 📄 **Document Management** | 10 | Create/open/save/close parts and assemblies, list documents |
-| ✏️ **2D Sketching** | 14 | Lines, rectangles, circles, arcs, splines, points, constraints, ellipse, hyperbola, parabola |
+| ✏️ **2D Sketching** | 15 | Lines, rectangles, circles, arcs, splines, points, constraints, ellipse, hyperbola, parabola |
 | 🔧 **Part Design** | 19 | Pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, shell, draft, lifting, sweep, loft, boolean |
 | 🎨 **GSD (Wireframe & Surface)** | 24 | Point, line, circle, plane, cylinder, fill, sweep, join, thicken, offset, sphere, cone, torus, ruled, blend, split, extend, trim |
 | 📦 **Assembly** | 14 | Add components, constraints (fix/coincidence/offset/angle/contact/distance/tangent), move, remove |
@@ -23,8 +23,8 @@ This MCP server exposes **95 tools** across 7 modules that let an LLM-driven cli
 - **Windows** (COM automation is Windows-only)
 - **CATIA V5** R2016+ installed and licensed
 - **Python 3.10+**
-- **pycatia** (installed automatically via `pip install`)
-- **Claude Desktop**, **Claude Code**, or **LM Studio** (see below)
+- **Dependencies** (installed automatically via `pip install`): `mcp`, `pywin32`, `pycatia`, `starlette`, `sse-starlette`, `uvicorn`
+- **Claude Desktop**, **Claude Code**, **LM Studio**, or **Open WebUI** (see below)
 
 ## Installation
 
@@ -166,16 +166,32 @@ Leave this terminal window open — the server runs in the foreground.
 
 5. Start chatting — LM Studio will route tool calls to CATIA via SSE and LLM responses via vLLM
 
-**SSE server CLI options:**
+**CLI options:**
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--sse` | — | Start in SSE transport mode instead of stdio |
+| `--sse` | — | Start in SSE transport mode (for Hermes, vLLM, LM Studio) |
+| `--streamable-http` | — | Start in Streamable HTTP mode (for Open WebUI) |
 | `--host` | `0.0.0.0` | Bind address (use `0.0.0.0` for LAN access) |
-| `--port` | `8765` | Port number for the SSE HTTP server |
-| `--stdio` | — | Explicit stdio mode (default; for Claude Desktop/Code) |
+| `--port` | `8765` | SSE bind port |
+| `--shport` | `3001` | Streamable HTTP bind port |
 
-> **Note:** The SSE server binds to `0.0.0.0` by default, making it accessible from other machines on your LAN. If you want local-only access, use `--host 127.0.0.1`.
+> **Note:** The server binds to `0.0.0.0` by default, making it accessible from other machines on your LAN. If you want local-only access, use `--host 127.0.0.1`. Stdio mode is the default when neither `--sse` nor `--streamable-http` is specified.
+
+### Open WebUI
+
+**Step 1: Start the MCP server in Streamable HTTP mode**
+
+```bash
+python -m catia_mcp --streamable-http --host 0.0.0.0 --shport 3001
+```
+
+**Step 2: Configure Open WebUI**
+
+1. Go to **Settings** → **Functions** → **MCP Servers**
+2. **Add MCP Server:**
+   - **Name:** `catia-v5`
+   - **URL:** `http://localhost:3001/mcp`
 
 ### Standalone (for testing)
 
@@ -192,7 +208,8 @@ catia-mcp
 2. **Start the server:**
 
    - **Claude Desktop / Claude Code**: The server starts automatically via stdio
-   - **LM Studio / remote LLM**: Run `python -m catia_mcp --sse` (see Configuration section above)
+   - **LM Studio / Hermes / remote LLM**: Run `python -m catia_mcp --sse` (see Configuration section above)
+   - **Open WebUI**: Run `python -m catia_mcp --streamable-http` (see Configuration section above)
 
 3. **Open your client** and ask the LLM to work with CATIA.
 
@@ -236,13 +253,13 @@ catia-v5-mcp-server/
 ├── catia_mcp/
 │   ├── __init__.py
 │   ├── __main__.py            # python -m catia_mcp entry point
-│   ├── server.py              # MCP Server — tool registration & routing (stdio + SSE)
+│   ├── server.py              # MCP Server — tool registration & routing (stdio, SSE, Streamable HTTP)
 │   ├── connection.py          # COM connection manager (auto-connect, reconnect, shutdown)
 │   ├── utils.py               # Shared validation utilities
 │   └── tools/
 │       ├── __init__.py
 │       ├── document.py        # Document management (10 tools)
-│       ├── sketcher.py        # 2D sketching (14 tools)
+│       ├── sketcher.py        # 2D sketching (15 tools)
 │       ├── part_design.py     # 3D part design (19 tools)
 │       ├── assembly.py        # Assembly/product (14 tools)
 │       ├── measurement.py     # Measurement & analysis (10 tools)
@@ -276,7 +293,7 @@ catia_mcp/tools/*.py  (Tool modules)
 CATIA V5 Application
 ```
 
-**SSE mode** (LM Studio / vLLM.rs / remote LLM):
+**SSE mode** (LM Studio / vLLM.rs / Hermes / remote LLM):
 
 ```
 LM Studio (Browser)
@@ -284,6 +301,14 @@ LM Studio (Browser)
     ├── SSE HTTP ──→ catia_mcp --sse :8765 ──→ CATIA V5
     │
     └── OpenAI API ──→ vLLM (remote) :8010
+```
+
+**Streamable HTTP mode** (Open WebUI):
+
+```
+Open WebUI (Browser)
+    │
+    └── HTTP ──→ catia_mcp --streamable-http :3001/mcp ──→ CATIA V5
 ```
 
 ## Complete Tool Reference
@@ -309,7 +334,7 @@ All dimensions are in **millimeters**, angles in **degrees**.
 
 ---
 
-### ✏️ Sketcher Tools (14)
+### ✏️ Sketcher Tools (15)
 
 | Tool | Parameters | Required | Description |
 |------|------------|----------|-------------|
@@ -320,6 +345,9 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_sketch_centered_rectangle` | `cx`, `cy`, `width`, `height` | `width`, `height` | Draw a rectangle centered at (cx, cy). All values in mm. |
 | `catia_sketch_circle` | `cx`, `cy`, `radius` | `radius` | Draw a circle. Center defaults to (0, 0) if not specified. |
 | `catia_sketch_arc` | `cx`, `cy`, `radius`, `start_angle`, `end_angle` | `cx`, `cy`, `radius`, `start_angle`, `end_angle` | Draw a circular arc. Angles are counter-clockwise from positive X axis. |
+| `catia_sketch_ellipse` | `cx`, `cy`, `major_axis`, `minor_axis`, `angle` | `major_axis`, `minor_axis` | Draw an ellipse. Center defaults to (0, 0). `angle` rotates major axis (default 0°). |
+| `catia_sketch_hyperbola` | `cx`, `cy`, `transverse_axis`, `conjugate_axis`, `angle` | `transverse_axis`, `conjugate_axis` | Draw a hyperbola. Center defaults to (0, 0). `angle` rotates transverse axis (default 0°). |
+| `catia_sketch_parabola` | `cx`, `cy`, `focal_length`, `angle` | `focal_length` | Draw a parabola. Vertex defaults to (0, 0). `angle` rotates parabola (default 0°). |
 | `catia_sketch_spline` | `points`, `closed` | `points` | Draw a spline through control points. `points` is a list of `[x, y]` in mm. |
 | `catia_sketch_point` | `x`, `y` | `x`, `y` | Create a point in the active sketch. |
 | `catia_sketch_constraint` | `type`, `value`, `geometry_index_1`, `geometry_index_2` | `type` | Add a dimensional/geometric constraint. Types: `distance`, `radius`, `angle`, `coincidence`, `tangent`, `perpendicular`, `parallel`, `horizontal`, `vertical`, `fix`. |
@@ -337,7 +365,7 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_groove` | `angle`, `sketch_name` | — | Revolution cut — remove material by revolving a 2D profile around an axis. |
 | `catia_fillet` | `radius`, `edge_name` | `radius` | Add rounded edges. `edge_name` targets a specific edge; omit to fillet all. |
 | `catia_chamfer` | `length`, `angle`, `edge_name` | `length` | Add beveled edges. Default angle: 45°. |
-| `catia_hole` | `diameter`, `depth`, `type`, `threaded`, `sketch_name` | `diameter`, `depth` | Create a hole. `type`: `simple` (default), `counterbored`, `countersunk`. |
+| `catia_hole` | `diameter`, `depth`, `type`, `threaded`, `sketch_name` | `diameter`, `depth` | Create a hole. `type`: `simple` (default), `counterbored`, `countersunk`, `tapered`. |
 | `catia_rect_pattern` | `dir1_count`, `dir1_spacing`, `dir2_count`, `dir2_spacing`, `feature_name` | `dir1_count`, `dir1_spacing` | Duplicate a feature in a grid along two directions. |
 | `catia_circ_pattern` | `count`, `angular_spacing`, `feature_name` | `count` | Duplicate a feature around a central axis. |
 | `catia_mirror` | `plane`, `feature_name` | `plane` | Mirror a feature or body about a plane: `xy`, `yz`, or `zx`. |
@@ -367,6 +395,8 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_distance_constraint` | `component1`, `component2`, `distance`, `element1`, `element2` | `component1`, `component2`, `distance` | Create a distance constraint — constant distance between elements. |
 | `catia_tangent_constraint` | `component1`, `component2`, `element1`, `element2` | `component1`, `component2` | Create a tangency constraint — surfaces touch tangentially. |
 | `catia_move_component` | `component_name`, `tx`, `ty`, `tz`, `rx`, `ry`, `rz` | `component_name` | Move a component by translation (mm) and/or rotation (degrees). |
+| `catia_remove_component` | `component_name` | `component_name` | Remove a component from the active assembly. |
+| `catia_remove_constraint` | `constraint_name` | `constraint_name` | Remove a constraint by name from the active assembly. |
 | `catia_list_components` | — | — | List all assembly components with names and positions. |
 | `catia_list_constraints` | — | — | List all assembly constraints in the active product. |
 
@@ -418,9 +448,9 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_create_join` | `surface_names`, `set_name` | `surface_names` | Join multiple surfaces into a single connected element. |
 | `catia_create_thicken` | `surface_name`, `thickness`, `set_name` | `surface_name`, `thickness` | Thicken a surface into a solid shell. |
 | `catia_create_surface_from_contours` | `contour_names`, `set_name` | `contour_names` | Create a multi-section surface (loft) spanning multiple contour profiles. |
-| `catia_create_sphere` | `cx`, `cy`, `cz`, `radius`, `angle_start`, `angle_end`, `lat_start`, `lat_end`, `set_name` | `cx`, `cy`, `cz`, `radius` | Create a spherical surface. Full sphere by default; use angles for partial. |
-| `catia_create_cone` | `cx`, `cy`, `cz`, `base_radius`, `height`, `top_radius`, `angle`, `set_name` | `cx`, `cy`, `cz`, `base_radius`, `height` | Create a conical surface. Default: full cone (360°). Truncated cone via top_radius. |
-| `catia_create_torus` | `cx`, `cy`, `cz`, `major_radius`, `minor_radius`, `angle_start`, `angle_end`, `set_name` | `cx`, `cy`, `cz`, `major_radius`, `minor_radius` | Create a toroidal (ring) surface. Full torus by default. |
+| `catia_create_sphere` | `cx`, `cy`, `cz`, `radius`, `angle_start`, `angle_end`, `lat_start`, `lat_end`, `set_name` | `radius` | Create a spherical surface. Full sphere by default; use angles for partial. `cx`/`cy`/`cz` default to 0. |
+| `catia_create_cone` | `cx`, `cy`, `cz`, `base_radius`, `height`, `top_radius`, `angle`, `set_name` | `base_radius`, `height` | Create a conical surface. Default: full cone (360°). Truncated cone via top_radius. `cx`/`cy`/`cz` default to 0. |
+| `catia_create_torus` | `cx`, `cy`, `cz`, `major_radius`, `minor_radius`, `angle_start`, `angle_end`, `set_name` | `major_radius`, `minor_radius` | Create a toroidal (ring) surface. Full torus by default. `cx`/`cy`/`cz` default to 0. |
 | `catia_create_ruled` | `profile1`, `profile2`, `set_name` | `profile1`, `profile2` | Create a ruled surface between two curves or edges. |
 | `catia_create_blend` | `edge_or_curve_name`, `radius`, `set_name` | `edge_or_curve_name`, `radius` | Create a blend (fillet) on an edge or curve with specified radius. |
 | `catia_split_surface` | `surface_name`, `tool_name`, `set_name` | `surface_name`, `tool_name` | Split a surface using a cutting element (plane, curve, or surface). |
