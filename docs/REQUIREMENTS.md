@@ -3,9 +3,9 @@
 | Feld | Wert |
 |------|------|
 | **Dokument-ID** | REQ-001 |
-| **Version** | 1.7 |
+| **Version** | 1.8 |
 | **Status** | Freigegeben |
-| **Letzte Änderung** | 2026-05-30 |
+| **Letzte Änderung** | 2026-06-03 |
 | **Projekt** | catia-v5-mcp-server |
 | **Software-Version** | 0.1.0 |
 
@@ -24,7 +24,7 @@ Tool-Interface zu steuern.
 
 Das System ist ein Python-Package (`catia-v5-mcp-server`), das als MCP-Server agiert und über
 zwei Transport-Modi (stdio, SSE) mit LLM-Clients kommuniziert. Die CAD-Operationen werden
-über Windows COM Automation (win32com) an CATIA V5 delegiert.
+über **pycatia** (primär) mit **win32com** als Fallback an CATIA V5 delegiert.
 
 ### 1.3 Begriffe und Abkürzungen
 
@@ -61,10 +61,10 @@ zwei Transport-Modi (stdio, SSE) mit LLM-Clients kommuniziert. Die CAD-Operation
 #### 2.1.1 Produkt-Perspektive
 
 ```
-┌──────────────┐  MCP-Protokoll  ┌──────────────┐  COM-Automation  ┌──────────┐
-│  LLM-Client  │  ──────────────►│  MCP-Server  │  ───────────────►│ CATIA V5 │
-│              │  (stdio / SSE)  │ (Python)     │  (win32com)      │ (Windows)│
-└──────────────┘                  └──────────────┘                   └──────────┘
+┌──────────────┐  MCP-Protokoll  ┌──────────────┐  pycatia / win32com  ┌──────────┐
+│  LLM-Client  │  ──────────────►│  MCP-Server  │  ───────────────────►│ CATIA V5 │
+│              │  (stdio / SSE)  │ (Python)     │  (Dual-Backend)      │ (Windows)│
+└──────────────┘                  └──────────────┘                      └──────────┘
 ```
 
 Das System ist ein **Middleware-Server** zwischen LLM-Clients und CATIA V5. Es übersetzt
@@ -76,11 +76,12 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 |-----------|------------|-------------|
 | Dokument-Verwaltung | 10 | Erstellen, Öffnen, Speichern, Schließen von Part/Product/Drawing |
 | Sketcher | 14 | 2D-Geometrie-Erstellung (inkl. Conics) und -Bearbeitung |
-| Part Design | 15 | 3D-Feature-Erstellung (Pad, Pocket, Fillet, etc.) |
+| Part Design | 19 | 3D-Feature-Erstellung (Pad, Pocket, Fillet, Lifting, Sweep, Loft, Boolean, etc.) |
 | Assembly | 14 | Baugruppen-Verwaltung und Constraints (inkl. Contact, Distance, Tangent, Remove) |
-| Measurement | 6 | Abstand, Trägheit, Bounding Box, Parameter |
+| Measurement | 10 | Abstand, Trägheit, Bounding Box, Parameter, Winkel, Fläche, Länge, Interferenz |
 | Export & View | 4 | Export (STEP/IGES/STL), Screenshots, View |
-| **Total** | **55** | — |
+| GSD (Wireframe & Surface) | 24 | Point, Line, Circle, Plane, Cylinder, Fill, Sweep, Join, Sphere, Cone, Torus, Ruled, Blend, Split, Extend, Trim |
+| **Total** | **95** | — |
 
 #### 2.1.3 Nutzerklassen und Charakteristiken
 
@@ -104,10 +105,9 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 | Einschränkung | Begründung |
 |--------------|-----------|
-| COM-Automation nur unter Windows | Plattform-Beschränkung von win32com |
+| COM-Automation nur unter Windows | Plattform-Beschränkung von win32com/pycatia |
 | Single-Threaded COM-Zugriff | CATIA COM-API ist nicht thread-safe |
 | Keine CATIA-Zeichnungsautomatisierung | Aktuell kein Drawing-Tool-Set implementiert |
-| Keine GSD (Surface) Werkzeuge | Aktuell nur Part Design und Assembly |
 
 #### 2.1.6 Verwendungsannahmen
 
@@ -128,7 +128,7 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 > *Verifizierbarkeit:* Der Server antwortet auf `initialize`-Request mit `serverInfo.name == "catia-v5-mcp"`.
 
-**FR-01.2** Das System SOLL mindestens 55 Tools implementieren und über `tools/list` verfügbar machen.
+**FR-01.2** Das System SOLL mindestens 95 Tools implementieren und über `tools/list` verfügbar machen.
 
 > *Verifizierbarkeit:* `tools/list`-Response enthält ≥55 Einträge mit korrekten `name`, `description`, `inputSchema`.
 
@@ -178,7 +178,7 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 > *Verifizierbarkeit:* Bei nicht-laufender CATIA führt `catia_connect` zum Start von `CATIA.Application`.
 
-**FR-03.3** Das System SOLL nach COM-Verbindungsabbruch eine erneute Verbindung mit `catia_reconnect` ermöglichen.
+**FR-03.3** Das System SOLL nach COM-Verbindungsabbruch eine erneute Verbindung durch `ensure_connected()` ermöglichen.
 
 > *Verifizierbarkeit:* Nach `disconnect`+neuem `connect` ist `is_connected` == True.
 
@@ -232,7 +232,7 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 ---
 
-#### FR-05: Sketcher (11 Tools)
+#### FR-05: Sketcher (14 Tools)
 
 **FR-05.1** `catia_create_sketch` SOLL einen 2D-Sketch auf einer Referenzebene (xy, yz, zx) erstellen.
 
@@ -292,7 +292,7 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 ---
 
-#### FR-06: Part Design (15 Tools)
+#### FR-06: Part Design (19 Tools)
 
 **FR-06.1** `catia_pad` SOLL einen Pad (Extrusion) aus dem letzten oder benannten Sketch erstellen.
 
@@ -332,7 +332,7 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 **FR-06.10** `catia_mirror` SOLL ein Feature oder Body an einer Ebene spiegeln.
 
-> *Parameter:* `plane` (required, enum: xy/yz/zx), `feature_name` (required, string). *Verifizierbarkeit:* Gespiegeltes Feature existiert.
+> *Parameter:* `plane` (required, enum: xy/yz/zx), `feature_name` (optional, string; default: letztes Feature). *Verifizierbarkeit:* Gespiegeltes Feature existiert.
 
 **FR-06.11** `catia_shell` SOLL ein Part aushöhlen.
 
@@ -354,9 +354,25 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 > *Parameter:* keine. *Verifizierbarkeit:* Response enthält Kanten-Namen für Fillet/Chamfer-Selektion.
 
+**FR-06.16** `catia_lifting` SOLL eine variable Extrusion entlang einer Kurve erstellen.
+
+> *Parameter:* `guiding_curve` (required), `sketch_name` (optional), `support` (optional). *Verifizierbarkeit:* Lifting-Feature existiert.
+
+**FR-06.17** `catia_sweep` SOLL eine Variable Section Sweep (VSS) erstellen.
+
+> *Parameter:* `spine`, `section` (required), `profile`, `direction` (optional). *Verifizierbarkeit:* Sweep-Feature existiert.
+
+**FR-06.18** `catia_loft` SOLL eine Loft-Interpolation zwischen 2+ Sketchen erstellen.
+
+> *Parameter:* `sketch_names` (required, list). *Verifizierbarkeit:* Loft-Feature existiert.
+
+**FR-06.19** `catia_boolean` SOLL eine Boolean-Operation (Union, Difference, Intersection) zwischen zwei Bodies durchführen.
+
+> *Parameter:* `operation` (required, enum: union/difference/intersection), `body1`, `body2` (required). *Verifizierbarkeit:* Boolean-Feature existiert.
+
 ---
 
-#### FR-07: Assembly (9 Tools)
+#### FR-07: Assembly (14 Tools)
 
 **FR-07.1** `catia_add_component` SOLL eine existierende .CATPart oder .CATProduct als Komponente hinzufügen.
 
@@ -417,7 +433,7 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 ---
 
-#### FR-08: Measurement (6 Tools)
+#### FR-08: Measurement (10 Tools)
 
 **FR-08.1** `catia_measure_distance` SOLL den Mindestabstand zwischen zwei Geometrie-Elementen messen.
 
@@ -443,6 +459,22 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 > *Parameter:* keine. *Verifizierbarkeit:* Alle Features sind recalc'd und up-to-date.
 
+**FR-08.7** `catia_measure_angle` SOLL den Winkel zwischen zwei planaren Flächen messen.
+
+> *Parameter:* `element1`, `element2` (required). *Verifizierbarkeit:* Response enthält Winkel in Grad.
+
+**FR-08.8** `catia_measure_area` SOLL die Oberfläche einer Fläche/Surface messen.
+
+> *Parameter:* `element` (required). *Verifizierbarkeit:* Response enthält Fläche in mm²/cm².
+
+**FR-08.9** `catia_measure_length` SOLL die Länge einer Kante/Kurve messen.
+
+> *Parameter:* `element` (required). *Verifizierbarkeit:* Response enthält Länge in mm.
+
+**FR-08.10** `catia_measure_interference` SOLL Interferenz/Überlappung zwischen zwei Bodies prüfen.
+
+> *Parameter:* `element1`, `element2` (required). *Verifizierbarkeit:* Response enthält Interferenz-Tiefe oder Freiraum.
+
 ---
 
 #### FR-09: Export & View (4 Tools)
@@ -465,6 +497,106 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 ---
 
+#### FR-10: GSD — Wireframe & Surface (24 Tools)
+
+**FR-10.1** `catia_create_geometrical_set` SOLL einen neuen Geometrical Set (HybridBody) erstellen.
+
+> *Parameter:* `name` (required). *Verifizierbarkeit:* Neuer HybridBody existiert.
+
+**FR-10.2** `catia_create_point_coord` SOLL einen Punkt durch 3D-Koordinaten erstellen.
+
+> *Parameter:* `x`, `y`, `z` (required), `set_name` (optional). *Verifizierbarkeit:* Point-Element existiert.
+
+**FR-10.3** `catia_create_line_2points` SOLL eine Linie durch zwei Punkte erstellen.
+
+> *Parameter:* `point1_name`, `point2_name` (required), `set_name` (optional). *Verifizierbarkeit:* Line-Element existiert.
+
+**FR-10.4** `catia_create_line_point_direction` SOLL eine Linie durch Punkt und Richtung erstellen.
+
+> *Parameter:* `point_name`, `direction` (required), `set_name` (optional). *Verifizierbarkeit:* Line-Element existiert.
+
+**FR-10.5** `catia_create_circle_center_radius` SOLL einen Kreis durch Mittelpunkt und Radius erstellen.
+
+> *Parameter:* `center_name`, `radius` (required), `support_plane`, `set_name` (optional). *Verifizierbarkeit:* Circle-Element existiert.
+
+**FR-10.6** `catia_create_plane_offset` SOLL eine versetzte Ebene erstellen.
+
+> *Parameter:* `reference_plane`, `offset` (required), `set_name` (optional). *Verifizierbarkeit:* Plane-Element existiert.
+
+**FR-10.7** `catia_create_cylinder` SOLL einen Zylinder erstellen.
+
+> *Parameter:* `center_name`, `axis`, `radius`, `height` (required), `set_name` (optional). *Verifizierbarkeit:* Cylinder-Element existiert.
+
+**FR-10.8** `catia_list_geometrical_sets` SOLL alle Geometrical Sets auflisten.
+
+> *Parameter:* keine. *Verifizierbarkeit:* Response enthält Namen und Shape-Counts.
+
+**FR-10.9** `catia_create_plane_3points` SOLL eine Ebene durch drei Punkte erstellen.
+
+> *Parameter:* `point1_name`, `point2_name`, `point3_name` (required). *Verifizierbarkeit:* Plane-Element existiert.
+
+**FR-10.10** `catia_create_fill` SOLL eine Fill-Oberfläche aus Konturen erstellen.
+
+> *Parameter:* `contour_names` (required). *Verifizierbarkeit:* Fill-Element existiert.
+
+**FR-10.11** `catia_create_sweep` SOLL eine Swept-Surface erstellen.
+
+> *Parameter:* `spine_name`, `section_name` (required). *Verifizierbarkeit:* Sweep-Element existiert.
+
+**FR-10.12** `catia_create_rotational_surface` SOLL eine Rotationsfläche erstellen.
+
+> *Parameter:* `axis_name`, `profile_name` (required), `angle` (optional). *Verifizierbarkeit:* Rotational-Surface existiert.
+
+**FR-10.13** `catia_create_offset_surface` SOLL eine Offset-Oberfläche erstellen.
+
+> *Parameter:* `surface_name`, `distance` (required). *Verifizierbarkeit:* Offset-Surface existiert.
+
+**FR-10.14** `catia_create_join` SOLL mehrere Oberflächen verbinden.
+
+> *Parameter:* `surface_names` (required). *Verifizierbarkeit:* Join-Element existiert.
+
+**FR-10.15** `catia_create_thicken` SOLL eine Oberfläche verdicken.
+
+> *Parameter:* `surface_name`, `thickness` (required). *Verifizierbarkeit:* Thicken-Element existiert.
+
+**FR-10.16** `catia_create_surface_from_contours` SOLL eine Multi-Section-Surface erstellen.
+
+> *Parameter:* `contour_names` (required). *Verifizierbarkeit:* Multi-section-surface existiert.
+
+**FR-10.17** `catia_create_sphere` SOLL eine Kugeloberfläche erstellen.
+
+> *Parameter:* `radius` (required), `cx`, `cy`, `cz`, `angle_start`, `angle_end`, `lat_start`, `lat_end`, `set_name` (optional). *Verifizierbarkeit:* Sphere-Element existiert.
+
+**FR-10.18** `catia_create_cone` SOLL eine Kegelfläche erstellen.
+
+> *Parameter:* `base_radius`, `height` (required), `cx`, `cy`, `cz`, `top_radius`, `angle`, `set_name` (optional). *Verifizierbarkeit:* Cone-Element existiert.
+
+**FR-10.19** `catia_create_torus` SOLL eine Torusfläche erstellen.
+
+> *Parameter:* `major_radius`, `minor_radius` (required), `cx`, `cy`, `cz`, `angle_start`, `angle_end`, `set_name` (optional). *Verifizierbarkeit:* Torus-Element existiert.
+
+**FR-10.20** `catia_create_ruled` SOLL eine Regelfläche zwischen zwei Kurven erstellen.
+
+> *Parameter:* `profile1`, `profile2` (required). *Verifizierbarkeit:* Ruled-surface existiert.
+
+**FR-10.21** `catia_create_blend` SOLL einen Blend (Fillett) auf einer Kante/Kurve erstellen.
+
+> *Parameter:* `edge_or_curve_name`, `radius` (required). *Verifizierbarkeit:* Blend-Element existiert.
+
+**FR-10.22** `catia_split_surface` SOLL eine Oberfläche mit einem Schneidelement aufteilen.
+
+> *Parameter:* `surface_name`, `tool_name` (required). *Verifizierbarkeit:* Split-Element existiert.
+
+**FR-10.23** `catia_extend_surface` SOLL eine Oberfläche über ihre aktuelle Begrenzung hinaus erweitern.
+
+> *Parameter:* `surface_name` (required), `distance` (optional, default 10). *Verifizierbarkeit:* Extend-Element existiert.
+
+**FR-10.24** `catia_trim_surface` SOLL eine Oberfläche mit einem Schneidelement beschneiden.
+
+> *Parameter:* `surface_name`, `tool_name` (required), `keep_part` (optional). *Verifizierbarkeit:* Trim-Element existiert.
+
+---
+
 ### 3.2 Nicht-Funktionale Anforderungen
 
 #### NR-01: Funktional
@@ -483,7 +615,7 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 #### NR-02: Zuverlässigkeit
 
-**NR-02.1** Das System SOLL nach einem COM-Verbindungsabbruch eine Neuverbindung durch `catia_reconnect` ermöglichen.
+**NR-02.1** Das System SOLL nach einem COM-Verbindungsabbruch eine transparente Neuverbindung durch `ensure_connected()` ermöglichen.
 
 > *Kriterium:* Nach Abbruch ist `reconnect()` erfolgreich innerhalb von 30 Sekunden.
 
@@ -565,7 +697,7 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 **NR-08.1** Das System SOLL eine umfassende Test-Suite mit mockten COM-Abhängigkeiten bereitstellen.
 
-> *Kriterium:* 154 pytest-Tests, alle bestanden, lauffähig unter Linux ohne CATIA.
+> *Kriterium:* 256 pytest-Tests, alle bestanden, lauffähig unter Linux ohne CATIA.
 
 **NR-08.2** Das System SOLL eine `.gitignore`-Datei enthalten, die Python-Artefakte, venvs, Logs und `.env`-Dateien ausschließt.
 
@@ -596,10 +728,11 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 | FR-03.1–03.7 | CATIA-Verbindung | `connection.py` | `test_connection.py` |
 | FR-04.1–04.7 | Dokument | `tools/document.py` | `test_document_tools.py` |
 | FR-05.1–05.14 | Sketcher | `tools/sketcher.py` | `test_sketcher_tools.py` |
-| FR-06.1–06.15 | Part Design | `tools/part_design.py` | `test_part_design_tools.py` |
+| FR-06.1–06.19 | Part Design | `tools/part_design.py` | `test_part_design_tools.py` |
 | FR-07.1–07.14 | Assembly | `tools/assembly.py` | `test_assembly_tools.py` |
 | FR-08.1–08.10 | Measurement | `tools/measurement.py` | `test_measurement_tools.py` |
 | FR-09.1–09.4 | Export & View | `tools/export.py` | `test_export_tools.py` |
+| FR-10.1–10.24 | GSD | `tools/gsd.py` | `test_gsd_tools.py` |
 | NR-01.1–01.3 | Funktional | `pyproject.toml`, `__main__.py` | `test_entry_points.py` |
 | NR-02.1–02.3 | Zuverlässigkeit | `connection.py` | `test_connection.py` |
 | NR-03.1–03.3 | Fehlerbehandlung | `utils.py` | `test_utils.py` |
@@ -617,3 +750,4 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 | Version | Datum | Autor | Änderung |
 |---------|-------|-------|---------|
 | 1.0 | 2026-05-30 | Hermes Agent | Erstfassung |
+| 1.8 | 2026-06-03 | Agent | pycatia-Dual-Backend, Tool-Count 55→95, GSD-FR-10, Part Design 15→19, Measurement 6→10, Assembly 9→14, Tests 154→256 |

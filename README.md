@@ -23,6 +23,7 @@ This MCP server exposes **95 tools** across 7 modules that let an LLM-driven cli
 - **Windows** (COM automation is Windows-only)
 - **CATIA V5** R2016+ installed and licensed
 - **Python 3.10+**
+- **pycatia** (installed automatically via `pip install`)
 - **Claude Desktop**, **Claude Code**, or **LM Studio** (see below)
 
 ## Installation
@@ -245,9 +246,9 @@ catia-v5-mcp-server/
 │       ├── part_design.py     # 3D part design (19 tools)
 │       ├── assembly.py        # Assembly/product (14 tools)
 │       ├── measurement.py     # Measurement & analysis (10 tools)
-│       ├── gsd.py             # Wireframe & surface (16 tools)
+│       ├── gsd.py             # Wireframe & surface (24 tools)
 │       └── export.py          # Export & view control (4 tools)
-├── tests/                     # pytest test suite (239 tests)
+├── tests/                     # pytest test suite (256 tests)
 │   ├── conftest.py            # Shared COM mocking infrastructure
 │   ├── test_*.py              # Module-specific tests
 │   └── test_sse.py            # SSE transport tests
@@ -270,7 +271,7 @@ catia_mcp/server.py  (MCP Server)
     ▼
 catia_mcp/tools/*.py  (Tool modules)
     │
-    │ win32com.client (COM Automation)
+    │ pycatia (preferred) / win32com (fallback)
     ▼
 CATIA V5 Application
 ```
@@ -430,7 +431,7 @@ All dimensions are in **millimeters**, angles in **degrees**.
 
 ## Testing
 
-This project includes a comprehensive pytest test suite (255 tests) with mocked COM, so tests run on any OS without CATIA installed:
+This project includes a comprehensive pytest test suite (256 tests) with mocked COM, so tests run on any OS without CATIA installed:
 
 ```bash
 pip install -e ".[dev]"
@@ -459,7 +460,7 @@ Create or open a document first using `catia_new_part`, `catia_new_product`, or 
 
 ### COM ByRef array limitations
 
-Some measurement methods (`get_inertia`, `get_bounding_box`) use ByRef arrays. The server includes fallback strategies (early binding → late binding → property access). If issues persist, try `pycatia` as an alternative backend.
+Some measurement methods (`get_inertia`, `get_bounding_box`) use ByRef arrays. The server uses a **dual-backend approach**: `pycatia` is the preferred backend (resolves ByRef via property access), with `win32com` as a transparent fallback.
 
 ### SSE connection fails
 
@@ -489,8 +490,7 @@ This project is open-source. Contributions welcome:
 - **Wireframe & Surface (GSD)** tools
 - **Drawing** tools (2D drafting)
 - **Knowledgeware** (formulas, rules, check)
-- **pycatia backend** as alternative to raw win32com
-- **Assembly** extensions (Contact, Distance, Tangent constraints, In-Context Design)
+- **Assembly** extensions (In-Context Design, Configurations)
 - **3DEXPERIENCE** CATIA support
 - **Windows integration tests** with real CATIA
 

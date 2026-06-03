@@ -15,23 +15,35 @@ from catia_mcp.utils import (
     validate_positive_float,
 )
 
+
+def _is_pycatia(obj: Any) -> bool:
+    """Check if obj is a pycatia-wrapped object (not a mock or win32com proxy)."""
+    if obj is None:
+        return False
+    cls_name = type(obj).__name__
+    if cls_name in ('MagicMock', 'NonCallableMagicMock', 'AsyncMock'):
+        return False
+    mod = type(obj).__module__
+    return mod is not None and mod.startswith('pycatia')
+
 # ── ByRef array helpers for win32com late binding ──
 #
 # CATIA's MeasurablePart interface methods (GetCOG, GetInertia, GetBoundingBox)
 # accept output arrays via ByRef.  win32com.client late binding cannot pass
 # mutable arrays, so we use early binding (DispatchWithSpecs) when available,
 # otherwise fall back to reading individual properties that don't require ByRef.
+# pycatia solves this by exposing .cog, .inertia, .bounding_box as list properties.
 
 def _get_cog_com(measurable: Any) -> tuple[float, float, float]:
-    """Return center-of-gravity via win32com Dispatch.
+    """Return center-of-gravity — pycatia preferred, win32com fallback."""
+    # pycatia: .cog is a list property, no ByRef needed
+    if _is_pycatia(measurable):
+        cog = measurable.cog
+        return float(cog[0]), float(cog[1]), float(cog[2])
 
-    Uses early-binding dispatch to satisfy the ByRef requirement.
-    Falls back to reading COG properties directly.
-    """
     try:
         import pythoncom
         import win32com.client
-        # Create a DispatchWithSpecs to get a typed interface
         dws = win32com.client.dynamic.DispatchWithSpecs(measurable._oleobj_.QueryInterface(
             pythoncom.IID_IDispatch, pythoncom.IID_IDispatch))
         cog = [0.0, 0.0, 0.0]
@@ -40,7 +52,6 @@ def _get_cog_com(measurable: Any) -> tuple[float, float, float]:
     except Exception:
         pass
 
-    # Fallback: read individual COG properties
     try:
         cog = [0.0, 0.0, 0.0]
         measurable.GetCOG(cog)
@@ -48,7 +59,6 @@ def _get_cog_com(measurable: Any) -> tuple[float, float, float]:
     except Exception:
         pass
 
-    # Last resort: use COG property (CATIA R26+)
     try:
         cog_prop = measurable.COG
         return float(cog_prop[0]), float(cog_prop[1]), float(cog_prop[2])
@@ -60,11 +70,15 @@ def _get_cog_com(measurable: Any) -> tuple[float, float, float]:
 
 
 def _get_inertia_com(measurable: Any) -> list[list[float]]:
-    """Return 3x3 inertia matrix via win32com Dispatch.
+    """Return 3x3 inertia matrix — pycatia preferred, win32com fallback."""
+    if _is_pycatia(measurable):
+        inertia = measurable.inertia
+        return [
+            [float(inertia[0]), float(inertia[1]), float(inertia[2])],
+            [float(inertia[3]), float(inertia[4]), float(inertia[5])],
+            [float(inertia[6]), float(inertia[7]), float(inertia[8])],
+        ]
 
-    Uses early-binding dispatch to satisfy the ByRef requirement.
-    Falls back to reading individual inertia properties.
-    """
     try:
         import pythoncom
         import win32com.client
@@ -80,7 +94,6 @@ def _get_inertia_com(measurable: Any) -> list[list[float]]:
     except Exception:
         pass
 
-    # Fallback: late binding (may work on some CATIA versions)
     try:
         inertia = [0.0] * 9
         measurable.GetInertia(inertia)
@@ -92,7 +105,6 @@ def _get_inertia_com(measurable: Any) -> list[list[float]]:
     except Exception:
         pass
 
-    # Last resort: individual properties
     try:
         inertia_prop = measurable.Inertia
         return [
@@ -108,11 +120,11 @@ def _get_inertia_com(measurable: Any) -> list[list[float]]:
 
 
 def _get_bounding_box_com(measurable: Any) -> list[float]:
-    """Return bounding box (6 floats) via win32com Dispatch.
+    """Return bounding box (6 floats) — pycatia preferred, win32com fallback."""
+    if _is_pycatia(measurable):
+        bbox = measurable.bounding_box
+        return [float(bbox[i]) for i in range(6)]
 
-    Uses early-binding dispatch to satisfy the ByRef requirement.
-    Falls back to reading individual bounding box properties.
-    """
     try:
         import pythoncom
         import win32com.client
@@ -124,7 +136,6 @@ def _get_bounding_box_com(measurable: Any) -> list[float]:
     except Exception:
         pass
 
-    # Fallback: late binding (may work on some CATIA versions)
     try:
         bbox = [0.0] * 6
         measurable.GetBoundingBox(bbox)
@@ -132,7 +143,6 @@ def _get_bounding_box_com(measurable: Any) -> list[float]:
     except Exception:
         pass
 
-    # Last resort: individual properties
     try:
         bbox_prop = measurable.BoundingBox
         return [float(bbox_prop[i]) for i in range(6)]

@@ -18,6 +18,17 @@ from catia_mcp.utils import (
 logger = logging.getLogger("catia_mcp")
 
 
+def _is_pycatia(obj: Any) -> bool:
+    """Check if obj is a pycatia-wrapped object (not a mock or win32com proxy)."""
+    if obj is None:
+        return False
+    cls_name = type(obj).__name__
+    if cls_name in ('MagicMock', 'NonCallableMagicMock', 'AsyncMock'):
+        return False
+    mod = type(obj).__module__
+    return mod is not None and mod.startswith('pycatia')
+
+
 class DocumentTools:
     """Tools for managing CATIA V5 documents."""
 
@@ -178,11 +189,13 @@ class DocumentTools:
     def _new_part(self, name: str | None = None) -> str:
         self.conn.ensure_connected()
         docs = self.conn.documents
-        import win32com.client
-        # docs.Add() returns a raw COM object that gencache can't proxy properly
-        # for .Part. Use dynamic.Dispatch to get a late-bound Document that exposes .Part.
+        # pycatia: documents.add() returns proper proxy
         raw_doc = docs.Add("Part")
-        doc = win32com.client.dynamic.Dispatch(raw_doc)
+        if _is_pycatia(raw_doc):
+            doc = raw_doc
+        else:
+            import win32com.client
+            doc = win32com.client.dynamic.Dispatch(raw_doc)
         if name:
             try:
                 doc.Part.Name = name
@@ -195,9 +208,12 @@ class DocumentTools:
     def _new_product(self, name: str | None = None) -> str:
         self.conn.ensure_connected()
         docs = self.conn.documents
-        import win32com.client
         raw_doc = docs.Add("Product")
-        doc = win32com.client.dynamic.Dispatch(raw_doc)
+        if _is_pycatia(raw_doc):
+            doc = raw_doc
+        else:
+            import win32com.client
+            doc = win32com.client.dynamic.Dispatch(raw_doc)
         if name:
             try:
                 doc.Product.Name = name
@@ -212,10 +228,13 @@ class DocumentTools:
         file_path = validate_file_path(file_path, "file_path")
         file_path = self.conn.normalize_path(file_path)
         docs = self.conn.documents
-        import win32com.client
         try:
             raw_doc = docs.Open(file_path)
-            doc = win32com.client.dynamic.Dispatch(raw_doc)
+            if _is_pycatia(raw_doc):
+                doc = raw_doc
+            else:
+                import win32com.client
+                doc = win32com.client.dynamic.Dispatch(raw_doc)
         except Exception as e:
             raise RuntimeError(format_catia_error("OpenDocument", e))
         return f"Opened document: '{doc.Name}' from {file_path}"

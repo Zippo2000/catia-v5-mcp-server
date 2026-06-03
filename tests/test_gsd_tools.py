@@ -182,6 +182,15 @@ class TestCreateLine2Points:
         assert isinstance(result, str)
         assert "Line" in result or "line" in result.lower()
 
+    def test_line_2points_missing_point_raises(self, gsd_tools, conn_mock):
+        part = conn_mock.get_active_part()
+        part.CreateReferenceFromName.side_effect = Exception("not found")
+        with pytest.raises(RuntimeError, match="Cannot find geometry"):
+            gsd_tools.execute(
+                "catia_create_line_2points",
+                {"point1_name": "Ghost", "point2_name": "Point.2"},
+            )
+
 
 class TestCreateLinePointDirection:
     def test_line_pt_dir_axis(self, gsd_tools, conn_mock):
@@ -318,6 +327,19 @@ class TestCreatePlane3Points:
         )
         assert isinstance(result, str)
 
+    def test_plane_3points_missing_point_raises(self, gsd_tools, conn_mock):
+        part = conn_mock.get_active_part()
+        part.CreateReferenceFromName.side_effect = Exception("not found")
+        with pytest.raises(RuntimeError, match="Cannot find geometry"):
+            gsd_tools.execute(
+                "catia_create_plane_3points",
+                {
+                    "point1_name": "Ghost",
+                    "point2_name": "Point.2",
+                    "point3_name": "Point.3",
+                },
+            )
+
 
 class TestCreateFill:
     def test_fill_valid(self, gsd_tools, conn_mock):
@@ -449,9 +471,10 @@ class TestCreateSphere:
         part = conn_mock.get_active_part()
         call_args = part.HybridShapeFactory.AddNewSphere.call_args
         assert call_args[0][2] == 25  # radius (now 3rd param after point, axis)
-        assert call_args[0][4] == 180  # endParallelAngle
-        assert call_args[0][5] == -45  # beginMeridianAngle
-        assert call_args[0][6] == 45  # endMeridianAngle
+        import math
+        assert call_args[0][4] == math.radians(180)  # endParallelAngle in radians
+        assert call_args[0][5] == math.radians(-45)  # beginMeridianAngle in radians
+        assert call_args[0][6] == math.radians(45)   # endMeridianAngle in radians
 
     def test_create_sphere_negative_radius_raises(self, gsd_tools, conn_mock):
         with pytest.raises(ValueError, match="must be positive"):

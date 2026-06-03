@@ -17,6 +17,17 @@ from catia_mcp.utils import (
     validate_positive_int,
 )
 
+
+def _is_pycatia(obj: Any) -> bool:
+    """Check if obj is a pycatia-wrapped object (not a mock or win32com proxy)."""
+    if obj is None:
+        return False
+    cls_name = type(obj).__name__
+    if cls_name in ('MagicMock', 'NonCallableMagicMock', 'AsyncMock'):
+        return False
+    mod = type(obj).__module__
+    return mod is not None and mod.startswith('pycatia')
+
 # CATIA export format identifiers
 FORMAT_MAP = {
     "step": "stp",
@@ -168,9 +179,12 @@ class ExportTools:
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
 
-        # CATIA V5 export via SaveAs with format specification
+        # CATIA V5 export via SaveAs with format specification — pycatia preferred
         try:
-            doc.ExportData(file_path, FORMAT_MAP[fmt_key])
+            if _is_pycatia(doc):
+                doc.export_data(file_path, FORMAT_MAP[fmt_key])
+            else:
+                doc.ExportData(file_path, FORMAT_MAP[fmt_key])
         except Exception as e:
             raise RuntimeError(format_catia_error("ExportData", e))
 
@@ -199,12 +213,15 @@ class ExportTools:
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
 
-        # Capture via the active viewer
+        # Capture via the active viewer — pycatia preferred
         viewer = self.conn._safe_active_viewer()
         if viewer is None:
             raise RuntimeError("No active 3D viewer available. Make sure a Part or Product document is open.")
         try:
-            viewer.CaptureToFile(1, file_path)
+            if _is_pycatia(viewer):
+                viewer.capture_to_file(1, file_path)
+            else:
+                viewer.CaptureToFile(1, file_path)
         except Exception as e:
             raise RuntimeError(format_catia_error("CaptureToFile", e))
 
@@ -215,7 +232,11 @@ class ExportTools:
         viewer = self.conn._safe_active_viewer()
         if viewer is None:
             raise RuntimeError("No active 3D viewer available. Make sure a Part or Product document is open.")
-        viewpoint = viewer.Viewpoint3D
+        # pycatia: viewer.viewpoint_3d, win32com: viewer.Viewpoint3D
+        if hasattr(viewer, 'viewpoint_3d'):
+            viewpoint = viewer.viewpoint_3d
+        else:
+            viewpoint = viewer.Viewpoint3D
 
         # Standard view direction vectors and up vectors
         views = {
@@ -236,8 +257,12 @@ class ExportTools:
         up = v["up"]
 
         try:
-            viewpoint.PutSightDirection(list(sight))
-            viewpoint.PutUpDirection(list(up))
+            if hasattr(viewpoint, 'put_sight_direction'):
+                viewpoint.put_sight_direction(list(sight))
+                viewpoint.put_up_direction(list(up))
+            else:
+                viewpoint.PutSightDirection(list(sight))
+                viewpoint.PutUpDirection(list(up))
             viewer.Reframe()
         except Exception as e:
             raise RuntimeError(format_catia_error("SetView", e))

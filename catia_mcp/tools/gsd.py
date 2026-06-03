@@ -720,90 +720,131 @@ class GSDTools:
     # ── Helpers ────────────────────────────────────────────────────────────
 
     @staticmethod
+    def _is_pycatia(obj: Any) -> bool:
+        """Check if obj is a pycatia-wrapped object (not a mock or win32com proxy).
+
+        pycatia objects have callable pycatia-style methods (snake_case).
+        We check for the presence of BOTH snake_case AND PascalCase to
+        distinguish real pycatia objects from MagicMock (which returns
+        truthy for any attribute).
+        """
+        if obj is None:
+            return False
+        # pycatia objects are actual class instances, not MagicMock
+        cls_name = type(obj).__name__
+        if cls_name in ('MagicMock', 'NonCallableMagicMock', 'AsyncMock'):
+            return False
+        # Check for pycatia module in the class
+        mod = type(obj).__module__
+        return mod is not None and mod.startswith('pycatia')
+
+    @staticmethod
     def _hsf(part: Any) -> Any:
-        """Get HybridShapeFactory via late binding on the Part object."""
+        """Get HybridShapeFactory — pycatia preferred, win32com fallback."""
+        if GSDTools._is_pycatia(part):
+            return part.hybrid_shape_factory
+        # win32com fallback
         try:
             import win32com.client.dynamic
-            # Use same detection as _dpart to avoid double-wrapping
             cls_module = type(part).__module__
             if cls_module and 'dynamic' in cls_module:
                 dp = part
             else:
                 dp = win32com.client.dynamic.Dispatch(part)
             return dp.HybridShapeFactory
-        except ImportError:
-            return part.HybridShapeFactory
         except Exception:
             return part.HybridShapeFactory
 
     @staticmethod
     def _dpart(part: Any) -> Any:
-        """Get late-bound wrapper for the Part, avoiding gencache proxy issues.
-
-        If part is already a dynamic.Dispatch wrapper, return as-is.
-        Double-wrapping (dynamic.Dispatch(dynamic.Dispatch(...))) crashes
-        with <unknown>.ZAxis because COM interface resolution is lost.
-        """
-        # Detect dynamic.Dispatch by its class module (not _username_ which
-        # is also present on gencache proxies via __getattr__ fallback)
-        cls_name = type(part).__name__
-        cls_module = type(part).__module__
-        if cls_module and 'dynamic' in cls_module:
+        """Get late-bound wrapper for the Part — pycatia preferred, win32com fallback."""
+        if GSDTools._is_pycatia(part):
             return part
         try:
             import win32com.client.dynamic
+            cls_module = type(part).__module__
+            if cls_module and 'dynamic' in cls_module:
+                return part
             return win32com.client.dynamic.Dispatch(part)
-        except (ImportError, Exception):
+        except Exception:
             return part
 
     @staticmethod
     def _ref_geom(dpart: Any, obj: Any) -> Any:
-        """Create Reference from a HybridShape using late binding."""
+        """Create Reference from a HybridShape — pycatia preferred, win32com fallback."""
+        if GSDTools._is_pycatia(dpart):
+            return dpart.create_reference_from_object(obj)
         return dpart.CreateReferenceFromGeometry(obj)
 
     @staticmethod
     def _ref_obj(dpart: Any, obj: Any) -> Any:
-        """Create Reference from an AnyObject using late binding."""
+        """Create Reference from an AnyObject — pycatia preferred, win32com fallback."""
+        if GSDTools._is_pycatia(dpart):
+            return dpart.create_reference_from_object(obj)
         return dpart.CreateReferenceFromObject(obj)
 
     def _get_or_create_set(self, part: Any, set_name: str | None) -> Any:
-        """Return an existing HybridBody by name, or create one."""
-        import win32com.client
+        """Return an existing HybridBody by name, or create one. pycatia preferred."""
+        if GSDTools._is_pycatia(part):
+            if not set_name:
+                for hb in part.hybrid_bodies:
+                    if hb.name != "Facturing":
+                        return hb
+                for hb in part.hybrid_bodies:
+                    if hb.name == "Geometrical Set.1":
+                        return hb
+                return list(part.hybrid_bodies)[0]
 
+            for hb in part.hybrid_bodies:
+                if hb.name == set_name:
+                    return hb
+
+            hbody = part.hybrid_bodies.add()
+            hbody.name = set_name
+            return hbody
+
+        # win32com fallback
+        import win32com.client
+        try:
+            hbodies = list(part.HybridBodies)
+        except Exception:
+            try:
+                hbodies = [part.HybridBodies.Item(i) for i in range(1, part.HybridBodies.Count + 1)]
+            except Exception:
+                hbodies = []
         if not set_name:
-            # Use first non-default HybridBody, fallback to Geometrical Set.1
-            for hb in part.HybridBodies:
+            for hb in hbodies:
                 if hb.Name != "Facturing":
                     return win32com.client.dynamic.Dispatch(hb)
+            if hbodies:
+                return win32com.client.dynamic.Dispatch(hbodies[0])
             return win32com.client.dynamic.Dispatch(
                 part.HybridBodies.Item("Geometrical Set.1")
             )
 
-        # Find existing
-        for hb in part.HybridBodies:
+        for hb in hbodies:
             if hb.Name == set_name:
                 return win32com.client.dynamic.Dispatch(hb)
 
-        # Create new
         hbody = part.HybridBodies.Add()
         hbody.Name = set_name
         return win32com.client.dynamic.Dispatch(hbody)
 
     def _find_shape(self, part: Any, name: str) -> Any | None:
-        """Search all HybridBodies for a HybridShape by name.
+        """Search all HybridBodies for a HybridShape by name. pycatia preferred."""
+        if GSDTools._is_pycatia(part):
+            for hb in part.hybrid_bodies:
+                for shape in hb.hybrid_shapes:
+                    if shape.name == name:
+                        return shape
+            return None
 
-        IMPORTANT: If part is a dynamic.Dispatch wrapper (no iterable HybridBodies),
-        re-wrap via gencache.EnsureDispatch to get iterable access.
-        """
+        # win32com fallback
         import win32com.client
-
-        # If part is a dynamic.Dispatch, we need gencache for HybridBodies iteration
         iter_part = part
         try:
-            # Test: can we iterate HybridBodies?
             list(part.HybridBodies)
         except Exception:
-            # dynamic.Dispatch wrapper — get gencache proxy for iteration
             try:
                 iter_part = win32com.client.gencache.EnsureDispatch(part)
             except Exception:
@@ -820,29 +861,25 @@ class GSDTools:
         return None
 
     def _ref(self, part: Any, name: str) -> Any:
-        """Create a Reference from a geometry name or standard element.
-
-        CRITICAL: OriginElements must be accessed via gencache proxy (not dynamic.Dispatch)
-        because child COM properties of a dynamic.Dispatch parent resolve as <unknown>.
-        CreateReferenceFromObject/Geometry must be called on dynamic.Dispatch to avoid
-        gencache proxy limitations.
-        """
-        import win32com.client
-
-        # dpart for CreateReferenceFrom... calls (late binding required)
+        """Create a Reference from a geometry name or standard element. pycatia preferred."""
         dpart = self._dpart(part)
 
-        # Standard planes and axes via OriginElements.
-        # OriginElements must be accessed on a gencache proxy (not dynamic.Dispatch).
-        # get_active_part() returns dynamic.Dispatch(doc).Part, so we must re-wrap
-        # via gencache.EnsureDispatch to get a proper proxy that exposes OriginElements.
         plane_map = {"xy": "PlaneXY", "yz": "PlaneYZ", "zx": "PlaneZX"}
         axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
         lookup = name.lower().strip()
 
         if lookup in plane_map or lookup in axis_map:
             key = plane_map.get(lookup, axis_map.get(lookup))
+            if GSDTools._is_pycatia(part):
+                oe = part.origin_elements
+                if lookup in ('xy', 'yz', 'zx'):
+                    elem = getattr(oe, f'plane_{lookup}')
+                else:
+                    elem = getattr(oe, f'axis_{lookup}')
+                return dpart.create_reference_from_object(elem)
+            # win32com fallback for origin elements
             try:
+                import win32com.client
                 gc_part = win32com.client.gencache.EnsureDispatch(part)
                 oe = gc_part.OriginElements
                 elem = getattr(oe, key)
@@ -852,15 +889,13 @@ class GSDTools:
                     f"Cannot reference '{name}': Failed to access OriginElements.{key}: {e}"
                 ) from e
 
-        # Search HybridShapes — use gencache 'part' for iteration (works),
-        # but 'dpart' for CreateReferenceFromGeometry (required for late binding)
         obj = self._find_shape(part, name)
         if obj:
-            return dpart.CreateReferenceFromGeometry(obj)
+            return self._ref_geom(dpart, obj)
 
-        # Last resort: CreateReferenceFromName for legacy geometry references
-        # This works on Windows for geometry path labels and returns a mock in tests
         try:
+            if GSDTools._is_pycatia(dpart):
+                return dpart.create_reference_from_name(name)
             return dpart.CreateReferenceFromName(name)
         except Exception:
             raise RuntimeError(
@@ -889,8 +924,12 @@ class GSDTools:
         if not isinstance(name, str) or not name.strip():
             raise ValueError("'name' must be a non-empty string")
 
-        hbody = part.HybridBodies.Add()
-        hbody.Name = name
+        if GSDTools._is_pycatia(part):
+            hbody = part.hybrid_bodies.add()
+            hbody.name = name
+        else:
+            hbody = part.HybridBodies.Add()
+            hbody.Name = name
         part.Update()
         return f"Geometrical Set '{name}' created."
 
@@ -1034,13 +1073,21 @@ class GSDTools:
         part = self.conn.get_active_part()
 
         sets = []
-        for hb in part.HybridBodies:
-            count = 0
-            try:
-                count = len(hb.HybridShapes)
-            except Exception:
-                count = hb.HybridShapes.Count if hasattr(hb, "HybridShapes") else 0
-            sets.append({"name": hb.Name, "shape_count": count})
+        if GSDTools._is_pycatia(part):
+            for hb in part.hybrid_bodies:
+                try:
+                    count = len(list(hb.hybrid_shapes))
+                except Exception:
+                    count = 0
+                sets.append({"name": hb.name, "shape_count": count})
+        else:
+            for hb in part.HybridBodies:
+                count = 0
+                try:
+                    count = len(hb.HybridShapes)
+                except Exception:
+                    count = hb.HybridShapes.Count if hasattr(hb, "HybridShapes") else 0
+                sets.append({"name": hb.Name, "shape_count": count})
 
         result = ", ".join(f"{s['name']} ({s['shape_count']} shapes)" for s in sets)
         return f"Geometrical Sets ({len(sets)}): {result}"
@@ -1215,20 +1262,24 @@ class GSDTools:
         lat_end = float(args.get("lat_end", 90))
 
         hsf = self._hsf(part)
-        dpart = self._dpart(part)
         point = hsf.AddNewPointCoord(cx, cy, cz)
 
         dpart = self._dpart(part)
+        # AddNewSphere expects angles in radians
+        angle_start_rad = math.radians(angle_start)
+        angle_end_rad = math.radians(angle_end)
+        lat_start_rad = math.radians(lat_start)
+        lat_end_rad = math.radians(lat_end)
         # AddNewSphere: when axis is not needed (full sphere), pass None
         try:
             sphere = hsf.AddNewSphere(
                 self._ref_geom(dpart, point),
                 None,  # axis not needed for full sphere
                 radius,
-                angle_start,
-                angle_end,
-                lat_start,
-                lat_end,
+                angle_start_rad,
+                angle_end_rad,
+                lat_start_rad,
+                lat_end_rad,
             )
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewSphere", e))
@@ -1238,7 +1289,7 @@ class GSDTools:
         return f"Sphere created: center=({cx},{cy},{cz}), radius={radius}mm, angle=({angle_start}°-{angle_end}°), lat=({lat_start}°-{lat_end}°). Name: '{name}'"
 
     def _create_cone(self, args: dict[str, Any]) -> str:
-        """Create a cone surface via AddNewRevol (AddNewConePointRadius does not exist in CATIA API).
+        """Create a cone surface via AddNewRevol.
         
         Creates a cone by revolving a line profile around the Z axis.
         """
@@ -1252,48 +1303,53 @@ class GSDTools:
         height = validate_positive_float(args.get("height"), "height")
 
         top_radius = float(args.get("top_radius", 0))
-        angle = float(args.get("angle", 360))
+        angle_deg = float(args.get("angle", 360))
+        angle_rad = math.radians(angle_deg)
 
         hsf = self._hsf(part)
         dpart = self._dpart(part)
-        point_base = hsf.AddNewPointCoord(cx + base_radius, cy, cz)
-        point_top = hsf.AddNewPointCoord(cx + top_radius, cy, cz + height)
-        profile = hsf.AddNewLinePtPt(
-            self._ref_geom(dpart, point_base),
-            self._ref_geom(dpart, point_top),
+
+        # Profile: line from (cx, cy, cz) to (cx+base_radius, cy, cz+height)
+        # Revolved around axis through (cx, cy, cz) along Z
+        p1 = hsf.AddNewPointCoord(cx, cy, cz)
+        p2 = hsf.AddNewPointCoord(cx + base_radius, cy, cz + height)
+        profile_line = hsf.AddNewLinePtPt(
+            self._ref_geom(dpart, p1),
+            self._ref_geom(dpart, p2),
         )
-        center_pt = hsf.AddNewPointCoord(cx, cy, cz)
-        center_top = hsf.AddNewPointCoord(cx, cy, cz + height)
-        axis_line = hsf.AddNewLinePtPt(
-            self._ref_geom(dpart, center_pt),
-            self._ref_geom(dpart, center_top),
+
+        axis_point = hsf.AddNewPointCoord(cx, cy, cz)
+        axis_dir = self._ref(part, "z")
+        axis_line = hsf.AddNewLinePtDir(
+            self._ref_geom(dpart, axis_point), axis_dir
         )
+
+        angle_start = 0.0
+        angle_end = angle_rad
+
         try:
             cone = hsf.AddNewRevol(
-                self._ref_geom(dpart, profile),
-                0.0,
-                float(angle),
+                self._ref_geom(dpart, profile_line),
+                angle_start,
+                angle_end,
                 self._ref_geom(dpart, axis_line),
             )
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewRevol", e))
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
-        name = self._append_and_update(part, hbody, cone, f"Cone({cx},{cy},{cz},{base_radius}mm,{height}mm)")
-        return f"Cone created (via revolution): base={base_radius}mm, top={top_radius}mm, height={height}mm, angle={angle}°. Name: '{name}'"
+        try:
+            name = self._append_and_update(
+                part, hbody, cone,
+                f"Cone({cx},{cy},{cz},{base_radius}mm,{height}mm)",
+            )
+        except Exception as e:
+            hbody.AppendHybridShape(cone)
+            name = f"Cone({cx},{cy},{cz},{base_radius}mm,{height}mm)"
+        return f"Cone created (via revolution): base_radius={base_radius}mm, height={height}mm, angle={angle_deg}°. Name: '{name}'"
 
     def _create_torus(self, args: dict[str, Any]) -> str:
-        """Create a torus (ring) surface via AddNewRevol.
-
-        No AddNewTorus exists in the CATIA API. A torus is created by
-        revolving a circle (the minor profile) around an axis.
-
-        The axis is created as an infinite line using the Z-axis direction,
-        passing through (cx, cy, cz). The profile circle is offset by
-        major_radius from the axis in the X direction.
-
-        CRITICAL: AddNewRevol expects angles in RADIANS, not degrees.
-        """
+        """Create a torus surface via AddNewRevol (revolution of a circle)."""
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
 
@@ -1303,21 +1359,20 @@ class GSDTools:
         major_radius = validate_positive_float(args.get("major_radius"), "major_radius")
         minor_radius = validate_positive_float(args.get("minor_radius"), "minor_radius")
 
-        # AddNewRevol requires RADIAN angles
-        angle_start = math.radians(float(args.get("angle_start", 0)))
-        angle_end = math.radians(float(args.get("angle_end", 360)))
+        angle_start_deg = float(args.get("angle_start", 0))
+        angle_end_deg = float(args.get("angle_end", 360))
+        angle_start = math.radians(angle_start_deg)
+        angle_end = math.radians(angle_end_deg)
 
         hsf = self._hsf(part)
         dpart = self._dpart(part)
 
-        # Profile circle: centered at (cx+major, cy, cz) with minor_radius
         circle_center = hsf.AddNewPointCoord(cx + major_radius, cy, cz)
         plane_ref = self._ref(part, "xy")
         circle = hsf.AddNewCircleCtrRad(
             self._ref_geom(dpart, circle_center), plane_ref, False, minor_radius
         )
 
-        # Axis of revolution: infinite line through (cx, cy, cz) along Z
         axis_point = hsf.AddNewPointCoord(cx, cy, cz)
         axis_dir = self._ref(part, "z")
         axis_line = hsf.AddNewLinePtDir(

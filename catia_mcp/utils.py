@@ -97,16 +97,25 @@ def validate_sketch_name(value: Any | None) -> str | None:
 def format_catia_error(op: str, e: Exception) -> str:
     """Format a CATIA COM error into a helpful message.
 
-    Adds context about the operation and suggests common fixes.
+    Adds context about the operation, backend, and suggests common fixes.
     """
     error_str = str(e)
     if not error_str or error_str == "None":
         error_str = "Unknown CATIA COM error (no error message from CATIA)"
 
-    return (
-        f"CATIA operation '{op}' failed: {error_str}\n"
-        "Common causes:\n"
+    # Detect if pycatia is involved
+    is_pycatia = any(m in error_str.lower() for m in ['pycatia', 'catia_interface'])
+
+    hints = (
         "  • CATIA may have a modal dialog open blocking automation\n"
         "  • The document may be in an invalid state (close and reopen)\n"
         "  • Try running catia_update_part to rebuild before retrying"
+    )
+    if is_pycatia:
+        hints += "\n  • pycatia backend error — try catia_disconnect then catia_connect"
+
+    return (
+        f"CATIA operation '{op}' failed: {error_str}\n"
+        "Common causes:\n"
+        f"{hints}"
     )

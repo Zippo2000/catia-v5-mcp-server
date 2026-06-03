@@ -5,9 +5,9 @@ __pycache__/
 *.so
 *.egg
 *.egg-info/
-*.dist-info/
 *.egg-info
 build/
+dist/
 develop-eggs/
 downloads/
 eggs/
@@ -37,8 +37,11 @@ env/
 Thumbs.db
 ehthumbs.db
 
-# Test artifacts
+# Test & lint artifacts
 .pytest_cache/
+pytest-cache-files*/
+.mypy_cache/
+.ruff_cache/
 .coverage
 htmlcov/
 *.log
@@ -50,3 +53,6 @@ htmlcov/
 
 # pycatia cache
 .pycatia/
+
+# Packaging
+MANIFEST
