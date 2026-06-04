@@ -836,7 +836,7 @@ class PartDesignTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
         import win32com.client.dynamic
-        shaft = win32com.client.dynamic.Dispatch(shaft)
+        shaft = win32com.client.dynamic.CDispatch(shaft)
         shaft.FirstAngle = angle
         part.UpdateObject(shaft)
         self.conn.refresh_display()
@@ -859,7 +859,7 @@ class PartDesignTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
         import win32com.client.dynamic
-        groove = win32com.client.dynamic.Dispatch(groove)
+        groove = win32com.client.dynamic.CDispatch(groove)
         groove.FirstAngle = angle
         part.UpdateObject(groove)
         self.conn.refresh_display()
@@ -962,7 +962,7 @@ class PartDesignTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
         import win32com.client.dynamic
-        hole = win32com.client.dynamic.Dispatch(hole)
+        hole = win32com.client.dynamic.CDispatch(hole)
         hole.Diameter = diameter
         hole.BottomType = 0
         if args.get("threaded", False):
