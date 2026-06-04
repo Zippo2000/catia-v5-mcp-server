@@ -404,9 +404,8 @@ class AssemblyTools:
         if _is_pycatia(product):
             comp_ref = product.create_reference_from_object(component)
         else:
-            import win32com.client.dynamic
-            dp = win32com.client.dynamic.Dispatch(product)
-            comp_ref = dp.CreateReferenceFromObject(component)
+            # product is already dynamic.Dispatch'd via get_active_product() — use directly
+            comp_ref = product.CreateReferenceFromObject(component)
 
         try:
             cst = constraints.AddMonoEltCst(0, comp_ref)
