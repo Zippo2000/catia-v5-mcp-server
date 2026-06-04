@@ -843,7 +843,7 @@ class PartDesignTools:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
         # dynamic.Dispatch needs raw win32com proxy — extract from pycatia wrapper if needed
         import win32com.client.dynamic
-        _shaft_com = getattr(shaft, "_com_object", shaft)
+        _shaft_com = getattr(shaft, "com_object", shaft)
         ds = win32com.client.dynamic.Dispatch(_shaft_com)
         ds.FirstAngle = angle
 
@@ -878,7 +878,7 @@ class PartDesignTools:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
         # dynamic.Dispatch needs raw win32com proxy — extract from pycatia wrapper if needed
         import win32com.client.dynamic
-        _groove_com = getattr(groove, "_com_object", groove)
+        _groove_com = getattr(groove, "com_object", groove)
         dg = win32com.client.dynamic.Dispatch(_groove_com)
         dg.FirstAngle = angle
 
@@ -993,7 +993,7 @@ class PartDesignTools:
             raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
         # dynamic.Dispatch needs raw win32com proxy — extract from pycatia wrapper if needed
         import win32com.client.dynamic
-        _hole_com = getattr(hole, "_com_object", hole)
+        _hole_com = getattr(hole, "com_object", hole)
         dh = win32com.client.dynamic.Dispatch(_hole_com)
         dh.Diameter = diameter
         dh.BottomType = 0
