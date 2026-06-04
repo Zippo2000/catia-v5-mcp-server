@@ -48,6 +48,8 @@ def _install_com_mocks():
     # Make Dispatch() and CDispatch() return their argument unchanged (pass-through for late binding)
     mock_win32com.client.dynamic.Dispatch.side_effect = lambda obj: obj
     mock_win32com.client.dynamic.CDispatch.side_effect = lambda obj, olerepr=None: obj
+    # PropertyPut sets attributes on the mock (for shaft/groove/hole)
+    mock_win32com.client.dynamic.PropertyPut.side_effect = lambda obj, name, value: setattr(obj, name, value)
     # Make all MagicMock instances support PutPropertyByName (for shaft/groove/hole)
     def _put_property_by_name(obj, name, value):
         setattr(obj, name, value)

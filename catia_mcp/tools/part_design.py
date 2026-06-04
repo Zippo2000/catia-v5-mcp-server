@@ -835,10 +835,9 @@ class PartDesignTools:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
-        # Set properties via pythoncom IDispatch.Invoke (bypasses win32com's type lookup)
-        import pythoncom
-        disp = pythoncom.CastToPyObject(shaft._oleobj_.QueryInterface(pythoncom.IID_IDispatch))
-        disp.InvokeNamed("FirstAngle", pythoncom.DISPATCH_PROPERTYPUT, (angle,))
+        # Use win32com dynamic.PropertyPut to set properties on unidentifiable COM objects
+        import win32com.client.dynamic
+        win32com.client.dynamic.PropertyPut(shaft, "FirstAngle", angle)
         part.UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
@@ -859,9 +858,8 @@ class PartDesignTools:
             groove = sf.AddNewGroove(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
-        import pythoncom
-        disp = pythoncom.CastToPyObject(groove._oleobj_.QueryInterface(pythoncom.IID_IDispatch))
-        disp.InvokeNamed("FirstAngle", pythoncom.DISPATCH_PROPERTYPUT, (angle,))
+        import win32com.client.dynamic
+        win32com.client.dynamic.PropertyPut(groove, "FirstAngle", angle)
         part.UpdateObject(groove)
         self.conn.refresh_display()
         return f"Groove (revolution cut) created: {angle}°. Feature: '{groove.Name}'"
@@ -962,12 +960,11 @@ class PartDesignTools:
             hole = sf.AddNewHoleFromSketch(sketch, depth)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
-        import pythoncom
-        disp = pythoncom.CastToPyObject(hole._oleobj_.QueryInterface(pythoncom.IID_IDispatch))
-        disp.InvokeNamed("Diameter", pythoncom.DISPATCH_PROPERTYPUT, (diameter,))
-        disp.InvokeNamed("BottomType", pythoncom.DISPATCH_PROPERTYPUT, (0,))
+        import win32com.client.dynamic
+        win32com.client.dynamic.PropertyPut(hole, "Diameter", diameter)
+        win32com.client.dynamic.PropertyPut(hole, "BottomType", 0)
         if args.get("threaded", False):
-            disp.InvokeNamed("ThreadingMode", pythoncom.DISPATCH_PROPERTYPUT, (1,))
+            win32com.client.dynamic.PropertyPut(hole, "ThreadingMode", 1)
         part.UpdateObject(hole)
         self.conn.refresh_display()
         return f"Hole created: D{diameter} mm, depth {depth} mm. Feature: '{hole.Name}'"
