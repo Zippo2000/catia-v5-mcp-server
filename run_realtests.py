@@ -1251,23 +1251,19 @@ def run_tests(sess):
     # ── Cleanup: close all documents created during testing ──
     print("\nCleanup: closing all test documents...")
     try:
-        docs = sess.call_tool("catia_list_documents", {})
-        # catia_list_documents returns a dict or JSON string
-        if isinstance(docs, dict):
-            doc_list = docs
-        else:
-            import json as _json
-            doc_list = _json.loads(docs)
-        if "Error" not in str(docs):
-            for doc in doc_list:
-                name = doc.get("name", "")
-                path = doc.get("path", "")
-                if not path or path == name:
-                    sess.call_tool("catia_close_document", {"file_path": name})
-                    print(f"  Closed (unsaved): {name}")
-                else:
-                    sess.call_tool("catia_close_document", {"file_path": path})
-                    print(f"  Closed: {name}")
+        docs_raw = sess.call_tool("catia_list_documents", {})
+        docs_txt = txt(docs_raw)
+        import json as _json
+        doc_list = _json.loads(docs_txt)
+        for doc in doc_list:
+            name = doc.get("name", "")
+            path = doc.get("path", "")
+            if not path or path == name:
+                sess.call_tool("catia_close_document", {"file_path": name})
+                print(f"  Closed (unsaved): {name}")
+            else:
+                sess.call_tool("catia_close_document", {"file_path": path})
+                print(f"  Closed: {name}")
     except Exception as e:
         print(f"  Cleanup warning: {e}")
 
