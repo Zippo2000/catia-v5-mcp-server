@@ -186,7 +186,7 @@ class CATIAMCPServer:
 
             except Exception as e:
                 error_msg = f"Error in {name}: {e}"
-                logger.error("!!! Tool error: %s\n%s", error_msg, "".join(__import__("traceback").format_exception()))
+                logger.error("!!! Tool error: %s", error_msg, exc_info=True)
                 return [TextContent(type="text", text=error_msg)]
 
     async def run_stdio(self) -> None:
