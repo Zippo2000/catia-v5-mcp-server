@@ -1248,6 +1248,30 @@ def run_tests(sess):
 
     print(f"\nResults written to docs/REALTEST_RESULTS.md")
 
+    # ── Cleanup: close all documents created during testing ──
+    print("\nCleanup: closing all test documents...")
+    try:
+        docs = sess.call_tool("catia_list_documents", {})
+        # Parse the JSON response and close each document
+        if "Error" not in docs:
+            import json as _json
+            doc_list = _json.loads(docs)
+            for doc in doc_list:
+                name = doc.get("name", "")
+                path = doc.get("path", "")
+                if not path or path == name:
+                    # Unsaved document — close without saving
+                    sess.call_tool("catia_close_document", {"file_path": name})
+                    print(f"  Closed (unsaved): {name}")
+                else:
+                    # Saved document — close
+                    sess.call_tool("catia_close_document", {"file_path": path})
+                    print(f"  Closed: {name}")
+    except Exception as e:
+        print(f"  Cleanup warning: {e}")
+
+    print("Cleanup complete.\n")
+
 
 if __name__ == "__main__":
     sess = MCPSession()
