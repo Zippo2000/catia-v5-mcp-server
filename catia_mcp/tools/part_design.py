@@ -835,15 +835,9 @@ class PartDesignTools:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
-        # Update the part to materialize the new shape
-        part.Update()
-        # Retrieve the last shape from the body (just created)
-        shapes = body.Shapes
-        shaft = shapes.Item(shapes.Count)
-        import win32com.client.dynamic
-        shaft = win32com.client.dynamic.Dispatch(shaft)
+        # Set properties directly on the COM proxy before UpdateObject
         shaft.FirstAngle = angle
-        part.Update()
+        part.UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
 
@@ -863,15 +857,9 @@ class PartDesignTools:
             groove = sf.AddNewGroove(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
-        # Update the part to materialize the new shape
-        part.Update()
-        # Retrieve the last shape from the body (just created)
-        shapes = body.Shapes
-        groove = shapes.Item(shapes.Count)
-        import win32com.client.dynamic
-        groove = win32com.client.dynamic.Dispatch(groove)
+        # Set properties directly on the COM proxy before UpdateObject
         groove.FirstAngle = angle
-        part.Update()
+        part.UpdateObject(groove)
         self.conn.refresh_display()
         return f"Groove (revolution cut) created: {angle}°. Feature: '{groove.Name}'"
 
@@ -971,18 +959,12 @@ class PartDesignTools:
             hole = sf.AddNewHoleFromSketch(sketch, depth)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
-        # Update the part to materialize the new shape
-        part.Update()
-        # Retrieve the last shape from the body (just created)
-        shapes = body.Shapes
-        hole = shapes.Item(shapes.Count)
-        import win32com.client.dynamic
-        hole = win32com.client.dynamic.Dispatch(hole)
+        # Set properties directly on the COM proxy before UpdateObject
         hole.Diameter = diameter
         hole.BottomType = 0
         if args.get("threaded", False):
             hole.ThreadingMode = 1
-        part.Update()
+        part.UpdateObject(hole)
         self.conn.refresh_display()
         return f"Hole created: D{diameter} mm, depth {depth} mm. Feature: '{hole.Name}'"
 
