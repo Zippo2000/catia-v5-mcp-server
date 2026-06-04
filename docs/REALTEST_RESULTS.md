@@ -1,6 +1,6 @@
 # CATIA V5 MCP Server — Realtest Results
 
-> **Date:** 2026-06-04 19:34:22  
+> **Date:** 2026-06-04 19:41:51  
 > **Server:** SSE on http://192.168.177.151:8765  
 
 ## Summary
@@ -8,33 +8,35 @@
 | Metric | Value |
 |--------|-------|
 | Total Tests | 122 |
-| Passed ✅ | 115 |
-| Failed ❌ | 1 |
+| Passed ✅ | 114 |
+| Failed ❌ | 2 |
 | Skipped ⏭️ | 6 |
-| Pass Rate | 99.1% |
+| Pass Rate | 98.3% |
 
 ## Detailed Results
 
 | Phase | Test ID | Status | Remark |
 |-------|---------|--------|--------|
 | P0 | P0-01 | ✅ | Connected to running CATIA V5 instance (CATIA V5) |
-| P0 | P0-02 | ✅ | Created new Part document: 'Part9' |
-| P0 | P0-03 | ✅ | Created new Part document: 'Part10' |
-| P0 | P0-04 | ✅ | Created new Product (assembly) document: 'Product5' |
-| P0 | P0-05 | ✅ | Created new Product (assembly) document: 'Product6' |
+| P0 | P0-02 | ✅ | Created new Part document: 'Part1' |
+| P0 | P0-03 | ✅ | Created new Part document: 'Part2' |
+| P0 | P0-04 | ✅ | Created new Product (assembly) document: 'Product1' |
+| P0 | P0-05 | ✅ | Created new Product (assembly) document: 'Product2' |
 | P0 | P0-06 | ✅ | [
   {
-    "name": "Product1.CATProduct",
-    "path": "Product1.CATProduct",
+    "name": "Part1.CATPart",
+    "path": "Part1.CATPart",
     "type": "Other"
-  }, |
+  },
+  {
+    "na |
 | P0 | P0-07 | ✅ | {
-  "name": "Product6.CATProduct",
-  "path": "Product6.CATProduct",
+  "name": "Product2.CATProduct",
+  "path": "Product2.CATProduct",
   "type": "Unknown"
 } |
-| P0 | P0-08 | ✅ | Error in catia_save_document: CATIA operation 'SaveAs' failed: (-2147352567, 'Ausnahmefehler aufgetr |
-| P0 | P0-09 | ✅ | Document 'Product6.CATProduct' closed |
+| P0 | P0-08 | ❌ | Timeout: no response for catia_save_document |
+| P0 | P0-09 | ✅ | Document 'test_part.CATPart' closed |
 | P0 | P0-10 | ✅ | Opened document: 'test_part.CATPart' from C:\catia_tests\test_part.CATPart |
 | P0 | P0-11 | ✅ | Disconnected from CATIA V5 |
 | P0 | P0-12 | ✅ | Connected to running CATIA V5 instance (CATIA V5) |
@@ -125,7 +127,7 @@
 | P3 | P3-18 | ✅ | Error in catia_create_ruled: Cannot find geometry 'Point.1' in any HybridBody and CreateReferenceFro |
 | P3 | P3-19 | ✅ | Geometrical Sets (2): Geometrical Set.1 (0 shapes), TestGeoSet (5 shapes) |
 | P3 | P3-20 | ✅ | Error in catia_create_blend: Cannot find geometry 'Point.1' in any HybridBody and CreateReferenceFro |
-| P4 | P4-01 | ✅ | Created new Product (assembly) document: 'Product6' |
+| P4 | P4-01 | ✅ | Created new Product (assembly) document: 'Product3' |
 | P4 | P4-02 | ✅ | New Part component created in assembly: 'BasePart' |
 | P4 | P4-03 | ✅ | Component added from: C:\catia_tests\test_part.CATPart |
 | P4 | P4-04 | ✅ | Error in catia_fix_constraint: <unknown>.CreateReferenceFromObject |
@@ -143,8 +145,8 @@
 | P4 | P4-10 | ⏭️ | Skipped - requires 2 components |
 | P4 | P4-11 | ✅ | No constraints in the active assembly |
 | P4 | P4-12 | ✅ | {
-  "name": "Product6.CATProduct",
-  "path": "Product6.CATProduct",
+  "name": "Product3.CATProduct",
+  "path": "Product3.CATProduct",
   "type": "Unknown"
 } |
 | P5 | P5-01 | ✅ | Error in catia_measure_distance: CATIA operation 'SetWorkbench(SPAWorkbench)' failed: '<win32com.gen |
@@ -157,16 +159,16 @@
 | P5 | P5-08 | ⏭️ | Skipped - requires 2 bodies |
 | P5 | P5-09 | ✅ | [
   {
-    "name": "Part14\\PartBody\\Sketch.1\\Activity",
+    "name": "Part6\\PartBody\\Sketch.1\\Activity",
     "value": true,
     "comment": ""
   },
- |
+  |
 | P5 | P5-10 | ✅ | [
   {
-    "name": "Part14\\PartBody\\Pad.1\\FirstLimit\\Length",
+    "name": "Part6\\PartBody\\Pad.1\\FirstLimit\\Length",
     "value": 40.0,
-    "comment": " |
+    "comment": "" |
 | P5 | P5-11 | ⏭️ | Skipped - requires known parameter name |
 | P5 | P5-12 | ✅ | Part updated successfully |
 | P6 | P6-01 | ✅ | Error in catia_set_view: No active 3D viewer available. Make sure a Part or Product document is open |
@@ -188,8 +190,8 @@
 | P7 | P7-09 | ✅ | Error in catia_open_document: 'file_path' does not appear to be a valid file path: 'nonexistent_file |
 | P7 | P7-10 | ✅ | Error in catia_export: 'file_path' does not appear to be a valid file path: 'relative_path.stp'
 On W |
-| P8 | P8-01 | ✅ | Created new Part document: 'Part15' |
-| P8 | P8-02 | ✅ | Created new Part document: 'Part16' |
+| P8 | P8-01 | ✅ | Created new Part document: 'Part7' |
+| P8 | P8-02 | ✅ | Created new Part document: 'Part8' |
 | P8 | P8-03 | ✅ | Listed tools, response length: 45312 |
 | P8 | P8-04 | ✅ | Unknown tool: 'catia_nonexistent'. Use list_tools to see available tools. |
 | P8 | P8-05 | ✅ | 10/10 rapid calls succeeded |

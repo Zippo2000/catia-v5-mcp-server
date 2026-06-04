@@ -42,8 +42,9 @@ import tempfile
 _log_dir = os.path.join(tempfile.gettempdir(), "catia-mcp")
 os.makedirs(_log_dir, exist_ok=True)
 _log_path = os.path.join(_log_dir, "catia_mcp.log")
+_log_level = logging.DEBUG if os.environ.get("CATIA_MCP_DEBUG") else logging.INFO
 logging.basicConfig(
-    level=logging.INFO,
+    level=_log_level,
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     handlers=[
         logging.FileHandler(_log_path, encoding="utf-8"),
@@ -159,7 +160,7 @@ class CATIAMCPServer:
             name: str, arguments: dict[str, Any] | None
         ) -> list[TextContent]:
             arguments = arguments or {}
-            logger.info("Tool call: %s(%s)", name, arguments)
+            logger.info(">>> Tool call: %s(%s)", name, arguments)
 
             try:
                 module = self._tool_router.get(name)
@@ -180,12 +181,12 @@ class CATIAMCPServer:
 
                     result = module.execute(name, arguments)
 
-                logger.info("Tool result: %s", result[:200] if len(result) > 200 else result)
+                logger.info("<<< Tool result: %s: %s", name, result)
                 return [TextContent(type="text", text=result)]
 
             except Exception as e:
                 error_msg = f"Error in {name}: {e}"
-                logger.error(error_msg, exc_info=True)
+                logger.error("!!! Tool error: %s\n%s", error_msg, "".join(__import__("traceback").format_exception()))
                 return [TextContent(type="text", text=error_msg)]
 
     async def run_stdio(self) -> None:
