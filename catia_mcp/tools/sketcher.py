@@ -545,43 +545,51 @@ class SketcherTools:
         constraints = sketch.Constraints
         geom = sketch.GeometricElements
 
-        # Dimensional constraints (need a geometry reference + value)
+        _part = self.conn.get_active_part()
+
+        def _make_ref(elem: Any) -> Any:
+            if _is_pycatia(_part):
+                return _part.create_reference_from_object(elem)
+            return _part.CreateReferenceFromObject(elem)
+
         if constraint_type in ("distance", "radius", "angle"):
             if value is None:
                 raise ValueError(f"Constraint type '{constraint_type}' requires a 'value' parameter.")
             if idx1 is None:
                 raise ValueError(f"Constraint type '{constraint_type}' requires 'geometry_index_1'.")
 
-            ref1 = geom.Item(idx1)
+            elem1 = geom.Item(idx1)
+            ref1 = _make_ref(elem1)
 
             if constraint_type == "distance" and idx2 is not None:
-                ref2 = geom.Item(idx2)
-                cst = constraints.AddBiEltCst(0, ref1, ref2)  # catCstTypeDistance = 0
+                elem2 = geom.Item(idx2)
+                ref2 = _make_ref(elem2)
+                cst = constraints.AddBiEltCst(0, ref1, ref2)
                 cst.Dimension.Value = value
             elif constraint_type == "distance":
-                cst = constraints.AddMonoEltCst(0, ref1)  # Length constraint
+                cst = constraints.AddMonoEltCst(0, ref1)
                 cst.Dimension.Value = value
             elif constraint_type == "radius":
-                cst = constraints.AddMonoEltCst(1, ref1)  # catCstTypeRadius = 1
+                cst = constraints.AddMonoEltCst(1, ref1)
                 cst.Dimension.Value = value
             elif constraint_type == "angle":
                 if idx2 is None:
                     raise ValueError("Angle constraint requires 'geometry_index_2'.")
-                ref2 = geom.Item(idx2)
-                cst = constraints.AddBiEltCst(2, ref1, ref2)  # catCstTypeAngle = 2
+                elem2 = geom.Item(idx2)
+                ref2 = _make_ref(elem2)
+                cst = constraints.AddBiEltCst(2, ref1, ref2)
                 cst.Dimension.Value = value
 
             return f"{constraint_type.capitalize()} constraint added: {value} {'mm' if constraint_type != 'angle' else '°'}"
 
-        # Geometric constraints (no value needed)
         cst_type_map = {
-            "coincidence": 3,   # catCstTypeOn
-            "tangent": 4,       # catCstTypeTangent
-            "perpendicular": 6, # catCstTypePerpendicular
-            "parallel": 7,      # catCstTypeParallel
-            "horizontal": 8,    # catCstTypeHorizontality
-            "vertical": 9,      # catCstTypeVerticality
-            "fix": 10,          # catCstTypeFix
+            "coincidence": 3,
+            "tangent": 4,
+            "perpendicular": 6,
+            "parallel": 7,
+            "horizontal": 8,
+            "vertical": 9,
+            "fix": 10,
         }
 
         cst_code = cst_type_map.get(constraint_type)
@@ -591,15 +599,18 @@ class SketcherTools:
         if constraint_type in ("horizontal", "vertical", "fix"):
             if idx1 is None:
                 raise ValueError(f"Constraint '{constraint_type}' requires 'geometry_index_1'.")
-            ref1 = geom.Item(idx1)
+            elem1 = geom.Item(idx1)
+            ref1 = _make_ref(elem1)
             constraints.AddMonoEltCst(cst_code, ref1)
         else:
             if idx1 is None or idx2 is None:
                 raise ValueError(
                     f"Constraint '{constraint_type}' requires both 'geometry_index_1' and 'geometry_index_2'."
                 )
-            ref1 = geom.Item(idx1)
-            ref2 = geom.Item(idx2)
+            elem1 = geom.Item(idx1)
+            elem2 = geom.Item(idx2)
+            ref1 = _make_ref(elem1)
+            ref2 = _make_ref(elem2)
             constraints.AddBiEltCst(cst_code, ref1, ref2)
 
         return f"{constraint_type.capitalize()} constraint added"

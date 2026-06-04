@@ -401,8 +401,15 @@ class AssemblyTools:
         except Exception:
             raise ValueError(f"Component '{component_name}' not found in assembly.")
 
+        if _is_pycatia(product):
+            comp_ref = product.create_reference_from_object(component)
+        else:
+            import win32com.client.dynamic
+            dp = win32com.client.dynamic.Dispatch(product)
+            comp_ref = dp.CreateReferenceFromObject(component)
+
         try:
-            cst = constraints.AddMonoEltCst(0, component)  # Fix constraint
+            cst = constraints.AddMonoEltCst(0, comp_ref)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddMonoEltCst (Fix)", e))
         cst.Name = f"Fix.{component_name}"

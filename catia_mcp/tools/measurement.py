@@ -361,6 +361,10 @@ class MeasurementTools:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
         try:
+            self.conn.app.SetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("SetWorkbench(SPAWorkbench)", e))
+        try:
             spa = self.conn.app.GetWorkbench("SPAWorkbench")
         except Exception as e:
             raise RuntimeError(format_catia_error("GetWorkbench(SPAWorkbench)", e))
@@ -392,6 +396,10 @@ class MeasurementTools:
         self.conn.ensure_connected()
         if density is not None:
             validate_non_negative_float(density, "density")
+        try:
+            self.conn.app.SetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("SetWorkbench(SPAWorkbench)", e))
         try:
             spa = self.conn.app.GetWorkbench("SPAWorkbench")
         except Exception as e:
@@ -450,6 +458,10 @@ class MeasurementTools:
 
     def _get_bounding_box(self) -> str:
         self.conn.ensure_connected()
+        try:
+            self.conn.app.SetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("SetWorkbench(SPAWorkbench)", e))
         try:
             spa = self.conn.app.GetWorkbench("SPAWorkbench")
         except Exception as e:
@@ -537,6 +549,10 @@ class MeasurementTools:
     def _measure_angle(self, elem1_name: str, elem2_name: str) -> str:
         self.conn.ensure_connected()
         try:
+            self.conn.app.SetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("SetWorkbench(SPAWorkbench)", e))
+        try:
             spa = self.conn.app.GetWorkbench("SPAWorkbench")
         except Exception as e:
             raise RuntimeError(format_catia_error("GetWorkbench(SPAWorkbench)", e))
@@ -557,6 +573,10 @@ class MeasurementTools:
     def _measure_area(self, element_name: str) -> str:
         self.conn.ensure_connected()
         try:
+            self.conn.app.SetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("SetWorkbench(SPAWorkbench)", e))
+        try:
             spa = self.conn.app.GetWorkbench("SPAWorkbench")
         except Exception as e:
             raise RuntimeError(format_catia_error("GetWorkbench(SPAWorkbench)", e))
@@ -575,6 +595,10 @@ class MeasurementTools:
     def _measure_length(self, element_name: str) -> str:
         self.conn.ensure_connected()
         try:
+            self.conn.app.SetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("SetWorkbench(SPAWorkbench)", e))
+        try:
             spa = self.conn.app.GetWorkbench("SPAWorkbench")
         except Exception as e:
             raise RuntimeError(format_catia_error("GetWorkbench(SPAWorkbench)", e))
@@ -592,6 +616,10 @@ class MeasurementTools:
 
     def _measure_interference(self, elem1_name: str, elem2_name: str) -> str:
         self.conn.ensure_connected()
+        try:
+            self.conn.app.SetWorkbench("SPAWorkbench")
+        except Exception as e:
+            raise RuntimeError(format_catia_error("SetWorkbench(SPAWorkbench)", e))
         try:
             spa = self.conn.app.GetWorkbench("SPAWorkbench")
         except Exception as e:

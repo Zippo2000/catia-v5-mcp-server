@@ -841,7 +841,12 @@ class PartDesignTools:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
-        shaft.FirstAngle = angle
+        if has_pycatia:
+            shaft.first_angle = angle
+        else:
+            import win32com.client.dynamic
+            ds = win32com.client.dynamic.Dispatch(shaft)
+            ds.FirstAngle = angle
 
         if has_pycatia:
             part.update_object(shaft)
@@ -872,7 +877,12 @@ class PartDesignTools:
             groove = sf.AddNewGroove(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
-        groove.FirstAngle = angle
+        if has_pycatia:
+            groove.first_angle = angle
+        else:
+            import win32com.client.dynamic
+            dg = win32com.client.dynamic.Dispatch(groove)
+            dg.FirstAngle = angle
 
         if has_pycatia:
             part.update_object(groove)
@@ -899,10 +909,15 @@ class PartDesignTools:
         else:
             target = self._get_last_shape()
 
+        if has_pycatia:
+            edge_ref = part.create_reference_from_object(target)
+        else:
+            edge_ref = part.CreateReferenceFromObject(target)
+
         try:
             fillet = sf.AddNewSolidEdgeFilletWithConstantRadius(
-                target,
-                1,       # catTangencyFilletEdgePropagation
+                edge_ref,
+                1,
                 radius,
             )
         except Exception as e:
@@ -934,11 +949,16 @@ class PartDesignTools:
         else:
             target = self._get_last_shape()
 
+        if has_pycatia:
+            edge_ref = part.create_reference_from_object(target)
+        else:
+            edge_ref = part.CreateReferenceFromObject(target)
+
         try:
             chamfer = sf.AddNewChamfer(
-                target,
-                1,       # catTangencyChamferPropagation
-                0,       # catLengthAngleChamfer mode
+                edge_ref,
+                1,
+                0,
                 length,
                 angle,
             )
@@ -973,11 +993,18 @@ class PartDesignTools:
             hole = sf.AddNewHoleFromSketch(sketch, depth)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
-        hole.Diameter = diameter
-        hole.BottomType = 0
-
-        if args.get("threaded", False):
-            hole.ThreadingMode = 1
+        if has_pycatia:
+            hole.diameter = diameter
+            hole.bottom_type = 0
+            if args.get("threaded", False):
+                hole.threading_mode = 1
+        else:
+            import win32com.client.dynamic
+            dh = win32com.client.dynamic.Dispatch(hole)
+            dh.Diameter = diameter
+            dh.BottomType = 0
+            if args.get("threaded", False):
+                dh.ThreadingMode = 1
 
         if has_pycatia:
             part.update_object(hole)
@@ -1002,13 +1029,18 @@ class PartDesignTools:
         d2_count = validate_positive_int(args.get("dir2_count", 1), "dir2_count")
         d2_spacing = validate_non_negative_float(args.get("dir2_spacing", 0), "dir2_spacing")
 
+        if has_pycatia:
+            feat_ref = part.create_reference_from_object(feature)
+        else:
+            feat_ref = part.CreateReferenceFromObject(feature)
+
         try:
             pattern = sf.AddNewRectPattern(
-                feature,
+                feat_ref,
                 d1_count, d2_count,
                 d1_spacing, d2_spacing,
-                1, 1,  # direction specification
-                True,   # keep specification
+                1, 1,
+                True,
             )
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewRectPattern", e))
