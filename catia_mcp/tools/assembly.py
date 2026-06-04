@@ -390,22 +390,14 @@ class AssemblyTools:
 
     def _fix_constraint(self, component_name: str) -> str:
         product = self.conn.get_active_product()
-        # pycatia: product.constraints, win32com: product.Connections("CATIAConstraints")
-        if _is_pycatia(product):
-            constraints = product.constraints
-        else:
-            constraints = product.Connections("CATIAConstraints")
+        constraints = product.Connections("CATIAConstraints")
 
         try:
             component = product.Products.Item(component_name)
         except Exception:
             raise ValueError(f"Component '{component_name}' not found in assembly.")
 
-        if _is_pycatia(product):
-            comp_ref = product.create_reference_from_object(component)
-        else:
-            # product is already dynamic.Dispatch'd via get_active_product() — use directly
-            comp_ref = product.CreateReferenceFromObject(component)
+        comp_ref = product.CreateReferenceFromObject(component)
 
         try:
             cst = constraints.AddMonoEltCst(0, comp_ref)

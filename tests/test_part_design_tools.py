@@ -179,12 +179,10 @@ class TestShaft:
         body.Sketches.Count = 1
         shaft_mock = MagicMock()
         shaft_mock.Name = "Shaft.1"
-        shaft_mock.com_object = shaft_mock
-        shaft_mock.GetDefinition.return_value = shaft_mock
-        part.shape_factory.AddNewShaft.return_value = shaft_mock
+        part.ShapeFactory.AddNewShaft.return_value = shaft_mock
         result = pd_tools.execute("catia_shaft", {"angle": 180})
         assert "Shaft" in result or "revolution" in result.lower()
-        # GetDefinition().FirstAngle uses PascalCase
+        # win32com path uses PascalCase
         assert shaft_mock.FirstAngle == 180
 
     def test_shaft_negative_angle_raises(self, pd_tools):
@@ -216,9 +214,7 @@ class TestGroove:
         body.Sketches.Count = 1
         groove_mock = MagicMock()
         groove_mock.Name = "Groove.1"
-        groove_mock.com_object = groove_mock
-        groove_mock.GetDefinition.return_value = groove_mock
-        part.shape_factory.AddNewGroove.return_value = groove_mock
+        part.ShapeFactory.AddNewGroove.return_value = groove_mock
         result = pd_tools.execute("catia_groove", {"angle": 270})
         assert "Groove" in result or "revolution" in result.lower()
         # dynamic.Dispatch path uses PascalCase attributes
@@ -323,12 +319,10 @@ class TestHole:
         body.Sketches.Count = 1
         hole_mock = MagicMock()
         hole_mock.Name = "Hole.1"
-        hole_mock.com_object = hole_mock
-        hole_mock.GetDefinition.return_value = hole_mock
-        part.shape_factory.AddNewHoleFromSketch.return_value = hole_mock
+        part.ShapeFactory.AddNewHoleFromSketch.return_value = hole_mock
         result = pd_tools.execute("catia_hole", {"diameter": 8, "depth": 20, "threaded": True})
         assert "Hole" in result
-        # GetDefinition().ThreadingMode uses PascalCase
+        # win32com path uses PascalCase
         assert hole_mock.ThreadingMode == 1
 
     def test_hole_zero_diameter_raises(self, pd_tools):

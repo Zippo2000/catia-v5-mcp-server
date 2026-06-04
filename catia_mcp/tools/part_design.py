@@ -821,17 +821,11 @@ class PartDesignTools:
 
     def _shaft(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
-        if has_pycatia:
-            part = self.conn.get_active_part_pycatia()
-            body = self.conn.get_active_part_body()
-            sf = part.shape_factory
-            part.in_work_object = body
-        else:
-            part = self.conn.get_active_part()
-            body = self.conn.get_active_part_body()
-            sf = part.ShapeFactory
-            part.InWorkObject = body
+        # Force win32com — pycatia shape_factory returns placeholder objects for Shaft
+        part = self.conn.get_active_part()
+        body = self.conn.get_active_part_body()
+        sf = part.ShapeFactory
+        part.InWorkObject = body
 
         sketch_name = validate_sketch_name(args.get("sketch_name"))
         sketch = self._get_last_sketch(sketch_name, part)
@@ -841,29 +835,19 @@ class PartDesignTools:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
-        # Shaft has no FirstAngle property — it's on the Revolution definition
-        shaft.GetDefinition().FirstAngle = angle
+        shaft.FirstAngle = angle
 
-        if has_pycatia:
-            part.update_object(shaft)
-        else:
-            part.UpdateObject(shaft)
+        part.UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
 
     def _groove(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
-        if has_pycatia:
-            part = self.conn.get_active_part_pycatia()
-            body = self.conn.get_active_part_body()
-            sf = part.shape_factory
-            part.in_work_object = body
-        else:
-            part = self.conn.get_active_part()
-            body = self.conn.get_active_part_body()
-            sf = part.ShapeFactory
-            part.InWorkObject = body
+        # Force win32com — pycatia shape_factory returns placeholder objects for Groove
+        part = self.conn.get_active_part()
+        body = self.conn.get_active_part_body()
+        sf = part.ShapeFactory
+        part.InWorkObject = body
 
         sketch_name = validate_sketch_name(args.get("sketch_name"))
         sketch = self._get_last_sketch(sketch_name, part)
@@ -873,13 +857,9 @@ class PartDesignTools:
             groove = sf.AddNewGroove(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
-        # Groove has no FirstAngle property — it's on the Revolution definition
-        groove.GetDefinition().FirstAngle = angle
+        groove.FirstAngle = angle
 
-        if has_pycatia:
-            part.update_object(groove)
-        else:
-            part.UpdateObject(groove)
+        part.UpdateObject(groove)
         self.conn.refresh_display()
         return f"Groove (revolution cut) created: {angle}°. Feature: '{groove.Name}'"
 
@@ -964,17 +944,11 @@ class PartDesignTools:
 
     def _hole(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
-        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
-        if has_pycatia:
-            part = self.conn.get_active_part_pycatia()
-            body = self.conn.get_active_part_body()
-            sf = part.shape_factory
-            part.in_work_object = body
-        else:
-            part = self.conn.get_active_part()
-            body = self.conn.get_active_part_body()
-            sf = part.ShapeFactory
-            part.InWorkObject = body
+        # Force win32com — pycatia shape_factory returns placeholder objects for Hole
+        part = self.conn.get_active_part()
+        body = self.conn.get_active_part_body()
+        sf = part.ShapeFactory
+        part.InWorkObject = body
 
         sketch_name = validate_sketch_name(args.get("sketch_name"))
         sketch = self._get_last_sketch(sketch_name, part)
@@ -985,17 +959,12 @@ class PartDesignTools:
             hole = sf.AddNewHoleFromSketch(sketch, depth)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
-        # Hole properties are on HoleDefinition, not Hole itself
-        hole_def = hole.GetDefinition()
-        hole_def.Diameter.Value = diameter
-        hole_def.BottomType = 0
+        hole.Diameter = diameter
+        hole.BottomType = 0
         if args.get("threaded", False):
-            hole_def.ThreadingMode = 1
+            hole.ThreadingMode = 1
 
-        if has_pycatia:
-            part.update_object(hole)
-        else:
-            part.UpdateObject(hole)
+        part.UpdateObject(hole)
         self.conn.refresh_display()
         return f"Hole created: D{diameter} mm, depth {depth} mm. Feature: '{hole.Name}'"
 

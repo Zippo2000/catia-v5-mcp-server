@@ -310,14 +310,10 @@ class CATIAConnection:
             )
 
     def get_active_product(self) -> Any:
-        """Get the Product object from the active ProductDocument.
-
-        IMPORTANT: Returns dynamic.Dispatch(doc).Product for consistent late binding.
-        """
+        """Get the Product object from the active ProductDocument."""
         doc = self.active_document
-        import win32com.client.dynamic
         try:
-            return win32com.client.dynamic.Dispatch(doc).Product
+            return doc.Product
         except Exception:
             raise RuntimeError(
                 "Active document is not a Product document. "
