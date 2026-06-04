@@ -106,6 +106,7 @@ class TestSSEInfrastructure:
 
     def test_server_has_run_sse_method(self):
         from catia_mcp.server import CATIAMCPServer
+        import asyncio
         import inspect
         assert hasattr(CATIAMCPServer, "run_sse")
         assert asyncio.iscoroutinefunction(CATIAMCPServer.run_sse)

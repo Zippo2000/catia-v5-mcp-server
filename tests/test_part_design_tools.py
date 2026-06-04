@@ -182,7 +182,8 @@ class TestShaft:
         part.shape_factory.AddNewShaft.return_value = shaft_mock
         result = pd_tools.execute("catia_shaft", {"angle": 180})
         assert "Shaft" in result or "revolution" in result.lower()
-        assert shaft_mock.FirstAngle == 180
+        # pycatia path uses snake_case attributes
+        assert shaft_mock.first_angle == 180
 
     def test_shaft_negative_angle_raises(self, pd_tools):
         with pytest.raises((ValueError, RuntimeError)):
@@ -215,7 +216,8 @@ class TestGroove:
         part.shape_factory.AddNewGroove.return_value = groove_mock
         result = pd_tools.execute("catia_groove", {"angle": 270})
         assert "Groove" in result or "revolution" in result.lower()
-        assert groove_mock.FirstAngle == 270
+        # pycatia path uses snake_case attributes
+        assert groove_mock.first_angle == 270
 
     def test_groove_negative_angle_raises(self, pd_tools):
         with pytest.raises((ValueError, RuntimeError)):
@@ -319,7 +321,8 @@ class TestHole:
         part.shape_factory.AddNewHoleFromSketch.return_value = hole_mock
         result = pd_tools.execute("catia_hole", {"diameter": 8, "depth": 20, "threaded": True})
         assert "Hole" in result
-        assert hole_mock.ThreadingMode == 1
+        # pycatia path uses snake_case attributes
+        assert hole_mock.threading_mode == 1
 
     def test_hole_zero_diameter_raises(self, pd_tools):
         with pytest.raises((ValueError, RuntimeError)):

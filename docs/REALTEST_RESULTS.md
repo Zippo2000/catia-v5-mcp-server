@@ -1,6 +1,6 @@
 # CATIA V5 MCP Server — Realtest Results
 
-> **Date:** 2026-06-03 22:29:25  
+> **Date:** 2026-06-04 19:13:26  
 > **Server:** SSE on http://192.168.177.151:8765  
 
 ## Summary
@@ -17,27 +17,25 @@
 
 | Phase | Test ID | Status | Remark |
 |-------|---------|--------|--------|
-| P0 | P0-01 | ✅ | Already connected to CATIA V5 (CATIA V5) |
-| P0 | P0-02 | ✅ | Created new Part document: 'Part2' |
-| P0 | P0-03 | ✅ | Created new Part document: 'Part3' |
-| P0 | P0-04 | ✅ | Created new Product (assembly) document: 'Product1' |
-| P0 | P0-05 | ✅ | Created new Product (assembly) document: 'Product2' |
+| P0 | P0-01 | ✅ | Connected to running CATIA V5 instance (CATIA V5) |
+| P0 | P0-02 | ✅ | Created new Part document: 'Part1' |
+| P0 | P0-03 | ✅ | Created new Part document: 'Part2' |
+| P0 | P0-04 | ✅ | Created new Product (assembly) document: 'Product2' |
+| P0 | P0-05 | ✅ | Created new Product (assembly) document: 'Product3' |
 | P0 | P0-06 | ✅ | [
   {
-    "name": "Part1.CATPart",
-    "path": "Part1.CATPart",
+    "name": "Product1.CATProduct",
+    "path": "Product1.CATProduct",
     "type": "Other"
-  },
-  {
-    "na |
+  }, |
 | P0 | P0-07 | ✅ | {
-  "name": "Product2.CATProduct",
-  "path": "Product2.CATProduct",
+  "name": "Product3.CATProduct",
+  "path": "Product3.CATProduct",
   "type": "Unknown"
 } |
-| P0 | P0-08 | ✅ | Error in catia_save_document: CATIA operation 'SaveAs' failed: (-2147352567, 'Ausnahmefehler aufgetr |
-| P0 | P0-09 | ✅ | Document 'Product2.CATProduct' closed |
-| P0 | P0-10 | ✅ | Error in catia_open_document: CATIA operation 'OpenDocument' failed: (-2147352567, 'Ausnahmefehler a |
+| P0 | P0-08 | ✅ | Document saved as: C:\catia_tests\test_part.CATPart |
+| P0 | P0-09 | ✅ | Document 'test_part.CATPart' closed |
+| P0 | P0-10 | ✅ | Opened document: 'test_part.CATPart' from C:\catia_tests\test_part.CATPart |
 | P0 | P0-11 | ✅ | Disconnected from CATIA V5 |
 | P0 | P0-12 | ✅ | Connected to running CATIA V5 instance (CATIA V5) |
 | P1 | P1-01 | ✅ | Sketch created on XY (front) plane. Ready for geometry. |
@@ -99,12 +97,12 @@
 | P2 | P2-15 | ✅ | Line created from (0, 0) to (0, 30) mm |
 | P2 | P2-16 | ✅ | Rectangle created from (10, 5) to (25, 25) mm [15.0 x 20.0 mm] |
 | P2 | P2-17 | ✅ | Sketch closed. You can now apply Part Design features (pad, pocket, etc.). |
-| P2 | P2-18 | ✅ | Error in catia_shaft: Property 'AddNewShaft.FirstAngle' can not be set. |
-| P2 | P2-19 | ✅ | Error in catia_shaft: Property 'AddNewShaft.FirstAngle' can not be set. |
+| P2 | P2-18 | ✅ | Error in catia_shaft: Property '<unknown>.FirstAngle' can not be set. |
+| P2 | P2-19 | ✅ | Error in catia_shaft: Property '<unknown>.FirstAngle' can not be set. |
 | P2 | P2-20 | ✅ | Sketch created on XY (front) plane. Ready for geometry. |
 | P2 | P2-21 | ✅ | Point created at (30, 20) mm |
 | P2 | P2-22 | ❌ | Error in catia_close_sketch: (-2147352567, 'Ausnahmefehler aufgetreten.', (0, 'CATIAPart', 'The meth |
-| P2 | P2-23 | ✅ | Error in catia_hole: Property 'AddNewHoleFromSketch.Diameter' can not be set. |
+| P2 | P2-23 | ✅ | Error in catia_hole: Property '<unknown>.Diameter' can not be set. |
 | P2 | P2-24 | ✅ | Error in catia_rect_pattern: CATIA operation 'AddNewRectPattern' failed: The Python instance can not |
 | P2 | P2-25 | ✅ | Error in catia_mirror: (-2147352567, 'Ausnahmefehler aufgetreten.', (0, 'CATIAPart', 'The method Upd |
 | P3 | P3-01 | ✅ | Geometrical Set 'TestGeoSet' created. |
@@ -127,10 +125,10 @@
 | P3 | P3-18 | ✅ | Error in catia_create_ruled: Cannot find geometry 'Point.1' in any HybridBody and CreateReferenceFro |
 | P3 | P3-19 | ✅ | Geometrical Sets (2): Geometrical Set.1 (0 shapes), TestGeoSet (5 shapes) |
 | P3 | P3-20 | ✅ | Error in catia_create_blend: Cannot find geometry 'Point.1' in any HybridBody and CreateReferenceFro |
-| P4 | P4-01 | ✅ | Created new Product (assembly) document: 'Product2' |
+| P4 | P4-01 | ✅ | Created new Product (assembly) document: 'Product4' |
 | P4 | P4-02 | ✅ | New Part component created in assembly: 'BasePart' |
 | P4 | P4-03 | ✅ | Component added from: C:\catia_tests\test_part.CATPart |
-| P4 | P4-04 | ✅ | Error in catia_fix_constraint: CATIA operation 'AddMonoEltCst (Fix)' failed: '<win32com.gen_py.CATIA |
+| P4 | P4-04 | ✅ | Error in catia_fix_constraint: <unknown>.CreateReferenceFromObject |
 | P4 | P4-05 | ✅ | [
   {
     "index": 1,
@@ -145,28 +143,28 @@
 | P4 | P4-10 | ⏭️ | Skipped - requires 2 components |
 | P4 | P4-11 | ✅ | No constraints in the active assembly |
 | P4 | P4-12 | ✅ | {
-  "name": "Product2.CATProduct",
-  "path": "Product2.CATProduct",
+  "name": "Product4.CATProduct",
+  "path": "Product4.CATProduct",
   "type": "Unknown"
 } |
-| P5 | P5-01 | ✅ | Error in catia_measure_distance: CATIA operation 'GetWorkbench(SPAWorkbench)' failed: '<win32com.gen |
-| P5 | P5-02 | ✅ | Error in catia_get_inertia: CATIA operation 'GetWorkbench(SPAWorkbench)' failed: '<win32com.gen_py.C |
-| P5 | P5-03 | ✅ | Error in catia_get_inertia: CATIA operation 'GetWorkbench(SPAWorkbench)' failed: '<win32com.gen_py.C |
-| P5 | P5-04 | ✅ | Error in catia_get_bounding_box: CATIA operation 'GetWorkbench(SPAWorkbench)' failed: '<win32com.gen |
-| P5 | P5-05 | ✅ | Error in catia_measure_angle: CATIA operation 'GetWorkbench(SPAWorkbench)' failed: '<win32com.gen_py |
-| P5 | P5-06 | ✅ | Error in catia_measure_area: CATIA operation 'GetWorkbench(SPAWorkbench)' failed: '<win32com.gen_py. |
-| P5 | P5-07 | ✅ | Error in catia_measure_length: CATIA operation 'GetWorkbench(SPAWorkbench)' failed: '<win32com.gen_p |
+| P5 | P5-01 | ✅ | Error in catia_measure_distance: CATIA operation 'SetWorkbench(SPAWorkbench)' failed: '<win32com.gen |
+| P5 | P5-02 | ✅ | Error in catia_get_inertia: CATIA operation 'SetWorkbench(SPAWorkbench)' failed: '<win32com.gen_py.C |
+| P5 | P5-03 | ✅ | Error in catia_get_inertia: CATIA operation 'SetWorkbench(SPAWorkbench)' failed: '<win32com.gen_py.C |
+| P5 | P5-04 | ✅ | Error in catia_get_bounding_box: CATIA operation 'SetWorkbench(SPAWorkbench)' failed: '<win32com.gen |
+| P5 | P5-05 | ✅ | Error in catia_measure_angle: CATIA operation 'SetWorkbench(SPAWorkbench)' failed: '<win32com.gen_py |
+| P5 | P5-06 | ✅ | Error in catia_measure_area: CATIA operation 'SetWorkbench(SPAWorkbench)' failed: '<win32com.gen_py. |
+| P5 | P5-07 | ✅ | Error in catia_measure_length: CATIA operation 'SetWorkbench(SPAWorkbench)' failed: '<win32com.gen_p |
 | P5 | P5-08 | ⏭️ | Skipped - requires 2 bodies |
 | P5 | P5-09 | ✅ | [
   {
-    "name": "Part7\\PartBody\\Sketch.1\\Activity",
+    "name": "Part6\\PartBody\\Sketch.1\\Activity",
     "value": true,
     "comment": ""
   },
   |
 | P5 | P5-10 | ✅ | [
   {
-    "name": "Part7\\PartBody\\Pad.1\\FirstLimit\\Length",
+    "name": "Part6\\PartBody\\Pad.1\\FirstLimit\\Length",
     "value": 40.0,
     "comment": "" |
 | P5 | P5-11 | ⏭️ | Skipped - requires known parameter name |
@@ -190,8 +188,8 @@
 | P7 | P7-09 | ✅ | Error in catia_open_document: 'file_path' does not appear to be a valid file path: 'nonexistent_file |
 | P7 | P7-10 | ✅ | Error in catia_export: 'file_path' does not appear to be a valid file path: 'relative_path.stp'
 On W |
-| P8 | P8-01 | ✅ | Created new Part document: 'Part8' |
-| P8 | P8-02 | ✅ | Created new Part document: 'Part9' |
+| P8 | P8-01 | ✅ | Created new Part document: 'Part7' |
+| P8 | P8-02 | ✅ | Created new Part document: 'Part8' |
 | P8 | P8-03 | ✅ | Listed tools, response length: 45312 |
 | P8 | P8-04 | ✅ | Unknown tool: 'catia_nonexistent'. Use list_tools to see available tools. |
 | P8 | P8-05 | ✅ | 10/10 rapid calls succeeded |

@@ -91,10 +91,11 @@ class TestConnect:
         win32com = sys.modules["win32com"]
         mock_app = MagicMock()
         mock_app.Caption = "CATIA V5"
-        win32com.client.GetActiveObject.return_value = mock_app
+        # side_effect takes precedence over return_value — must set side_effect
+        win32com.client.GetActiveObject.side_effect = lambda progid: mock_app
         mock_ensure = MagicMock()
         mock_ensure.Caption = "CATIA V5"
-        win32com.client.gencache.EnsureDispatch.return_value = mock_ensure
+        win32com.client.gencache.EnsureDispatch.side_effect = lambda progid: mock_ensure
 
         conn = CATIAConnection()
         result = conn.connect()
@@ -109,7 +110,8 @@ class TestConnect:
         win32com.client.GetActiveObject.side_effect = Exception("no running")
         mock_new = MagicMock()
         mock_new.Caption = "CATIA V5"
-        win32com.client.gencache.EnsureDispatch.return_value = mock_new
+        # side_effect takes precedence over return_value — must set side_effect
+        win32com.client.gencache.EnsureDispatch.side_effect = lambda progid: mock_new
 
         conn = CATIAConnection()
         result = conn.connect()
@@ -177,7 +179,8 @@ class TestReconnect:
         win32com = sys.modules["win32com"]
         mock_app = MagicMock()
         mock_app.Caption = "CATIA V5"
-        win32com.client.GetActiveObject.return_value = mock_app
+        # side_effect takes precedence over return_value — must set side_effect
+        win32com.client.GetActiveObject.side_effect = lambda progid: mock_app
 
         conn = CATIAConnection()
         result = conn.reconnect()
@@ -190,7 +193,7 @@ class TestReconnect:
         win32com.client.GetActiveObject.side_effect = Exception("no running")
         mock_new = MagicMock()
         mock_new.Caption = "CATIA V5"
-        win32com.client.Dispatch.return_value = mock_new
+        win32com.client.Dispatch.side_effect = lambda progid: mock_new
 
         conn = CATIAConnection()
         result = conn.reconnect()
@@ -225,7 +228,8 @@ class TestEnsureConnected:
         win32com.client.Dispatch.side_effect = Exception("no install")
         mock_new = MagicMock()
         mock_new.Caption = "CATIA V5"
-        win32com.client.gencache.EnsureDispatch.return_value = mock_new
+        # side_effect takes precedence over return_value — must set side_effect
+        win32com.client.gencache.EnsureDispatch.side_effect = lambda progid: mock_new
         conn.ensure_connected()
         assert conn.app is not None
 

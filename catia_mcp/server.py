@@ -25,6 +25,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
+from catia_mcp.__version__ import __version__
 from catia_mcp.connection import CATIAConnection
 from catia_mcp.tools.assembly import AssemblyTools
 from catia_mcp.tools.document import DocumentTools
@@ -391,6 +392,7 @@ class CATIAMCPServer:
 def main() -> None:
     """Entry point for the CATIA V5 MCP Server."""
     args = parse_args()
+    print(f"CATIA V5 MCP Server v{__version__}")
     server = CATIAMCPServer()
 
     if args.sse:
