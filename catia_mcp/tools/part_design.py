@@ -841,12 +841,10 @@ class PartDesignTools:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
-        if has_pycatia:
-            shaft.first_angle = angle
-        else:
-            import win32com.client.dynamic
-            ds = win32com.client.dynamic.Dispatch(shaft)
-            ds.FirstAngle = angle
+        # Always use dynamic.Dispatch for FirstAngle — pycatia-wrapped proxies fail
+        import win32com.client.dynamic
+        ds = win32com.client.dynamic.Dispatch(shaft)
+        ds.FirstAngle = angle
 
         if has_pycatia:
             part.update_object(shaft)
@@ -877,12 +875,10 @@ class PartDesignTools:
             groove = sf.AddNewGroove(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
-        if has_pycatia:
-            groove.first_angle = angle
-        else:
-            import win32com.client.dynamic
-            dg = win32com.client.dynamic.Dispatch(groove)
-            dg.FirstAngle = angle
+        # Always use dynamic.Dispatch for FirstAngle — pycatia-wrapped proxies fail
+        import win32com.client.dynamic
+        dg = win32com.client.dynamic.Dispatch(groove)
+        dg.FirstAngle = angle
 
         if has_pycatia:
             part.update_object(groove)
@@ -993,18 +989,13 @@ class PartDesignTools:
             hole = sf.AddNewHoleFromSketch(sketch, depth)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
-        if has_pycatia:
-            hole.diameter = diameter
-            hole.bottom_type = 0
-            if args.get("threaded", False):
-                hole.threading_mode = 1
-        else:
-            import win32com.client.dynamic
-            dh = win32com.client.dynamic.Dispatch(hole)
-            dh.Diameter = diameter
-            dh.BottomType = 0
-            if args.get("threaded", False):
-                dh.ThreadingMode = 1
+        # Always use dynamic.Dispatch for Hole properties — pycatia-wrapped proxies fail
+        import win32com.client.dynamic
+        dh = win32com.client.dynamic.Dispatch(hole)
+        dh.Diameter = diameter
+        dh.BottomType = 0
+        if args.get("threaded", False):
+            dh.ThreadingMode = 1
 
         if has_pycatia:
             part.update_object(hole)
