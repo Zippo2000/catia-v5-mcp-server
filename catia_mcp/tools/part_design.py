@@ -835,14 +835,15 @@ class PartDesignTools:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
-        # UpdateObject first — the COM proxy is incomplete until CATIA materializes it
-        part.UpdateObject(shaft)
-        # Now wrap with dynamic.Dispatch and set properties on the live object
+        # Update the part to materialize the new shape
+        part.Update()
+        # Retrieve the last shape from the body (just created)
+        shapes = body.Shapes
+        shaft = shapes.Item(shapes.Count)
         import win32com.client.dynamic
         shaft = win32com.client.dynamic.Dispatch(shaft)
         shaft.FirstAngle = angle
-        # Re-update to apply the angle change
-        part.UpdateObject(shaft)
+        part.Update()
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
 
@@ -862,14 +863,15 @@ class PartDesignTools:
             groove = sf.AddNewGroove(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
-        # UpdateObject first — the COM proxy is incomplete until CATIA materializes it
-        part.UpdateObject(groove)
-        # Now wrap with dynamic.Dispatch and set properties on the live object
+        # Update the part to materialize the new shape
+        part.Update()
+        # Retrieve the last shape from the body (just created)
+        shapes = body.Shapes
+        groove = shapes.Item(shapes.Count)
         import win32com.client.dynamic
         groove = win32com.client.dynamic.Dispatch(groove)
         groove.FirstAngle = angle
-        # Re-update to apply the angle change
-        part.UpdateObject(groove)
+        part.Update()
         self.conn.refresh_display()
         return f"Groove (revolution cut) created: {angle}°. Feature: '{groove.Name}'"
 
@@ -969,17 +971,18 @@ class PartDesignTools:
             hole = sf.AddNewHoleFromSketch(sketch, depth)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
-        # UpdateObject first — the COM proxy is incomplete until CATIA materializes it
-        part.UpdateObject(hole)
-        # Now wrap with dynamic.Dispatch and set properties on the live object
+        # Update the part to materialize the new shape
+        part.Update()
+        # Retrieve the last shape from the body (just created)
+        shapes = body.Shapes
+        hole = shapes.Item(shapes.Count)
         import win32com.client.dynamic
         hole = win32com.client.dynamic.Dispatch(hole)
         hole.Diameter = diameter
         hole.BottomType = 0
         if args.get("threaded", False):
             hole.ThreadingMode = 1
-        # Re-update to apply property changes
-        part.UpdateObject(hole)
+        part.Update()
         self.conn.refresh_display()
         return f"Hole created: D{diameter} mm, depth {depth} mm. Feature: '{hole.Name}'"
 
