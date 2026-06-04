@@ -1,6 +1,6 @@
 # CATIA V5 MCP Server — Realtest Results
 
-> **Date:** 2026-06-04 20:55:38  
+> **Date:** 2026-06-04 21:03:25  
 > **Server:** SSE on http://192.168.177.151:8765  
 
 ## Summary
@@ -20,17 +20,19 @@
 | P0 | P0-01 | ✅ | Connected to running CATIA V5 instance (CATIA V5) |
 | P0 | P0-02 | ✅ | Created new Part document: 'Part1' |
 | P0 | P0-03 | ✅ | Created new Part document: 'Part2' |
-| P0 | P0-04 | ✅ | Created new Product (assembly) document: 'Product2' |
-| P0 | P0-05 | ✅ | Created new Product (assembly) document: 'Product3' |
+| P0 | P0-04 | ✅ | Created new Product (assembly) document: 'Product1' |
+| P0 | P0-05 | ✅ | Created new Product (assembly) document: 'Product2' |
 | P0 | P0-06 | ✅ | [
   {
-    "name": "Product1.CATProduct",
-    "path": "Product1.CATProduct",
+    "name": "Part1.CATPart",
+    "path": "Part1.CATPart",
     "type": "Other"
-  }, |
+  },
+  {
+    "na |
 | P0 | P0-07 | ✅ | {
-  "name": "Product3.CATProduct",
-  "path": "Product3.CATProduct",
+  "name": "Product2.CATProduct",
+  "path": "Product2.CATProduct",
   "type": "Unknown"
 } |
 | P0 | P0-08 | ✅ | Document saved as: C:\catia_tests\test_part.CATPart |
@@ -125,7 +127,7 @@
 | P3 | P3-18 | ✅ | Error in catia_create_ruled: Cannot find geometry 'Point.1' in any HybridBody and CreateReferenceFro |
 | P3 | P3-19 | ✅ | Geometrical Sets (2): Geometrical Set.1 (0 shapes), TestGeoSet (5 shapes) |
 | P3 | P3-20 | ✅ | Error in catia_create_blend: Cannot find geometry 'Point.1' in any HybridBody and CreateReferenceFro |
-| P4 | P4-01 | ✅ | Created new Product (assembly) document: 'Product4' |
+| P4 | P4-01 | ✅ | Created new Product (assembly) document: 'Product3' |
 | P4 | P4-02 | ✅ | New Part component created in assembly: 'BasePart' |
 | P4 | P4-03 | ✅ | Component added from: C:\catia_tests\test_part.CATPart |
 | P4 | P4-04 | ✅ | Error in catia_fix_constraint: <unknown>.CreateReferenceFromObject |
@@ -143,8 +145,8 @@
 | P4 | P4-10 | ⏭️ | Skipped - requires 2 components |
 | P4 | P4-11 | ✅ | No constraints in the active assembly |
 | P4 | P4-12 | ✅ | {
-  "name": "Product4.CATProduct",
-  "path": "Product4.CATProduct",
+  "name": "Product3.CATProduct",
+  "path": "Product3.CATProduct",
   "type": "Unknown"
 } |
 | P5 | P5-01 | ✅ | Error in catia_measure_distance: CATIA operation 'SetWorkbench(SPAWorkbench)' failed: '<win32com.gen |

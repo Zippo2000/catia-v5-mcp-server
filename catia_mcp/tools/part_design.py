@@ -841,11 +841,8 @@ class PartDesignTools:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
-        # dynamic.Dispatch needs raw win32com proxy — extract from pycatia wrapper if needed
-        import win32com.client.dynamic
-        _shaft_com = getattr(shaft, "com_object", shaft)
-        ds = win32com.client.dynamic.Dispatch(_shaft_com)
-        ds.FirstAngle = angle
+        # Shaft has no FirstAngle property — it's on the Revolution definition
+        shaft.GetDefinition().FirstAngle = angle
 
         if has_pycatia:
             part.update_object(shaft)
@@ -876,11 +873,8 @@ class PartDesignTools:
             groove = sf.AddNewGroove(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
-        # dynamic.Dispatch needs raw win32com proxy — extract from pycatia wrapper if needed
-        import win32com.client.dynamic
-        _groove_com = getattr(groove, "com_object", groove)
-        dg = win32com.client.dynamic.Dispatch(_groove_com)
-        dg.FirstAngle = angle
+        # Groove has no FirstAngle property — it's on the Revolution definition
+        groove.GetDefinition().FirstAngle = angle
 
         if has_pycatia:
             part.update_object(groove)
@@ -991,14 +985,12 @@ class PartDesignTools:
             hole = sf.AddNewHoleFromSketch(sketch, depth)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
-        # dynamic.Dispatch needs raw win32com proxy — extract from pycatia wrapper if needed
-        import win32com.client.dynamic
-        _hole_com = getattr(hole, "com_object", hole)
-        dh = win32com.client.dynamic.Dispatch(_hole_com)
-        dh.Diameter = diameter
-        dh.BottomType = 0
+        # Hole properties are on HoleDefinition, not Hole itself
+        hole_def = hole.GetDefinition()
+        hole_def.Diameter.Value = diameter
+        hole_def.BottomType = 0
         if args.get("threaded", False):
-            dh.ThreadingMode = 1
+            hole_def.ThreadingMode = 1
 
         if has_pycatia:
             part.update_object(hole)
