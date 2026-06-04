@@ -41,7 +41,7 @@ def _install_com_mocks():
     mock_win32com.client.dynamic = MagicMock()
     # Make Dispatch() and CDispatch() return their argument unchanged (pass-through for late binding)
     mock_win32com.client.dynamic.Dispatch.side_effect = lambda obj: obj
-    mock_win32com.client.dynamic.CDispatch.side_effect = lambda obj: obj
+    mock_win32com.client.dynamic.CDispatch.side_effect = lambda obj, olerepr=None: obj
 
     # Restore saved overrides or set defaults
     if saved_ensure_dispatch is not None:

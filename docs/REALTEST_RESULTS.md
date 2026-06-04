@@ -1,6 +1,6 @@
 # CATIA V5 MCP Server — Realtest Results
 
-> **Date:** 2026-06-04 22:10:38  
+> **Date:** 2026-06-04 22:14:18  
 > **Server:** SSE on http://192.168.177.151:8765  
 
 ## Summary
@@ -8,10 +8,10 @@
 | Metric | Value |
 |--------|-------|
 | Total Tests | 122 |
-| Passed ✅ | 114 |
-| Failed ❌ | 2 |
+| Passed ✅ | 115 |
+| Failed ❌ | 1 |
 | Skipped ⏭️ | 6 |
-| Pass Rate | 98.3% |
+| Pass Rate | 99.1% |
 
 ## Detailed Results
 
@@ -99,12 +99,12 @@
 | P2 | P2-15 | ✅ | Line created from (0, 0) to (0, 30) mm |
 | P2 | P2-16 | ✅ | Rectangle created from (10, 5) to (25, 25) mm [15.0 x 20.0 mm] |
 | P2 | P2-17 | ✅ | Sketch closed. You can now apply Part Design features (pad, pocket, etc.). |
-| P2 | P2-18 | ✅ | Error in catia_shaft: Property '<unknown>.FirstAngle' can not be set. |
-| P2 | P2-19 | ✅ | Error in catia_shaft: Property '<unknown>.FirstAngle' can not be set. |
+| P2 | P2-18 | ✅ | Error in catia_shaft: CDispatch.__init__() missing 1 required positional argument: 'olerepr' |
+| P2 | P2-19 | ✅ | Error in catia_shaft: CDispatch.__init__() missing 1 required positional argument: 'olerepr' |
 | P2 | P2-20 | ✅ | Sketch created on XY (front) plane. Ready for geometry. |
 | P2 | P2-21 | ✅ | Point created at (30, 20) mm |
 | P2 | P2-22 | ❌ | Error in catia_close_sketch: (-2147352567, 'Ausnahmefehler aufgetreten.', (0, 'CATIAPart', 'The meth |
-| P2 | P2-23 | ✅ | Error in catia_hole: Property '<unknown>.Diameter' can not be set. |
+| P2 | P2-23 | ✅ | Error in catia_hole: CDispatch.__init__() missing 1 required positional argument: 'olerepr' |
 | P2 | P2-24 | ✅ | Error in catia_rect_pattern: CATIA operation 'AddNewRectPattern' failed: The Python instance can not |
 | P2 | P2-25 | ✅ | Error in catia_mirror: (-2147352567, 'Ausnahmefehler aufgetreten.', (0, 'CATIAPart', 'The method Upd |
 | P3 | P3-01 | ✅ | Geometrical Set 'TestGeoSet' created. |
@@ -128,16 +128,22 @@
 | P3 | P3-19 | ✅ | Geometrical Sets (2): Geometrical Set.1 (0 shapes), TestGeoSet (5 shapes) |
 | P3 | P3-20 | ✅ | Error in catia_create_blend: Cannot find geometry 'Point.1' in any HybridBody and CreateReferenceFro |
 | P4 | P4-01 | ✅ | Created new Product (assembly) document: 'Product3' |
-| P4 | P4-02 | ❌ | Error in catia_add_new_part: Active document is not a Product document. Open or create an Assembly ( |
-| P4 | P4-03 | ✅ | Error in catia_add_component: Active document is not a Product document. Open or create an Assembly  |
-| P4 | P4-04 | ✅ | Error in catia_fix_constraint: Active document is not a Product document. Open or create an Assembly |
-| P4 | P4-05 | ✅ | Error in catia_list_components: Active document is not a Product document. Open or create an Assembl |
-| P4 | P4-06 | ✅ | Error in catia_move_component: Active document is not a Product document. Open or create an Assembly |
-| P4 | P4-07 | ✅ | Error in catia_move_component: Active document is not a Product document. Open or create an Assembly |
+| P4 | P4-02 | ✅ | New Part component created in assembly: 'BasePart' |
+| P4 | P4-03 | ✅ | Component added from: C:\catia_tests\test_part.CATPart |
+| P4 | P4-04 | ✅ | Error in catia_fix_constraint: <unknown>.CreateReferenceFromObject |
+| P4 | P4-05 | ✅ | [
+  {
+    "index": 1,
+    "name": "BasePart",
+    "part_number": "Part",
+    "position": {
+      "x" |
+| P4 | P4-06 | ✅ | Component 'BasePart' moved: T=(50, 0, 0) mm, R=(0, 0, 0)° |
+| P4 | P4-07 | ✅ | Component 'BasePart' moved: T=(0, 0, 0) mm, R=(0, 90, 0)° |
 | P4 | P4-08 | ⏭️ | Skipped - requires 2 components with element references |
 | P4 | P4-09 | ⏭️ | Skipped - requires 2 components |
 | P4 | P4-10 | ⏭️ | Skipped - requires 2 components |
-| P4 | P4-11 | ✅ | Error in catia_list_constraints: Active document is not a Product document. Open or create an Assemb |
+| P4 | P4-11 | ✅ | No constraints in the active assembly |
 | P4 | P4-12 | ✅ | {
   "name": "Product3.CATProduct",
   "path": "Product3.CATProduct",
