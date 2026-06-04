@@ -42,6 +42,14 @@ def _install_com_mocks():
     # Make Dispatch() and CDispatch() return their argument unchanged (pass-through for late binding)
     mock_win32com.client.dynamic.Dispatch.side_effect = lambda obj: obj
     mock_win32com.client.dynamic.CDispatch.side_effect = lambda obj, olerepr=None: obj
+    # Make all MagicMock instances support PutPropertyByName (for shaft/groove/hole)
+    original_magicmock_init = MagicMock.__init__
+    def _magicmock_init_with_pbp(self, *a, **kw):
+        original_magicmock_init(self, *a, **kw)
+    # Instead, add PutPropertyByName as a method on the mock class
+    def _put_property_by_name(obj, name, value):
+        setattr(obj, name, value)
+    MagicMock.PutPropertyByName = _put_property_by_name
 
     # Restore saved overrides or set defaults
     if saved_ensure_dispatch is not None:

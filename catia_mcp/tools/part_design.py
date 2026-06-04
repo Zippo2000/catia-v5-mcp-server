@@ -835,9 +835,9 @@ class PartDesignTools:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
-        import win32com.client.dynamic
-        shaft = win32com.client.dynamic.CDispatch(shaft, None)
-        shaft.FirstAngle = angle
+        # Use pythoncom to set properties via IDispatch.Invoke
+        import pythoncom
+        shaft.PutPropertyByName("FirstAngle", angle)
         part.UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
@@ -858,9 +858,8 @@ class PartDesignTools:
             groove = sf.AddNewGroove(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
-        import win32com.client.dynamic
-        groove = win32com.client.dynamic.CDispatch(groove, None)
-        groove.FirstAngle = angle
+        import pythoncom
+        groove.PutPropertyByName("FirstAngle", angle)
         part.UpdateObject(groove)
         self.conn.refresh_display()
         return f"Groove (revolution cut) created: {angle}°. Feature: '{groove.Name}'"
@@ -961,12 +960,11 @@ class PartDesignTools:
             hole = sf.AddNewHoleFromSketch(sketch, depth)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
-        import win32com.client.dynamic
-        hole = win32com.client.dynamic.CDispatch(hole, None)
-        hole.Diameter = diameter
-        hole.BottomType = 0
+        import pythoncom
+        hole.PutPropertyByName("Diameter", diameter)
+        hole.PutPropertyByName("BottomType", 0)
         if args.get("threaded", False):
-            hole.ThreadingMode = 1
+            hole.PutPropertyByName("ThreadingMode", 1)
         part.UpdateObject(hole)
         self.conn.refresh_display()
         return f"Hole created: D{diameter} mm, depth {depth} mm. Feature: '{hole.Name}'"
