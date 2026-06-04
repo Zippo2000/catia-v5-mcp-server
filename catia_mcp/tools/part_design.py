@@ -835,7 +835,8 @@ class PartDesignTools:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
-        # Set properties directly on the COM proxy before UpdateObject
+        import win32com.client.dynamic
+        shaft = win32com.client.dynamic.Dispatch(shaft)
         shaft.FirstAngle = angle
         part.UpdateObject(shaft)
         self.conn.refresh_display()
@@ -857,7 +858,8 @@ class PartDesignTools:
             groove = sf.AddNewGroove(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
-        # Set properties directly on the COM proxy before UpdateObject
+        import win32com.client.dynamic
+        groove = win32com.client.dynamic.Dispatch(groove)
         groove.FirstAngle = angle
         part.UpdateObject(groove)
         self.conn.refresh_display()
@@ -959,7 +961,8 @@ class PartDesignTools:
             hole = sf.AddNewHoleFromSketch(sketch, depth)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
-        # Set properties directly on the COM proxy before UpdateObject
+        import win32com.client.dynamic
+        hole = win32com.client.dynamic.Dispatch(hole)
         hole.Diameter = diameter
         hole.BottomType = 0
         if args.get("threaded", False):
