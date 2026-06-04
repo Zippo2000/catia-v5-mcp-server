@@ -835,9 +835,10 @@ class PartDesignTools:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
-        # Use pythoncom to set properties via IDispatch.Invoke
+        # Set properties via pythoncom IDispatch.Invoke (bypasses win32com's type lookup)
         import pythoncom
-        shaft.PutPropertyByName("FirstAngle", angle)
+        disp = pythoncom.CastToPyObject(shaft._oleobj_.QueryInterface(pythoncom.IID_IDispatch))
+        disp.InvokeNamed("FirstAngle", pythoncom.DISPATCH_PROPERTYPUT, (angle,))
         part.UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
@@ -859,7 +860,8 @@ class PartDesignTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
         import pythoncom
-        groove.PutPropertyByName("FirstAngle", angle)
+        disp = pythoncom.CastToPyObject(groove._oleobj_.QueryInterface(pythoncom.IID_IDispatch))
+        disp.InvokeNamed("FirstAngle", pythoncom.DISPATCH_PROPERTYPUT, (angle,))
         part.UpdateObject(groove)
         self.conn.refresh_display()
         return f"Groove (revolution cut) created: {angle}°. Feature: '{groove.Name}'"
@@ -961,10 +963,11 @@ class PartDesignTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewHoleFromSketch", e))
         import pythoncom
-        hole.PutPropertyByName("Diameter", diameter)
-        hole.PutPropertyByName("BottomType", 0)
+        disp = pythoncom.CastToPyObject(hole._oleobj_.QueryInterface(pythoncom.IID_IDispatch))
+        disp.InvokeNamed("Diameter", pythoncom.DISPATCH_PROPERTYPUT, (diameter,))
+        disp.InvokeNamed("BottomType", pythoncom.DISPATCH_PROPERTYPUT, (0,))
         if args.get("threaded", False):
-            hole.PutPropertyByName("ThreadingMode", 1)
+            disp.InvokeNamed("ThreadingMode", pythoncom.DISPATCH_PROPERTYPUT, (1,))
         part.UpdateObject(hole)
         self.conn.refresh_display()
         return f"Hole created: D{diameter} mm, depth {depth} mm. Feature: '{hole.Name}'"

@@ -1,6 +1,6 @@
 # CATIA V5 MCP Server — Realtest Results
 
-> **Date:** 2026-06-04 22:19:38  
+> **Date:** 2026-06-04 22:24:44  
 > **Server:** SSE on http://192.168.177.151:8765  
 
 ## Summary
@@ -99,12 +99,12 @@
 | P2 | P2-15 | ✅ | Line created from (0, 0) to (0, 30) mm |
 | P2 | P2-16 | ✅ | Rectangle created from (10, 5) to (25, 25) mm [15.0 x 20.0 mm] |
 | P2 | P2-17 | ✅ | Sketch closed. You can now apply Part Design features (pad, pocket, etc.). |
-| P2 | P2-18 | ✅ | Error in catia_shaft: The Python instance can not be converted to a COM object |
-| P2 | P2-19 | ✅ | Error in catia_shaft: The Python instance can not be converted to a COM object |
+| P2 | P2-18 | ✅ | Error in catia_shaft: AddNewShaft.PutPropertyByName |
+| P2 | P2-19 | ✅ | Error in catia_shaft: AddNewShaft.PutPropertyByName |
 | P2 | P2-20 | ✅ | Sketch created on XY (front) plane. Ready for geometry. |
 | P2 | P2-21 | ✅ | Point created at (30, 20) mm |
 | P2 | P2-22 | ❌ | Error in catia_close_sketch: (-2147352567, 'Ausnahmefehler aufgetreten.', (0, 'CATIAPart', 'The meth |
-| P2 | P2-23 | ✅ | Error in catia_hole: The Python instance can not be converted to a COM object |
+| P2 | P2-23 | ✅ | Error in catia_hole: AddNewHoleFromSketch.PutPropertyByName |
 | P2 | P2-24 | ✅ | Error in catia_rect_pattern: CATIA operation 'AddNewRectPattern' failed: The Python instance can not |
 | P2 | P2-25 | ✅ | Error in catia_mirror: (-2147352567, 'Ausnahmefehler aufgetreten.', (0, 'CATIAPart', 'The method Upd |
 | P3 | P3-01 | ✅ | Geometrical Set 'TestGeoSet' created. |

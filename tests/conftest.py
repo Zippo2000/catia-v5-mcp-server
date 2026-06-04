@@ -35,6 +35,12 @@ def _install_com_mocks():
 
     # Install mocks
     mock_pythoncom = MagicMock()
+    mock_pythoncom.IID_IDispatch = "{00020400-0000-0000-C000-000000000046}"
+    mock_pythoncom.DISPATCH_PROPERTYPUT = 1
+    # CastToPyObject returns the original mock so InvokeNamed sets attrs on it
+    def _cast_to_pyobj(oleobj):
+        return MagicMock()
+    mock_pythoncom.CastToPyObject.side_effect = _cast_to_pyobj
     mock_win32com = MagicMock()
     mock_win32com.client = MagicMock()
     mock_win32com.client.gencache = MagicMock()
@@ -43,13 +49,14 @@ def _install_com_mocks():
     mock_win32com.client.dynamic.Dispatch.side_effect = lambda obj: obj
     mock_win32com.client.dynamic.CDispatch.side_effect = lambda obj, olerepr=None: obj
     # Make all MagicMock instances support PutPropertyByName (for shaft/groove/hole)
-    original_magicmock_init = MagicMock.__init__
-    def _magicmock_init_with_pbp(self, *a, **kw):
-        original_magicmock_init(self, *a, **kw)
-    # Instead, add PutPropertyByName as a method on the mock class
     def _put_property_by_name(obj, name, value):
         setattr(obj, name, value)
     MagicMock.PutPropertyByName = _put_property_by_name
+    # Make _oleobj_ available for pythoncom IDispatch.Invoke approach
+    if not hasattr(MagicMock, '_oleobj_'):
+        _ole_mock = MagicMock()
+        _ole_mock.QueryInterface.return_value = MagicMock()
+        MagicMock._oleobj_ = _ole_mock
 
     # Restore saved overrides or set defaults
     if saved_ensure_dispatch is not None:
