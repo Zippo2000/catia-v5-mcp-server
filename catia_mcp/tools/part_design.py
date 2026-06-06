@@ -1198,12 +1198,13 @@ class PartDesignTools:
         if axis_name:
             try:
                 import win32com.client.dynamic as d
-                # Use pycatia part for HybridBodies access (same pattern as GSD tools)
-                pycatia_part = self.conn.get_active_part_pycatia()
-                hbody = pycatia_part.hybrid_bodies.add()
-                hbody.name = "ShaftAxisSet"
-                # Get as dynamic dispatch for AddNewLine
-                dlines = d.Dispatch(hbody).hybrid_shapes
+                # Use part.HybridBodies.Add() (same pattern as GSD tools)
+                hbody = part.HybridBodies.Add()
+                hbody.Name = "ShaftAxisSet"
+                part.UpdateObject(hbody)
+                part.InWorkObject = hbody
+                # Get HybridShapes via dynamic dispatch
+                dlines = d.Dispatch(hbody).HybridShapes
                 lookup = axis_name.lower().strip()
                 if lookup == "x":
                     axis_line = dlines.AddNewLine(0, 0, 0, 1, 0, 0)
