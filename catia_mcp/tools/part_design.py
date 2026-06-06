@@ -1188,11 +1188,8 @@ class PartDesignTools:
         # because CATIA shaft requires the axis to be a 2D line in the sketch
         if axis_name:
             try:
-                import win32com.client.dynamic
-                # Use dynamic dispatch for sketch methods — gencache doesn't expose GetMainObject
-                dsketch = win32com.client.dynamic.Dispatch(sketch)
-                dsketch.OpenEdition()
-                factory2d = dsketch.GetMainObject()
+                # OpenEdition() returns Factory2D directly (per sketcher.py pattern)
+                factory2d = sketch.OpenEdition()
 
                 # Map axis name to 2D line direction
                 lookup = axis_name.lower().strip()
@@ -1214,7 +1211,7 @@ class PartDesignTools:
                         raise RuntimeError(f"Cannot find axis '{axis_name}' in sketch")
 
                 axis_line.Name = "ShaftAxis"
-                dsketch.CloseEdition()
+                sketch.CloseEdition()
             except Exception as e:
                 raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
 
