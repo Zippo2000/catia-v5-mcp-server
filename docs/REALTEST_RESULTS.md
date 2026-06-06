@@ -1,6 +1,6 @@
 # CATIA V5 MCP Server — Realtest Results
 
-> **Date:** 2026-06-06 17:27:15  
+> **Date:** 2026-06-06 17:35:31  
 > **Server:** SSE on http://192.168.177.151:8765  
 
 ## Summary
@@ -18,15 +18,18 @@
 | Phase | Test ID | Status | Remark |
 |-------|---------|--------|--------|
 | P0 | P0-01 | ✅ | Connected to running CATIA V5 instance (CATIA V5) |
-| P0 | P0-02 | ✅ | Created new Part document: 'Part2' |
-| P0 | P0-03 | ✅ | Created new Part document: 'Part3' |
+| P0 | P0-02 | ✅ | Created new Part document: 'Part1' |
+| P0 | P0-03 | ✅ | Created new Part document: 'Part2' |
 | P0 | P0-04 | ✅ | Created new Product (assembly) document: 'Product1' |
 | P0 | P0-05 | ✅ | Created new Product (assembly) document: 'Product2' |
 | P0 | P0-06 | ✅ | [
   {
-    "name": "alu_housing_3L.CATPart",
-    "path": "C:\\catia_tests\\alu_housing_3L.CATPart",
-  |
+    "name": "Part1.CATPart",
+    "path": "Part1.CATPart",
+    "type": "Other"
+  },
+  {
+    "na |
 | P0 | P0-07 | ✅ | {
   "name": "Product2.CATProduct",
   "path": "Product2.CATProduct",
@@ -156,14 +159,14 @@
 | P5 | P5-08 | ⏭️ | Skipped - requires 2 bodies |
 | P5 | P5-09 | ✅ | [
   {
-    "name": "Part7\\PartBody\\Sketch.1\\Activity",
+    "name": "Part6\\PartBody\\Sketch.1\\Activity",
     "value": true,
     "comment": ""
   },
   |
 | P5 | P5-10 | ✅ | [
   {
-    "name": "Part7\\PartBody\\Pad.1\\FirstLimit\\Length",
+    "name": "Part6\\PartBody\\Pad.1\\FirstLimit\\Length",
     "value": 40.0,
     "comment": "" |
 | P5 | P5-11 | ⏭️ | Skipped - requires known parameter name |
@@ -187,9 +190,25 @@
 | P7 | P7-09 | ✅ | Error in catia_open_document: 'file_path' does not appear to be a valid file path: 'nonexistent_file |
 | P7 | P7-10 | ✅ | Error in catia_export: 'file_path' does not appear to be a valid file path: 'relative_path.stp'
 On W |
-| P8 | P8-01 | ✅ | Created new Part document: 'Part8' |
-| P8 | P8-02 | ✅ | Created new Part document: 'Part9' |
+| P8 | P8-01 | ✅ | Created new Part document: 'Part7' |
+| P8 | P8-02 | ✅ | Created new Part document: 'Part8' |
 | P8 | P8-03 | ✅ | Listed tools, response length: 55650 |
 | P8 | P8-04 | ✅ | Unknown tool: 'catia_nonexistent'. Use list_tools to see available tools. |
 | P8 | P8-05 | ✅ | 10/10 rapid calls succeeded |
+| P9 | P9-01 | ✅ | Error in catia_create_point_on_curve: Cannot find geometry 'Line.1' in any HybridBody and CreateRefe |
+| P9 | P9-02 | ✅ | Error in catia_create_point_intersection: Cannot find geometry 'Line.1' in any HybridBody and Create |
+| P9 | P9-03 | ✅ | Error in catia_create_line_tangent: Cannot find geometry 'Line.1' in any HybridBody and CreateRefere |
+| P9 | P9-04 | ✅ | Error in catia_create_line_normal_to_surface: Cannot find geometry 'Point.1' in any HybridBody and C |
+| P9 | P9-05 | ✅ | Error in catia_create_plane_parallel: Cannot find geometry 'Point.1' in any HybridBody and CreateRef |
+| P9 | P9-06 | ✅ | Error in catia_create_plane_tangent_to_surface: Cannot find geometry 'Point.1' in any HybridBody and |
+| P9 | P9-07 | ✅ | Error in catia_create_mirror: Cannot find geometry 'Point.1' in any HybridBody and CreateReferenceFr |
+| P9 | P9-08 | ✅ | Error in catia_create_tabulated_cylinder: Cannot find geometry 'Line.1' in any HybridBody and Create |
+| P9 | P9-09 | ✅ | Input validation error: 'spine' is a required property |
+| P9 | P9-10 | ✅ | Input validation error: 'spine' is a required property |
+| P9 | P9-11 | ✅ | Input validation error: 'support' is a required property |
+| P9 | P9-12 | ✅ | Input validation error: 'tool' is a required property |
+| P9 | P9-13 | ✅ | Input validation error: 'curve1_index' is a required property |
+| P9 | P9-14 | ✅ | Input validation error: 'element_index' is a required property |
+| P9 | P9-15 | ✅ | Input validation error: 'element_indices' is a required property |
+| P9 | P9-16 | ✅ | Input validation error: 'component_name' is a required property |
 

@@ -1209,14 +1209,24 @@ def run_tests(sess):
     print("PHASE P9: New Tools (v1.10.0)")
     print("="*60)
 
-    # Fresh part for new tool tests
+    # Close previous parts first, then create fresh part for GSD tests
+    try:
+        r = txt(sess.call_tool("catia_close_document", {"file_path": "TestPart"}))
+        print(f"  [Setup] Close previous: {r[:80]}")
+    except: pass
+    try:
+        r = txt(sess.call_tool("catia_close_document", {"file_path": "TestGSD"}))
+        print(f"  [Setup] Close previous: {r[:80]}")
+    except: pass
+
+    # Fresh part for GSD new tool tests
     try:
         r = txt(sess.call_tool("catia_new_part", {"name": "TestNewTools"}))
         print(f"  [Setup] New part: {r[:80]}")
     except Exception as e:
         print(f"  [Setup] New part failed: {e}")
 
-    # GSD: Create geometrical set and base geometry
+    # GSD: Create geometrical set and base geometry IN THIS PART
     try:
         r = txt(sess.call_tool("catia_create_geometrical_set", {"name": "TestSet"}))
         print(f"  [Setup] Geometrical set: {r[:80]}")
@@ -1235,7 +1245,7 @@ def run_tests(sess):
     except Exception as e:
         print(f"  [Setup] Line 2points failed: {e}")
 
-    # P9-01: catia_create_point_on_curve
+    # P9-01: catia_create_point_on_curve (happy path with fresh geometry)
     try:
         r = txt(sess.call_tool("catia_create_point_on_curve", {"curve_name": "Line.1", "parameter": 0.5, "set_name": "TestSet"}))
         ok = "point" in r.lower() or "created" in r.lower()
@@ -1243,7 +1253,7 @@ def run_tests(sess):
     except Exception as e:
         record("P9", "P9-01", "❌", str(e)[:100])
 
-    # P9-02: catia_create_point_intersection
+    # P9-02: catia_create_point_intersection (happy path)
     try:
         r = txt(sess.call_tool("catia_create_point_intersection", {"element1": "Line.1", "element2": "Point.1", "set_name": "TestSet"}))
         ok = "point" in r.lower() or "created" in r.lower() or "intersection" in r.lower()
@@ -1251,7 +1261,7 @@ def run_tests(sess):
     except Exception as e:
         record("P9", "P9-02", "❌", str(e)[:100])
 
-    # P9-03: catia_create_line_tangent
+    # P9-03: catia_create_line_tangent (happy path)
     try:
         r = txt(sess.call_tool("catia_create_line_tangent", {"curve_name": "Line.1", "point_name": "Point.1", "set_name": "TestSet"}))
         ok = "line" in r.lower() or "created" in r.lower() or "tangent" in r.lower()
@@ -1259,7 +1269,7 @@ def run_tests(sess):
     except Exception as e:
         record("P9", "P9-03", "❌", str(e)[:100])
 
-    # P9-04: catia_create_line_normal_to_surface
+    # P9-04: catia_create_line_normal_to_surface (happy path)
     try:
         r = txt(sess.call_tool("catia_create_line_normal_to_surface", {"surface_name": "xy", "point_name": "Point.1", "set_name": "TestSet"}))
         ok = "line" in r.lower() or "created" in r.lower() or "normal" in r.lower()
@@ -1267,7 +1277,7 @@ def run_tests(sess):
     except Exception as e:
         record("P9", "P9-04", "❌", str(e)[:100])
 
-    # P9-05: catia_create_plane_parallel
+    # P9-05: catia_create_plane_parallel (happy path)
     try:
         r = txt(sess.call_tool("catia_create_plane_parallel", {"reference_plane": "xy", "point_name": "Point.1", "set_name": "TestSet"}))
         ok = "plane" in r.lower() or "created" in r.lower() or "parallel" in r.lower()
@@ -1275,7 +1285,7 @@ def run_tests(sess):
     except Exception as e:
         record("P9", "P9-05", "❌", str(e)[:100])
 
-    # P9-06: catia_create_plane_tangent_to_surface
+    # P9-06: catia_create_plane_tangent_to_surface (happy path)
     try:
         r = txt(sess.call_tool("catia_create_plane_tangent_to_surface", {"surface_name": "xy", "point_name": "Point.1", "set_name": "TestSet"}))
         ok = "plane" in r.lower() or "created" in r.lower() or "tangent" in r.lower()
@@ -1283,7 +1293,7 @@ def run_tests(sess):
     except Exception as e:
         record("P9", "P9-06", "❌", str(e)[:100])
 
-    # P9-07: catia_create_mirror
+    # P9-07: catia_create_mirror (happy path)
     try:
         r = txt(sess.call_tool("catia_create_mirror", {"element_name": "Point.1", "mirror_plane": "xy", "set_name": "TestSet"}))
         ok = "mirror" in r.lower() or "created" in r.lower()
@@ -1291,7 +1301,7 @@ def run_tests(sess):
     except Exception as e:
         record("P9", "P9-07", "❌", str(e)[:100])
 
-    # P9-08: catia_create_tabulated_cylinder
+    # P9-08: catia_create_tabulated_cylinder (happy path)
     try:
         r = txt(sess.call_tool("catia_create_tabulated_cylinder", {"curve_name": "Line.1", "height1": 10, "height2": 10, "set_name": "TestSet"}))
         ok = "cylinder" in r.lower() or "created" in r.lower() or "tabulated" in r.lower()
