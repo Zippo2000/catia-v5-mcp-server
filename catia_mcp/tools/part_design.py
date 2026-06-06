@@ -1192,26 +1192,40 @@ class PartDesignTools:
         angle = validate_positive_float(args.get("angle", 360), "angle")
         axis_name = args.get("axis")
 
-        # AddNewShaftFromRef(iSketch, iAxis) — takes a sketch and an axis reference
+        # AddNewShaft creates the shaft from sketch
+        # If axis is specified, create a 3D direction and set it as the revolution axis
         if axis_name:
             try:
-                import win32com.client as wc
-                # Get axis reference from OriginElements via gencache (GSD _ref pattern)
-                part_raw = self.conn.active_document
-                gc_part = wc.gencache.EnsureDispatch(part_raw).Part
-                oe = gc_part.OriginElements
+                # Create GeometricalSet for the axis direction
+                hbody = part.HybridBodies.Add()
+                hbody.Name = "ShaftAxis"
+                
+                hsf = part.HybridShapeFactory
                 lookup = axis_name.lower().strip()
-                axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
-                if lookup not in axis_map:
+                
+                if lookup == "x":
+                    direction = hsf.AddNewDirectionByCoord(1, 0, 0)
+                elif lookup == "y":
+                    direction = hsf.AddNewDirectionByCoord(0, 1, 0)
+                elif lookup == "z":
+                    direction = hsf.AddNewDirectionByCoord(0, 0, 1)
+                else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
-                axis_elem = getattr(oe, axis_map[lookup])
-                import win32com.client.dynamic as d
-                dpart = d.Dispatch(gc_part)
-                axis_ref = dpart.CreateReferenceFromObject(axis_elem)
-
-                # Use AddNewShaftFromRef (takes sketch + axis reference)
+                    
+                direction.Name = "ShaftAxisDirection"
+                hbody.AppendHybridShape(direction)
+                part.UpdateObject(direction)
+                
+                # Create reference to the direction
+                axis_ref = part.CreateReferenceFromObject(direction)
+                
+                # Create shaft
                 sf = part.ShapeFactory
-                shaft = sf.AddNewShaftFromRef(sketch, axis_ref)
+                shaft = sf.AddNewShaft(sketch)
+                
+                # Set the axis via VBA property "Axis" (RevoluteAxis in CAA)
+                # pywin32 >= 311 removed PropertyPut — use setattr
+                setattr(shaft, "Axis", axis_ref)
             except Exception as e:
                 raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
         else:
