@@ -394,9 +394,23 @@ class SketcherTools:
         body = self.conn.get_active_part_body()
 
         if plane_name:
-            # Use a named custom plane (e.g. offset plane)
+            # Find the named plane in HybridBodies and create a reference
+            plane_obj = None
+            for hb in part.HybridBodies:
+                for i in range(1, hb.HybridShapes.Count + 1):
+                    obj = hb.HybridShapes.Item(i)
+                    if obj.Name == plane_name:
+                        plane_obj = obj
+                        break
+                if plane_obj:
+                    break
+            if not plane_obj:
+                raise RuntimeError(
+                    f"Cannot find plane '{plane_name}' in any HybridBody. "
+                    f"Create it first with catia_create_plane_offset."
+                )
+            ref = part.CreateReferenceFromObject(plane_obj)
             sketches = body.Sketches
-            ref = part.CreateReferenceFromObject(plane_name)
             try:
                 sketch = sketches.Add(ref)
             except Exception as e:
