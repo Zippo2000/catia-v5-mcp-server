@@ -1198,8 +1198,10 @@ class PartDesignTools:
         if axis_name:
             try:
                 import win32com.client.gencache
-                # Use gencache for typed proxy — dynamic.Dispatch fails on .Lines
-                typed_part = win32com.client.gencache.EnsureDispatch(part.GetDisplayName())
+                # Use gencache for typed proxy — dynamic.Dispatch fails on .MainBody.Lines
+                # Get the Part as a gencache proxy via the document
+                doc = self.conn.get_active_document()
+                typed_part = win32com.client.gencache.EnsureDispatch(doc).Part
                 body = typed_part.MainBody
                 lines = body.Lines
                 lookup = axis_name.lower().strip()
