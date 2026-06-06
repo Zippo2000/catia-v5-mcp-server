@@ -1199,8 +1199,7 @@ class PartDesignTools:
             try:
                 import win32com.client.gencache
                 # Use gencache for typed proxy — dynamic.Dispatch fails on .MainBody.Lines
-                # Get the Part as a gencache proxy via the document
-                doc = self.conn.get_active_document()
+                doc = self.conn.app.ActiveDocument
                 typed_part = win32com.client.gencache.EnsureDispatch(doc).Part
                 body = typed_part.MainBody
                 lines = body.Lines
