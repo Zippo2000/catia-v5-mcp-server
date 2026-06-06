@@ -21,6 +21,15 @@ from catia_mcp.utils import (
 )
 
 
+def _is_pycatia(obj: Any) -> bool:
+    """Check if obj is a pycatia-wrapped object (not a mock or win32com proxy)."""
+    if obj is None:
+        return False
+    cls_name = type(obj).__name__
+    mod = getattr(type(obj), "__module__", "")
+    return "pycatia" in mod or "pycatia" in cls_name
+
+
 class PartDesignTools:
     """Tools for 3D Part Design features in CATIA V5."""
 
@@ -1188,8 +1197,13 @@ class PartDesignTools:
         # because CATIA shaft requires the axis to be a 2D line in the sketch
         if axis_name:
             try:
-                # OpenEdition() returns Factory2D directly (per sketcher.py pattern)
-                factory2d = sketch.OpenEdition()
+                # Use same pattern as sketcher.py for open/close edition
+                if _is_pycatia(sketch):
+                    factory2d = sketch.open_edition()
+                else:
+                    import win32com.client.dynamic
+                    dsketch = win32com.client.dynamic.Dispatch(sketch)
+                    factory2d = dsketch.OpenEdition()
 
                 # Map axis name to 2D line direction
                 lookup = axis_name.lower().strip()
@@ -1211,7 +1225,11 @@ class PartDesignTools:
                         raise RuntimeError(f"Cannot find axis '{axis_name}' in sketch")
 
                 axis_line.Name = "ShaftAxis"
-                sketch.CloseEdition()
+                if _is_pycatia(sketch):
+                    sketch.close_edition()
+                else:
+                    import win32com.client.dynamic
+                    win32com.client.dynamic.Dispatch(sketch).CloseEdition()
             except Exception as e:
                 raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
 
