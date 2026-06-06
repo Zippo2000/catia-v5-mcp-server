@@ -1274,6 +1274,9 @@ class PartDesignTools:
         except Exception:
             part.Update()
 
+        # Final full part update to ensure geometry is computed
+        part.Update()
+
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
 
