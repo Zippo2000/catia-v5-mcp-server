@@ -1207,25 +1207,21 @@ class PartDesignTools:
 
     def _get_axis_ref(self, part: Any, axis_name: str) -> Any:
         """Get a COM Reference to an origin axis (x, y, z) or named geometry."""
-        import win32com.client
         import win32com.client.dynamic
-        # Use gencache for CreateReferenceFromObject — dynamic.Dispatch fails
-        try:
-            dpart = win32com.client.gencache.EnsureDispatch(part)
-        except Exception:
-            dpart = win32com.client.dynamic.Dispatch(part)
+        # part is already dynamic.Dispatch(doc).Part — use it directly
         oe = part.OriginElements
         axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
         lookup = axis_name.lower().strip()
         if lookup in axis_map:
             axis = getattr(oe, axis_map[lookup])
-            return dpart.CreateReferenceFromObject(axis)
+            # Use CreateReferenceFromGeometry for axes (not CreateReferenceFromObject)
+            return part.CreateReferenceFromGeometry(axis)
         # Try to find geometry by name in HybridBodies
         for hb in part.HybridBodies:
             for i in range(1, hb.HybridShapes.Count + 1):
                 obj = hb.HybridShapes.Item(i)
                 if obj.Name == axis_name:
-                    return dpart.CreateReferenceFromObject(obj)
+                    return part.CreateReferenceFromGeometry(obj)
         raise RuntimeError(f"Cannot find axis '{axis_name}'")
 
     def _groove(self, args: dict[str, Any]) -> str:
