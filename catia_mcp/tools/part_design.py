@@ -1197,42 +1197,19 @@ class PartDesignTools:
         # 2. The revolution axis (a 1D element: line, axis, or direction)
         if axis_name:
             try:
+                import win32com.client
                 import win32com.client.dynamic as d
-                # OriginElements has no XAxis/YAxis/ZAxis (confirmed by user CATScript test)
-                # Create a 3D line in a GeometricalSet and use it as the axis
-                hbody = part.HybridBodies.Add()
-                hbody.Name = "ShaftAxisSet"
-                part.UpdateObject(hbody)
-                part.InWorkObject = hbody
-                # Use HybridShapeFactory (works on win32com dynamic proxy)
-                hsf = part.HybridShapeFactory
-                # Create point at origin
-                origin_pt = hsf.AddNewPointCoord(0, 0, 0)
-                origin_pt.Name = "ShaftOrigin"
-                hbody.AppendHybridShape(origin_pt)
-                part.UpdateObject(origin_pt)
-                # Create direction via AddNewDirectionByCoord
+                # Use gencache for OriginElements.YAxis (GSD _ref pattern)
+                gc_part = win32com.client.gencache.EnsureDispatch(part)
+                oe = gc_part.OriginElements
                 lookup = axis_name.lower().strip()
-                if lookup == "x":
-                    dir_elem = hsf.AddNewDirectionByCoord(1, 0, 0)
-                elif lookup == "y":
-                    dir_elem = hsf.AddNewDirectionByCoord(0, 1, 0)
-                elif lookup == "z":
-                    dir_elem = hsf.AddNewDirectionByCoord(0, 0, 1)
-                else:
+                axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
+                if lookup not in axis_map:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
-                # Create references for AddNewLinePtDir (GSD pattern: takes 2 References)
+                axis_elem = getattr(oe, axis_map[lookup])
+                # Create reference to the origin axis
                 dpart = d.Dispatch(part)
-                pt_ref = dpart.CreateReferenceFromObject(origin_pt)
-                dir_ref = dpart.CreateReferenceFromObject(dir_elem)
-                # Create line through origin with direction
-                axis_line = hsf.AddNewLinePtDir(pt_ref, dir_ref)
-                axis_line.Name = "ShaftAxis"
-                hbody.AppendHybridShape(axis_line)
-                part.UpdateObject(axis_line)
-                part.InWorkObject = body  # restore body as in-work
-                # Create reference to the line for AddNewShaft
-                axis_ref = dpart.CreateReferenceFromObject(axis_line)
+                axis_ref = dpart.CreateReferenceFromObject(axis_elem)
                 # AddNewShaft(sketch, axis) — pass the axis reference
                 shaft = body.Shapes.AddNewShaft(sketch, axis_ref)
             except Exception as e:
