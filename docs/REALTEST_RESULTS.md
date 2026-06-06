@@ -1,17 +1,17 @@
 # CATIA V5 MCP Server — Realtest Results
 
-> **Date:** 2026-06-06 17:48:54  
+> **Date:** 2026-06-06 18:19:09  
 > **Server:** SSE on http://192.168.177.151:8765  
 
 ## Summary
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 122 |
-| Passed ✅ | 115 |
+| Total Tests | 148 |
+| Passed ✅ | 141 |
 | Failed ❌ | 1 |
 | Skipped ⏭️ | 6 |
-| Pass Rate | 99.1% |
+| Pass Rate | 99.3% |
 
 ## Detailed Results
 
@@ -192,7 +192,7 @@
 On W |
 | P8 | P8-01 | ✅ | Created new Part document: 'Part7' |
 | P8 | P8-02 | ✅ | Created new Part document: 'Part8' |
-| P8 | P8-03 | ✅ | Listed tools, response length: 55650 |
+| P8 | P8-03 | ✅ | Listed tools, response length: 59997 |
 | P8 | P8-04 | ✅ | Unknown tool: 'catia_nonexistent'. Use list_tools to see available tools. |
 | P8 | P8-05 | ✅ | 10/10 rapid calls succeeded |
 | P9 | P9-01 | ✅ | Error in catia_create_point_on_curve: Cannot find geometry 'Line.1' in any HybridBody and CreateRefe |
@@ -211,4 +211,14 @@ On W |
 | P9 | P9-14 | ✅ | Input validation error: 'element_index' is a required property |
 | P9 | P9-15 | ✅ | Input validation error: 'element_indices' is a required property |
 | P9 | P9-16 | ✅ | Input validation error: 'component_name' is a required property |
+| P10 | P10-01 | ✅ | Input validation error: 'edge_name' is a required property |
+| P10 | P10-02 | ✅ | Error in catia_variable_fillet: 'radius1' must be positive, got -1 |
+| P10 | P10-03 | ✅ | Input validation error: 'sketch_name' is a required property |
+| P10 | P10-04 | ✅ | Error in catia_drafted_filleted_pad: Sketch 'Sketch.1' not found in PartBody or any Geometrical Set. |
+| P10 | P10-05 | ✅ | Input validation error: 'sketch_name' is a required property |
+| P10 | P10-06 | ✅ | Error in catia_drafted_filleted_pocket: Sketch 'Sketch.1' not found in PartBody or any Geometrical S |
+| P10 | P10-07 | ✅ | Input validation error: 'sketch_name' is a required property |
+| P10 | P10-08 | ✅ | Error in catia_multi_pad: Sketch 'Sketch.1' not found in PartBody or any Geometrical Set. Make sure  |
+| P10 | P10-09 | ✅ | Input validation error: 'sketch_name' is a required property |
+| P10 | P10-10 | ✅ | Error in catia_multi_pocket: Sketch 'Sketch.1' not found in PartBody or any Geometrical Set. Make su |
 
