@@ -1196,8 +1196,6 @@ class PartDesignTools:
         # If axis is specified, inject a 2D line into the sketch as the rotation axis
         if axis_name:
             try:
-                import win32com.client.dynamic as d
-                import win32com.client as wc
                 # Open the sketch to inject the axis line
                 factory2d = sketch.OpenEdition()
                 lookup = axis_name.lower().strip()
@@ -1211,26 +1209,18 @@ class PartDesignTools:
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
                 axis_line.Name = "ShaftAxis"
-                axis_line.Construction = True  # Mark as construction geometry so it won't be extruded
-                # Close the sketch
+                axis_line.Construction = True  # Mark as construction geometry
                 sketch.CloseEdition()
-                # Get gencache Part from the active document (not from dynamic proxy)
-                doc = self.conn.active_document
-                gc_part = wc.gencache.EnsureDispatch(doc).Part
-                sf = gc_part.ShapeFactory
-                dsf = d.Dispatch(sf)
-                shaft = dsf.AddNewShaft(sketch)
+                
+                # Use part.ShapeFactory.AddNewShaft directly
+                sf = part.ShapeFactory
+                shaft = sf.AddNewShaft(sketch)
             except Exception as e:
                 raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
         else:
             try:
-                import win32com.client.dynamic as d
-                import win32com.client as wc
-                doc = self.conn.active_document
-                gc_part = wc.gencache.EnsureDispatch(doc).Part
-                sf = gc_part.ShapeFactory
-                dsf = d.Dispatch(sf)
-                shaft = dsf.AddNewShaft(sketch)
+                sf = part.ShapeFactory
+                shaft = sf.AddNewShaft(sketch)
             except Exception as e:
                 raise RuntimeError(format_catia_error("AddNewShaft", e))
 
