@@ -1203,19 +1203,20 @@ class PartDesignTools:
                 hbody.Name = "ShaftAxisSet"
                 part.UpdateObject(hbody)
                 part.InWorkObject = hbody
-                # Get HybridShapes via dynamic dispatch
-                dlines = d.Dispatch(hbody).HybridShapes
+                # Use part.HybridShapeFactory (GSD pattern) — hbody.HybridShapes returns <unknown>
+                hsf = part.HybridShapeFactory
                 lookup = axis_name.lower().strip()
-                # Use AddNewLinePtPt (GSD pattern) — AddNewLine doesn't exist
+                # AddNewLinePtPt via HybridShapeFactory
                 if lookup == "x":
-                    axis_line = dlines.AddNewLinePtPt(0, 0, 0, 100, 0, 0)
+                    axis_line = hsf.AddNewLinePtPt(0, 0, 0, 100, 0, 0)
                 elif lookup == "y":
-                    axis_line = dlines.AddNewLinePtPt(0, 0, 0, 0, 100, 0)
+                    axis_line = hsf.AddNewLinePtPt(0, 0, 0, 0, 100, 0)
                 elif lookup == "z":
-                    axis_line = dlines.AddNewLinePtPt(0, 0, 0, 0, 0, 100)
+                    axis_line = hsf.AddNewLinePtPt(0, 0, 0, 0, 0, 100)
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
                 axis_line.Name = "ShaftAxis"
+                hbody.AppendHybridShape(axis_line)
                 part.UpdateObject(axis_line)
                 part.InWorkObject = body  # restore body as in-work
 
