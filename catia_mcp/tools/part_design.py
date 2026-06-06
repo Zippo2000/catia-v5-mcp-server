@@ -1196,6 +1196,11 @@ class PartDesignTools:
         # If axis is specified, inject a 2D line into the sketch as the rotation axis
         if axis_name:
             try:
+                # Try to close sketch if it's open (OpenEdition would fail on open sketch)
+                try:
+                    sketch.CloseEdition()
+                except Exception:
+                    pass
                 # Open the sketch to inject the axis line
                 factory2d = sketch.OpenEdition()
                 lookup = axis_name.lower().strip()
@@ -1234,7 +1239,7 @@ class PartDesignTools:
             except Exception:
                 pass  # read-only — shaft will use full revolution
 
-        part.Update()  # Update all features
+        part.UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
 
