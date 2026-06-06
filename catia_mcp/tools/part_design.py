@@ -1202,9 +1202,11 @@ class PartDesignTools:
         
         if axis_name:
             try:
-                # Create GeometricalSet for the axis direction
+                # Create GeometricalSet for the axis direction (GSD pattern)
                 hbody = part.HybridBodies.Add()
                 hbody.Name = "ShaftAxis"
+                part.UpdateObject(hbody)
+                part.InWorkObject = hbody
                 
                 hsf = part.HybridShapeFactory
                 lookup = axis_name.lower().strip()
@@ -1225,7 +1227,10 @@ class PartDesignTools:
                 # Create reference to the direction
                 axis_ref = part.CreateReferenceFromObject(direction)
                 
-                # Create shaft
+                # Restore body as in-work BEFORE creating shaft (critical!)
+                part.InWorkObject = body
+                
+                # Create shaft from sketch
                 sf = part.ShapeFactory
                 shaft = sf.AddNewShaft(sketch)
                 
@@ -1250,7 +1255,7 @@ class PartDesignTools:
             except Exception:
                 pass  # read-only — shaft will use full revolution
 
-        part.UpdateObject(shaft)
+        part.Update()  # Use part.Update() instead of UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
 
