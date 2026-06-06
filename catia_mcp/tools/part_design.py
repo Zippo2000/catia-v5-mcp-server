@@ -1197,21 +1197,20 @@ class PartDesignTools:
         # 2. The revolution axis (a 1D element: line, axis, or direction)
         if axis_name:
             try:
-                import win32com.client
                 import win32com.client.dynamic as d
-                # Use gencache for OriginElements.YAxis (GSD _ref pattern)
-                gc_part = win32com.client.gencache.EnsureDispatch(part)
-                oe = gc_part.OriginElements
+                # Use HybridShapeFactory to create a direction as the axis
+                hsf = part.HybridShapeFactory
                 lookup = axis_name.lower().strip()
-                axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
-                if lookup not in axis_map:
+                if lookup == "x":
+                    direction = hsf.AddNewDirectionByCoord(1, 0, 0)
+                elif lookup == "y":
+                    direction = hsf.AddNewDirectionByCoord(0, 1, 0)
+                elif lookup == "z":
+                    direction = hsf.AddNewDirectionByCoord(0, 0, 1)
+                else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
-                axis_elem = getattr(oe, axis_map[lookup])
-                # Create reference to the origin axis
-                dpart = d.Dispatch(part)
-                axis_ref = dpart.CreateReferenceFromObject(axis_elem)
-                # AddNewShaft(sketch, axis) — pass the axis reference
-                shaft = body.Shapes.AddNewShaft(sketch, axis_ref)
+                # AddNewShaft(sketch, axis) — pass the direction directly
+                shaft = body.Shapes.AddNewShaft(sketch, direction)
             except Exception as e:
                 raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
         else:
