@@ -1193,8 +1193,8 @@ class PartDesignTools:
         if axis_name:
             try:
                 axis_ref = self._get_axis_ref(part, axis_name)
-                # Use setattr instead of PropertyPut (pywin32>=311 removed PropertyPut)
-                setattr(shaft, "RevoluteAxis", axis_ref)
+                # Per CATIA docs: Shaft.Axis is the rotation axis (Reference to Boundary)
+                setattr(shaft, "Axis", axis_ref)
             except Exception as e:
                 raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
 
@@ -1202,14 +1202,18 @@ class PartDesignTools:
         try:
             setattr(shaft, "FirstAngle", angle)
         except Exception:
-            # Fallback: try direct property assignment
             shaft.FirstAngle = angle
         part.UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
 
     def _get_axis_ref(self, part: Any, axis_name: str) -> Any:
-        """Get a COM Reference to an origin axis (x, y, z) or named geometry."""
+        """Get a COM Reference to an origin axis (x, y, z) or named geometry.
+
+        Per CATIA docs, Shaft.Axis expects a Reference to a Boundary object
+        (RectilinearTriDimFeatEdge, RectilinearBiDimFeatEdge, or RectilinearMonoDimFeatEdge).
+        OriginElements axes (XAxis, YAxis, ZAxis) are such boundary objects.
+        """
         # Use pycatia if available — it handles OriginElements correctly
         has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
         if has_pycatia:
@@ -1226,7 +1230,6 @@ class PartDesignTools:
                         return ppart.create_reference_from_object(shape)
             raise RuntimeError(f"Cannot find axis '{axis_name}'")
         # Fallback: win32com — use CreateReferenceFromName for origin axes
-        import win32com.client.dynamic
         axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
         lookup = axis_name.lower().strip()
         if lookup in axis_map:
@@ -1259,8 +1262,11 @@ class PartDesignTools:
             groove = sf.AddNewGroove(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewGroove", e))
-        import win32com.client.dynamic
-        win32com.client.dynamic.PropertyPut(groove, "FirstAngle", angle)
+        # Use setattr (pywin32>=311 removed PropertyPut)
+        try:
+            setattr(groove, "FirstAngle", angle)
+        except Exception:
+            groove.FirstAngle = angle
         part.UpdateObject(groove)
         self.conn.refresh_display()
         return f"Groove (revolution cut) created: {angle}°. Feature: '{groove.Name}'"
