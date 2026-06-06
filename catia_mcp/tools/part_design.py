@@ -1211,6 +1211,7 @@ class PartDesignTools:
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
                 axis_line.Name = "ShaftAxis"
+                axis_line.Construction = True  # Mark as construction geometry so it won't be extruded
                 # Close the sketch
                 sketch.CloseEdition()
                 # Get gencache Part from the active document (not from dynamic proxy)
