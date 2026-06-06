@@ -1203,18 +1203,25 @@ class PartDesignTools:
                 hbody.Name = "ShaftAxisSet"
                 part.UpdateObject(hbody)
                 part.InWorkObject = hbody
-                # Use part.HybridShapeFactory (GSD pattern) — hbody.HybridShapes returns <unknown>
+                # Use part.HybridShapeFactory (GSD pattern)
                 hsf = part.HybridShapeFactory
                 lookup = axis_name.lower().strip()
-                # AddNewLinePtPt via HybridShapeFactory
+                # Create point at origin
+                origin_pt = hsf.AddNewPointCoord(0, 0, 0)
+                origin_pt.Name = "ShaftOrigin"
+                hbody.AppendHybridShape(origin_pt)
+                part.UpdateObject(origin_pt)
+                # Create direction reference
                 if lookup == "x":
-                    axis_line = hsf.AddNewLinePtPt(0, 0, 0, 100, 0, 0)
+                    dir_ref = hsf.AddNewDirectionByCoord(1, 0, 0)
                 elif lookup == "y":
-                    axis_line = hsf.AddNewLinePtPt(0, 0, 0, 0, 100, 0)
+                    dir_ref = hsf.AddNewDirectionByCoord(0, 1, 0)
                 elif lookup == "z":
-                    axis_line = hsf.AddNewLinePtPt(0, 0, 0, 0, 0, 100)
+                    dir_ref = hsf.AddNewDirectionByCoord(0, 0, 1)
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
+                # Create line through origin with direction
+                axis_line = hsf.AddNewLinePtDir(origin_pt, dir_ref)
                 axis_line.Name = "ShaftAxis"
                 hbody.AppendHybridShape(axis_line)
                 part.UpdateObject(axis_line)
