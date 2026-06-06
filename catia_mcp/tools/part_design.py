@@ -1194,6 +1194,12 @@ class PartDesignTools:
 
         # AddNewShaft creates the shaft from sketch
         # If axis is specified, create a 3D direction and set it as the revolution axis
+        # Close the sketch first if it's open (from catia_create_sketch)
+        try:
+            sketch.CloseEdition()
+        except Exception:
+            pass  # sketch already closed
+        
         if axis_name:
             try:
                 # Create GeometricalSet for the axis direction
