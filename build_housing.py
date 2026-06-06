@@ -68,15 +68,15 @@ def main():
         check(call("catia_sketch_rectangle", {"x1": -90, "y1": -65, "x2": 90, "y2": 65}), "8. Inner rect")
         check(call("catia_close_sketch"), "9. Close sketch")
 
-        # ── 10. Pocket: 85 mm (cuts downward from z=90 into material) ──
-        check(call("catia_pocket", {"depth": 85}), "10. Pocket cavity (85mm)")
+        # ── 10. Pocket: 85 mm (normal cuts downward into material from offset plane) ──
+        check(call("catia_pocket", {"depth": 85}), "10. Pocket cavity (85mm, normal)")
 
         # ── 11-14. 4× M6 mounting holes on same offset plane ──
         for i, (cx, cy) in enumerate([(-80, -55), (80, -55), (-80, 55), (80, 55)]):
             check(call("catia_create_sketch", {"plane_name": cavity_plane}), f"11.{i} Sketch on {cavity_plane}")
             check(call("catia_sketch_circle", {"cx": cx, "cy": cy, "radius": 3.5}), f"12.{i} Circle ({cx},{cy})")
             check(call("catia_close_sketch"), f"13.{i} Close")
-            check(call("catia_pocket", {"depth": 85}), f"14.{i} Pocket hole")
+            check(call("catia_pocket", {"depth": 85}), f"14.{i} Pocket hole (normal)")
 
         # ── 15. Cover plate: offset plane at z=95 (top of pad) ──
         r = call("catia_create_plane_offset", {"reference_plane": "xy", "offset": 95})

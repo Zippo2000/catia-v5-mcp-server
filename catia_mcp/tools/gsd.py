@@ -1028,7 +1028,7 @@ class GSDTools:
 
         ref_plane = self._ref(part, ref)
         hsf = self._hsf(part)
-        plane = hsf.AddNewPlaneOffset(ref_plane, offset, True)
+        plane = hsf.AddNewPlaneOffset(ref_plane, offset, False)
 
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(
