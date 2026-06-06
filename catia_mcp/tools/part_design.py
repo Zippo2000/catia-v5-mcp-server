@@ -1193,14 +1193,17 @@ class PartDesignTools:
         if axis_name:
             try:
                 axis_ref = self._get_axis_ref(part, axis_name)
-                import win32com.client.dynamic
-                win32com.client.dynamic.PropertyPut(shaft, "RevoluteAxis", axis_ref)
+                # Use setattr instead of PropertyPut (pywin32>=311 removed PropertyPut)
+                setattr(shaft, "RevoluteAxis", axis_ref)
             except Exception as e:
                 raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
 
-        # Use win32com dynamic.PropertyPut to set properties on unidentifiable COM objects
-        import win32com.client.dynamic
-        win32com.client.dynamic.PropertyPut(shaft, "FirstAngle", angle)
+        # Set angle using setattr (pywin32>=311 removed PropertyPut)
+        try:
+            setattr(shaft, "FirstAngle", angle)
+        except Exception:
+            # Fallback: try direct property assignment
+            shaft.FirstAngle = angle
         part.UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
