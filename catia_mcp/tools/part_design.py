@@ -1185,7 +1185,6 @@ class PartDesignTools:
         # Force win32com — pycatia shape_factory returns placeholder objects for Shaft
         part = self.conn.get_active_part()
         body = self.conn.get_active_part_body()
-        sf = part.ShapeFactory
         part.InWorkObject = body
 
         sketch_name = validate_sketch_name(args.get("sketch_name"))
@@ -1193,9 +1192,10 @@ class PartDesignTools:
         angle = validate_positive_float(args.get("angle", 360), "angle")
         axis_name = args.get("axis")
 
-        # If axis is specified, create a 3D line in a GeometricalSet (before AddNewShaft)
-        # CATIA shaft requires a 3D axis reference — lines live in HybridBody, not Body
-        axis_ref = None
+        # AddNewShaft(sketch, axis) takes TWO parameters:
+        # 1. The sketch profile
+        # 2. The revolution axis (a 1D element: line, axis, or direction)
+        # If no axis is specified, the axis must be in the sketch as a 2D line.
         if axis_name:
             try:
                 import win32com.client.dynamic as d
@@ -1218,21 +1218,16 @@ class PartDesignTools:
                 axis_line.Name = "ShaftAxis"
                 dpart.UpdateObject(axis_line)
                 dpart.InWorkObject = body  # restore body as in-work
-                axis_ref = part.CreateReferenceFromObject(axis_line)
+
+                # AddNewShaft(sketch, axis) — pass the line directly as the axis
+                shaft = body.Shapes.AddNewShaft(sketch, axis_line)
             except Exception as e:
-                raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
-
-        try:
-            shaft = sf.AddNewShaft(sketch)
-        except Exception as e:
-            raise RuntimeError(format_catia_error("AddNewShaft", e))
-
-        # Set revolution axis after AddNewShaft (shaft now exists)
-        if axis_ref is not None:
+                raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
+        else:
             try:
-                setattr(shaft, "Axis", axis_ref)
+                shaft = body.Shapes.AddNewShaft(sketch)
             except Exception as e:
-                raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
+                raise RuntimeError(format_catia_error("AddNewShaft", e))
 
         # FirstAngle/SecondAngle are read-only after AddNewShaft per CATIA docs
         # For full revolution (360°), no angle setting needed — CATIA defaults to full
