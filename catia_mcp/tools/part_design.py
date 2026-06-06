@@ -1197,7 +1197,11 @@ class PartDesignTools:
         axis_ref = None
         if axis_name:
             try:
-                lines = part.MainBody.Lines
+                import win32com.client.gencache
+                # Use gencache for typed proxy — dynamic.Dispatch fails on .Lines
+                typed_part = win32com.client.gencache.EnsureDispatch(part.GetDisplayName())
+                body = typed_part.MainBody
+                lines = body.Lines
                 lookup = axis_name.lower().strip()
                 if lookup == "x":
                     axis_line = lines.AddNewLine(0, 0, 0, 1, 0, 0)
@@ -1208,7 +1212,7 @@ class PartDesignTools:
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
                 axis_line.Name = "ShaftAxis"
-                part.UpdateObject(axis_line)
+                typed_part.UpdateObject(axis_line)
                 axis_ref = part.CreateReferenceFromObject(axis_line)
             except Exception as e:
                 raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
