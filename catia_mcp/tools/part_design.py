@@ -1197,6 +1197,7 @@ class PartDesignTools:
         if axis_name:
             try:
                 import win32com.client.dynamic as d
+                import win32com.client as wc
                 # Open the sketch to inject the axis line
                 factory2d = sketch.OpenEdition()
                 lookup = axis_name.lower().strip()
@@ -1212,8 +1213,9 @@ class PartDesignTools:
                 axis_line.Name = "ShaftAxis"
                 # Close the sketch
                 sketch.CloseEdition()
-                # Use dynamic.Dispatch on ShapeFactory directly (not on part)
-                sf = part.ShapeFactory
+                # Use gencache for ShapeFactory, then dynamic.Dispatch for AddNewShaft
+                gc_part = wc.gencache.EnsureDispatch(part)
+                sf = gc_part.ShapeFactory
                 dsf = d.Dispatch(sf)
                 shaft = dsf.AddNewShaft(sketch)
             except Exception as e:
@@ -1221,7 +1223,9 @@ class PartDesignTools:
         else:
             try:
                 import win32com.client.dynamic as d
-                sf = part.ShapeFactory
+                import win32com.client as wc
+                gc_part = wc.gencache.EnsureDispatch(part)
+                sf = gc_part.ShapeFactory
                 dsf = d.Dispatch(sf)
                 shaft = dsf.AddNewShaft(sketch)
             except Exception as e:
