@@ -1244,11 +1244,12 @@ class PartDesignTools:
                 # Step 2: Set body as InWorkObject
                 part.InWorkObject = body
 
-                # Step 3: Create shaft from sketch, then set axis
+                # Step 3: Create shaft from sketch, then set axis via RevoluteAxis property
                 sf = part.ShapeFactory
                 shaft = sf.AddNewShaft(sketch)
                 axis_ref = part.CreateReferenceFromObject(axis_line)
-                shaft.Axis = axis_ref
+                # Use RevoluteAxis property (CAA name) — Axis is VBA alias that may not work in win32com
+                setattr(shaft, "RevoluteAxis", axis_ref)
             except Exception as e:
                 raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
         else:
