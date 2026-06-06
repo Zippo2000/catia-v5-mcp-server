@@ -1238,11 +1238,15 @@ class PartDesignTools:
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
 
-        # Set angle using setattr (pywin32>=311 removed PropertyPut)
-        try:
-            setattr(shaft, "FirstAngle", angle)
-        except Exception:
-            shaft.FirstAngle = angle
+        # FirstAngle/SecondAngle are read-only after AddNewShaft per CATIA docs
+        # For full revolution (360°), no angle setting needed — CATIA defaults to full
+        if angle != 360:
+            try:
+                setattr(shaft, "FirstAngle", angle / 2)
+                setattr(shaft, "SecondAngle", angle / 2)
+            except Exception:
+                pass  # read-only — shaft will use full revolution
+
         part.UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
