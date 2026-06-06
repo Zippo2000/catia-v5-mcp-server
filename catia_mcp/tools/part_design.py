@@ -1194,7 +1194,7 @@ class PartDesignTools:
             try:
                 axis_ref = self._get_axis_ref(part, axis_name)
                 import win32com.client.dynamic
-                win32com.client.dynamic.PropertyPut(shaft, "Axis", axis_ref)
+                win32com.client.dynamic.PropertyPut(shaft, "RevoluteAxis", axis_ref)
             except Exception as e:
                 raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
 
