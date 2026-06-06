@@ -93,7 +93,7 @@ class PartDesignTools:
                 "description": (
                     "Create a Shaft (revolution) from the last sketch. "
                     "Revolves a 2D profile around an axis to create a solid of revolution. "
-                    "The sketch must contain a line to use as the revolution axis."
+                    "The axis can be specified explicitly or must be defined in the sketch."
                 ),
                 "inputSchema": {
                     "type": "object",
@@ -106,6 +106,10 @@ class PartDesignTools:
                         "sketch_name": {
                             "type": "string",
                             "description": "Name of sketch to use.",
+                        },
+                        "axis": {
+                            "type": "string",
+                            "description": "Revolution axis: 'x', 'y', 'z' for origin axes, or a geometry name (e.g., 'Line.1'). Required when the sketch does not define the axis.",
                         },
                     },
                 },
@@ -1178,17 +1182,45 @@ class PartDesignTools:
         sketch_name = validate_sketch_name(args.get("sketch_name"))
         sketch = self._get_last_sketch(sketch_name, part)
         angle = validate_positive_float(args.get("angle", 360), "angle")
+        axis_name = args.get("axis")
 
         try:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
+
+        # Set revolution axis if specified
+        if axis_name:
+            try:
+                axis_ref = self._get_axis_ref(part, axis_name)
+                import win32com.client.dynamic
+                win32com.client.dynamic.PropertyPut(shaft, "Axis", axis_ref)
+            except Exception as e:
+                raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
+
         # Use win32com dynamic.PropertyPut to set properties on unidentifiable COM objects
         import win32com.client.dynamic
         win32com.client.dynamic.PropertyPut(shaft, "FirstAngle", angle)
         part.UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
+
+    def _get_axis_ref(self, part: Any, axis_name: str) -> Any:
+        """Get a COM Reference to an origin axis (x, y, z) or named geometry."""
+        dpart = self._dpart(part)
+        oe = part.OriginElements
+        axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
+        lookup = axis_name.lower().strip()
+        if lookup in axis_map:
+            axis = getattr(oe, axis_map[lookup])
+            return dpart.CreateReferenceFromObject(axis)
+        # Try to find geometry by name in HybridBodies
+        for hb in part.HybridBodies:
+            for i in range(1, hb.HybridShapes.Count + 1):
+                obj = hb.HybridShapes.Item(i)
+                if obj.Name == axis_name:
+                    return dpart.CreateReferenceFromObject(obj)
+        raise RuntimeError(f"Cannot find axis '{axis_name}'")
 
     def _groove(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
