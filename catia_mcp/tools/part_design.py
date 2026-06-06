@@ -1209,8 +1209,9 @@ class PartDesignTools:
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
                 axis_line.Name = "ShaftAxis"
-                axis_line.Construction = True  # Mark as construction geometry
+                setattr(axis_line, "Construction", True)  # Mark as construction geometry
                 sketch.CloseEdition()
+                part.Update()  # Update the sketch geometry before creating shaft
                 
                 # Use part.ShapeFactory.AddNewShaft directly
                 sf = part.ShapeFactory
@@ -1233,7 +1234,7 @@ class PartDesignTools:
             except Exception:
                 pass  # read-only — shaft will use full revolution
 
-        part.UpdateObject(shaft)
+        part.Update()  # Update all features
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
 
