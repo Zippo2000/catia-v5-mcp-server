@@ -1193,43 +1193,23 @@ class PartDesignTools:
         angle = validate_positive_float(args.get("angle", 360), "angle")
         axis_name = args.get("axis")
 
-        # If axis is specified, we need to inject it into the sketch as a line
-        # because CATIA shaft requires the axis to be a 2D line in the sketch
+        # If axis is specified, create a 3D line first (before AddNewShaft)
+        axis_ref = None
         if axis_name:
             try:
-                # Use same pattern as sketcher.py for open/close edition
-                if _is_pycatia(sketch):
-                    factory2d = sketch.open_edition()
-                else:
-                    import win32com.client.dynamic
-                    dsketch = win32com.client.dynamic.Dispatch(sketch)
-                    factory2d = dsketch.OpenEdition()
-
-                # Map axis name to 2D line direction
+                lines = part.MainBody.Lines
                 lookup = axis_name.lower().strip()
                 if lookup == "x":
-                    axis_line = factory2d.CreateLine(0, 0, 1, 0)
+                    axis_line = lines.AddNewLine(0, 0, 0, 1, 0, 0)
                 elif lookup == "y":
-                    axis_line = factory2d.CreateLine(0, 0, 0, 1)
+                    axis_line = lines.AddNewLine(0, 0, 0, 0, 1, 0)
                 elif lookup == "z":
-                    axis_line = factory2d.CreateLine(0, 0, 0.001, 0.001)
+                    axis_line = lines.AddNewLine(0, 0, 0, 0, 0, 1)
                 else:
-                    found = False
-                    for i in range(1, factory2d.Count + 1):
-                        elem = factory2d.Item(i)
-                        if elem.Name == axis_name:
-                            axis_line = elem
-                            found = True
-                            break
-                    if not found:
-                        raise RuntimeError(f"Cannot find axis '{axis_name}' in sketch")
-
+                    raise RuntimeError(f"Cannot find axis '{axis_name}'")
                 axis_line.Name = "ShaftAxis"
-                if _is_pycatia(sketch):
-                    sketch.close_edition()
-                else:
-                    import win32com.client.dynamic
-                    win32com.client.dynamic.Dispatch(sketch).CloseEdition()
+                part.UpdateObject(axis_line)
+                axis_ref = part.CreateReferenceFromObject(axis_line)
             except Exception as e:
                 raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
 
@@ -1237,6 +1217,13 @@ class PartDesignTools:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
+
+        # Set revolution axis after AddNewShaft (shaft now exists)
+        if axis_ref is not None:
+            try:
+                setattr(shaft, "Axis", axis_ref)
+            except Exception as e:
+                raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
 
         # FirstAngle/SecondAngle are read-only after AddNewShaft per CATIA docs
         # For full revolution (360°), no angle setting needed — CATIA defaults to full
