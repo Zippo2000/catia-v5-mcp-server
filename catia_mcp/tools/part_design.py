@@ -1193,50 +1193,61 @@ class PartDesignTools:
         axis_name = args.get("axis")
 
         # AddNewShaft creates the shaft from sketch
-        # If axis is specified, create a 3D direction and set it as the revolution axis
+        # If axis is specified:
+        #   1. Create GeometricalSet with 3D line as revolution axis (via 2 points)
+        #   2. Set body as InWorkObject
+        #   3. Create shaft from sketch, passing the line as axis reference
         # Close the sketch first if it's open (from catia_create_sketch)
         try:
             sketch.CloseEdition()
         except Exception:
             pass  # sketch already closed
-        
+
         if axis_name:
             try:
-                # Create GeometricalSet for the axis direction (GSD pattern)
+                # Step 1: Create GeometricalSet with 3D line via 2 points
                 hbody = part.HybridBodies.Add()
                 hbody.Name = "ShaftAxis"
                 part.UpdateObject(hbody)
                 part.InWorkObject = hbody
-                
+
                 hsf = part.HybridShapeFactory
                 lookup = axis_name.lower().strip()
-                
+
+                # Create origin point
+                pt1 = hsf.AddNewPointCoord(0, 0, 0)
+                pt1.Name = "ShaftAxisOrigin"
+                hbody.AppendHybridShape(pt1)
+                part.UpdateObject(pt1)
+
+                # Create second point along the axis
                 if lookup == "x":
-                    direction = hsf.AddNewDirectionByCoord(1, 0, 0)
+                    pt2 = hsf.AddNewPointCoord(100, 0, 0)
                 elif lookup == "y":
-                    direction = hsf.AddNewDirectionByCoord(0, 1, 0)
+                    pt2 = hsf.AddNewPointCoord(0, 100, 0)
                 elif lookup == "z":
-                    direction = hsf.AddNewDirectionByCoord(0, 0, 1)
+                    pt2 = hsf.AddNewPointCoord(0, 0, 100)
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
-                    
-                direction.Name = "ShaftAxisDirection"
-                hbody.AppendHybridShape(direction)
-                part.UpdateObject(direction)
-                
-                # Create reference to the direction
-                axis_ref = part.CreateReferenceFromObject(direction)
-                
-                # Restore body as in-work BEFORE creating shaft (critical!)
+                pt2.Name = "ShaftAxisEnd"
+                hbody.AppendHybridShape(pt2)
+                part.UpdateObject(pt2)
+
+                # Create line between the two points
+                pt1_ref = part.CreateReferenceFromObject(pt1)
+                pt2_ref = part.CreateReferenceFromObject(pt2)
+                axis_line = hsf.AddNewLinePtPt(pt1_ref, pt2_ref)
+                axis_line.Name = "ShaftAxis"
+                hbody.AppendHybridShape(axis_line)
+                part.UpdateObject(axis_line)
+
+                # Step 2: Set body as InWorkObject
                 part.InWorkObject = body
-                
-                # Create shaft from sketch
+
+                # Step 3: Create shaft from sketch, passing the line as axis reference
+                axis_ref = part.CreateReferenceFromObject(axis_line)
                 sf = part.ShapeFactory
-                shaft = sf.AddNewShaft(sketch)
-                
-                # Set the axis via VBA property "Axis" (RevoluteAxis in CAA)
-                # pywin32 >= 311 removed PropertyPut — use setattr
-                setattr(shaft, "Axis", axis_ref)
+                shaft = sf.AddNewShaftFromRef(sketch, axis_ref)
             except Exception as e:
                 raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
         else:
@@ -1255,7 +1266,13 @@ class PartDesignTools:
             except Exception:
                 pass  # read-only — shaft will use full revolution
 
-        part.Update()  # Use part.Update() instead of UpdateObject(shaft)
+        # Update the part to materialize the shaft
+        try:
+            part.UpdateObject(shaft)
+        except Exception:
+            # If UpdateObject fails, try full part update
+            part.Update()
+
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
 
