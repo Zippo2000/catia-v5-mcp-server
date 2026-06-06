@@ -1225,19 +1225,24 @@ class PartDesignTools:
                     if shape.name == axis_name:
                         return ppart.create_reference_from_object(shape)
             raise RuntimeError(f"Cannot find axis '{axis_name}'")
-        # Fallback: win32com
-        oe = part.OriginElements
+        # Fallback: win32com — use gencache to get typed proxy for OriginElements
+        import win32com.client.gencache
+        try:
+            typed_part = win32com.client.gencache.EnsureDispatch(part)
+        except Exception:
+            raise RuntimeError(f"Cannot create typed Part proxy for axis '{axis_name}'")
+        oe = typed_part.OriginElements
         axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
         lookup = axis_name.lower().strip()
         if lookup in axis_map:
             axis = getattr(oe, axis_map[lookup])
-            return part.CreateReferenceFromObject(axis)
+            return typed_part.CreateReferenceFromObject(axis)
         # Try to find geometry by name in HybridBodies
-        for hb in part.HybridBodies:
+        for hb in typed_part.HybridBodies:
             for i in range(1, hb.HybridShapes.Count + 1):
                 obj = hb.HybridShapes.Item(i)
                 if obj.Name == axis_name:
-                    return part.CreateReferenceFromObject(obj)
+                    return typed_part.CreateReferenceFromObject(obj)
         raise RuntimeError(f"Cannot find axis '{axis_name}'")
 
     def _groove(self, args: dict[str, Any]) -> str:
