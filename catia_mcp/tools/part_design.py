@@ -1184,19 +1184,44 @@ class PartDesignTools:
         angle = validate_positive_float(args.get("angle", 360), "angle")
         axis_name = args.get("axis")
 
+        # If axis is specified, we need to inject it into the sketch as a line
+        # because CATIA shaft requires the axis to be a 2D line in the sketch
+        if axis_name:
+            try:
+                # Open sketch to add axis line
+                sketch.OpenEdition
+                factory2d = sketch.GetMainObject()
+
+                # Map axis name to 2D line direction
+                lookup = axis_name.lower().strip()
+                if lookup == "x":
+                    axis_line = factory2d.CreateLine(0, 0, 1, 0)
+                elif lookup == "y":
+                    axis_line = factory2d.CreateLine(0, 0, 0, 1)
+                elif lookup == "z":
+                    # Z axis in XY sketch = point at origin, use a tiny line
+                    axis_line = factory2d.CreateLine(0, 0, 0.001, 0.001)
+                else:
+                    # Try to find existing geometry by name in sketch
+                    found = False
+                    for i in range(1, factory2d.Count + 1):
+                        elem = factory2d.Item(i)
+                        if elem.Name == axis_name:
+                            axis_line = elem
+                            found = True
+                            break
+                    if not found:
+                        raise RuntimeError(f"Cannot find axis '{axis_name}' in sketch")
+
+                axis_line.Name = "ShaftAxis"
+                sketch.CloseEdition
+            except Exception as e:
+                raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
+
         try:
             shaft = sf.AddNewShaft(sketch)
         except Exception as e:
             raise RuntimeError(format_catia_error("AddNewShaft", e))
-
-        # Set revolution axis if specified
-        if axis_name:
-            try:
-                axis_ref = self._get_axis_ref(part, axis_name)
-                # Per CATIA docs: Shaft.Axis is the rotation axis (Reference to Boundary)
-                setattr(shaft, "Axis", axis_ref)
-            except Exception as e:
-                raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
 
         # Set angle using setattr (pywin32>=311 removed PropertyPut)
         try:
@@ -1206,45 +1231,6 @@ class PartDesignTools:
         part.UpdateObject(shaft)
         self.conn.refresh_display()
         return f"Shaft (revolution) created: {angle}°. Feature: '{shaft.Name}'"
-
-    def _get_axis_ref(self, part: Any, axis_name: str) -> Any:
-        """Get a COM Reference to an origin axis (x, y, z) or named geometry.
-
-        Per CATIA docs, Shaft.Axis expects a Reference to a Boundary object
-        (RectilinearTriDimFeatEdge, RectilinearBiDimFeatEdge, or RectilinearMonoDimFeatEdge).
-        OriginElements axes (XAxis, YAxis, ZAxis) are such boundary objects.
-        """
-        # Use pycatia if available — it handles OriginElements correctly
-        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
-        if has_pycatia:
-            ppart = self.conn.get_active_part_pycatia()
-            axis_map = {"x": "x_axis", "y": "y_axis", "z": "z_axis"}
-            lookup = axis_name.lower().strip()
-            if lookup in axis_map:
-                axis = getattr(ppart.origin_elements, axis_map[lookup])
-                return ppart.create_reference_from_object(axis)
-            # Try to find geometry by name in HybridBodies
-            for hb in ppart.hybrid_bodies:
-                for shape in hb.hybrid_shapes:
-                    if shape.name == axis_name:
-                        return ppart.create_reference_from_object(shape)
-            raise RuntimeError(f"Cannot find axis '{axis_name}'")
-        # Fallback: win32com — use CreateReferenceFromName for origin axes
-        axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
-        lookup = axis_name.lower().strip()
-        if lookup in axis_map:
-            name = axis_map[lookup]
-            try:
-                return part.CreateReferenceFromName(name)
-            except Exception:
-                pass
-        # Try to find geometry by name in HybridBodies
-        for hb in part.HybridBodies:
-            for i in range(1, hb.HybridShapes.Count + 1):
-                obj = hb.HybridShapes.Item(i)
-                if obj.Name == axis_name:
-                    return part.CreateReferenceFromObject(obj)
-        raise RuntimeError(f"Cannot find axis '{axis_name}'")
 
     def _groove(self, args: dict[str, Any]) -> str:
         self.conn.ensure_connected()
