@@ -1194,26 +1194,26 @@ class PartDesignTools:
         axis_name = args.get("axis")
 
         # If axis is specified, create a 3D line first (before AddNewShaft)
+        # CATIA shaft requires a 3D axis reference
         axis_ref = None
         if axis_name:
             try:
-                import win32com.client.gencache
-                # Use gencache for typed proxy — dynamic.Dispatch fails on .MainBody.Lines
-                doc = self.conn.app.ActiveDocument
-                typed_part = win32com.client.gencache.EnsureDispatch(doc).Part
-                body = typed_part.MainBody
-                lines = body.Lines
+                import win32com.client.dynamic as d
+                # dynamic.Dispatch for all COM calls — gencache fails on Windows server
+                dpart = d.Dispatch(part)
+                dbody = dpart.MainBody
+                dlines = dbody.Lines
                 lookup = axis_name.lower().strip()
                 if lookup == "x":
-                    axis_line = lines.AddNewLine(0, 0, 0, 1, 0, 0)
+                    axis_line = dlines.AddNewLine(0, 0, 0, 1, 0, 0)
                 elif lookup == "y":
-                    axis_line = lines.AddNewLine(0, 0, 0, 0, 1, 0)
+                    axis_line = dlines.AddNewLine(0, 0, 0, 0, 1, 0)
                 elif lookup == "z":
-                    axis_line = lines.AddNewLine(0, 0, 0, 0, 0, 1)
+                    axis_line = dlines.AddNewLine(0, 0, 0, 0, 0, 1)
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
                 axis_line.Name = "ShaftAxis"
-                typed_part.UpdateObject(axis_line)
+                dpart.UpdateObject(axis_line)
                 axis_ref = part.CreateReferenceFromObject(axis_line)
             except Exception as e:
                 raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
