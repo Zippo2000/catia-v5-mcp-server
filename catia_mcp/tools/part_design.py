@@ -1200,13 +1200,12 @@ class PartDesignTools:
             try:
                 import win32com.client.dynamic as d
                 dpart = d.Dispatch(part)
-                # Create or get a GeometricalSet for the axis line
-                hybrid_bodies = dpart.HybridBodies
-                geo_set = hybrid_bodies.AddHybridBody()
+                dhybrid = d.Dispatch(dpart.HybridBodies)
+                geo_set = dhybrid.AddHybridBody()
                 geo_set.Name = "ShaftAxisSet"
                 dpart.UpdateObject(geo_set)
                 dpart.InWorkObject = geo_set
-                lines = geo_set.HybridShapes
+                lines = d.Dispatch(geo_set).HybridShapes
                 lookup = axis_name.lower().strip()
                 if lookup == "x":
                     axis_line = lines.AddNewLine(0, 0, 0, 1, 0, 0)
