@@ -1212,13 +1212,13 @@ class PartDesignTools:
                 axis_line.Name = "ShaftAxis"
                 # Close the sketch
                 sketch.CloseEdition()
-                # AddNewShaft(sketch) — CATIA uses the line in the sketch as the axis
-                shaft = body.Shapes.AddNewShaft(sketch)
+                # Use part.ShapeFactory (same as _pad) — body.Shapes is <unknown> on dynamic proxy
+                shaft = part.ShapeFactory.AddNewShaft(sketch)
             except Exception as e:
                 raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
         else:
             try:
-                shaft = body.Shapes.AddNewShaft(sketch)
+                shaft = part.ShapeFactory.AddNewShaft(sketch)
             except Exception as e:
                 raise RuntimeError(format_catia_error("AddNewShaft", e))
 
