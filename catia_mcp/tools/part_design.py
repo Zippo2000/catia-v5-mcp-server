@@ -1212,13 +1212,16 @@ class PartDesignTools:
                 axis_line.Name = "ShaftAxis"
                 # Close the sketch
                 sketch.CloseEdition()
-                # Use part.ShapeFactory (same as _pad) — body.Shapes is <unknown> on dynamic proxy
-                shaft = part.ShapeFactory.AddNewShaft(sketch)
+                # Use dynamic.Dispatch for ShapeFactory (gencache doesn't know AddNewShaft)
+                dsf = d.Dispatch(part).ShapeFactory
+                shaft = dsf.AddNewShaft(sketch)
             except Exception as e:
                 raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
         else:
             try:
-                shaft = part.ShapeFactory.AddNewShaft(sketch)
+                import win32com.client.dynamic as d
+                dsf = d.Dispatch(part).ShapeFactory
+                shaft = dsf.AddNewShaft(sketch)
             except Exception as e:
                 raise RuntimeError(format_catia_error("AddNewShaft", e))
 
