@@ -1195,29 +1195,27 @@ class PartDesignTools:
         # AddNewShaft(sketch, axis) takes TWO parameters:
         # 1. The sketch profile
         # 2. The revolution axis (a 1D element: line, axis, or direction)
-        # If no axis is specified, the axis must be in the sketch as a 2D line.
         if axis_name:
             try:
                 import win32com.client.dynamic as d
-                dpart = d.Dispatch(part)
-                dhybrid = d.Dispatch(dpart.HybridBodies)
-                geo_set = dhybrid.AddHybridBody()
-                geo_set.Name = "ShaftAxisSet"
-                dpart.UpdateObject(geo_set)
-                dpart.InWorkObject = geo_set
-                lines = d.Dispatch(geo_set).HybridShapes
+                # Use pycatia part for HybridBodies access (same pattern as GSD tools)
+                pycatia_part = self.conn.get_active_part_pycatia()
+                hbody = pycatia_part.hybrid_bodies.add()
+                hbody.name = "ShaftAxisSet"
+                # Get as dynamic dispatch for AddNewLine
+                dlines = d.Dispatch(hbody).hybrid_shapes
                 lookup = axis_name.lower().strip()
                 if lookup == "x":
-                    axis_line = lines.AddNewLine(0, 0, 0, 1, 0, 0)
+                    axis_line = dlines.AddNewLine(0, 0, 0, 1, 0, 0)
                 elif lookup == "y":
-                    axis_line = lines.AddNewLine(0, 0, 0, 0, 1, 0)
+                    axis_line = dlines.AddNewLine(0, 0, 0, 0, 1, 0)
                 elif lookup == "z":
-                    axis_line = lines.AddNewLine(0, 0, 0, 0, 0, 1)
+                    axis_line = dlines.AddNewLine(0, 0, 0, 0, 0, 1)
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
                 axis_line.Name = "ShaftAxis"
-                dpart.UpdateObject(axis_line)
-                dpart.InWorkObject = body  # restore body as in-work
+                part.UpdateObject(axis_line)
+                part.InWorkObject = body  # restore body as in-work
 
                 # AddNewShaft(sketch, axis) — pass the line directly as the axis
                 shaft = body.Shapes.AddNewShaft(sketch, axis_line)
