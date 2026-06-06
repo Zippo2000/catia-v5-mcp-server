@@ -1210,21 +1210,34 @@ class PartDesignTools:
 
     def _get_axis_ref(self, part: Any, axis_name: str) -> Any:
         """Get a COM Reference to an origin axis (x, y, z) or named geometry."""
-        import win32com.client.dynamic
-        # part is already dynamic.Dispatch(doc).Part — use it directly
+        # Use pycatia if available — it handles OriginElements correctly
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            ppart = self.conn.get_active_part_pycatia()
+            axis_map = {"x": "x_axis", "y": "y_axis", "z": "z_axis"}
+            lookup = axis_name.lower().strip()
+            if lookup in axis_map:
+                axis = getattr(ppart.origin_elements, axis_map[lookup])
+                return ppart.create_reference_from_object(axis)
+            # Try to find geometry by name in HybridBodies
+            for hb in ppart.hybrid_bodies:
+                for shape in hb.hybrid_shapes:
+                    if shape.name == axis_name:
+                        return ppart.create_reference_from_object(shape)
+            raise RuntimeError(f"Cannot find axis '{axis_name}'")
+        # Fallback: win32com
         oe = part.OriginElements
         axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
         lookup = axis_name.lower().strip()
         if lookup in axis_map:
             axis = getattr(oe, axis_map[lookup])
-            # Use CreateReferenceFromGeometry for axes (not CreateReferenceFromObject)
-            return part.CreateReferenceFromGeometry(axis)
+            return part.CreateReferenceFromObject(axis)
         # Try to find geometry by name in HybridBodies
         for hb in part.HybridBodies:
             for i in range(1, hb.HybridShapes.Count + 1):
                 obj = hb.HybridShapes.Item(i)
                 if obj.Name == axis_name:
-                    return part.CreateReferenceFromGeometry(obj)
+                    return part.CreateReferenceFromObject(obj)
         raise RuntimeError(f"Cannot find axis '{axis_name}'")
 
     def _groove(self, args: dict[str, Any]) -> str:
