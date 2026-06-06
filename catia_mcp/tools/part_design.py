@@ -1207,7 +1207,8 @@ class PartDesignTools:
 
     def _get_axis_ref(self, part: Any, axis_name: str) -> Any:
         """Get a COM Reference to an origin axis (x, y, z) or named geometry."""
-        dpart = self._dpart(part)
+        import win32com.client.dynamic
+        dpart = win32com.client.dynamic.Dispatch(part).Document.Part
         oe = part.OriginElements
         axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
         lookup = axis_name.lower().strip()
