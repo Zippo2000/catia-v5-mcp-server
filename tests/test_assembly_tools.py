@@ -303,6 +303,24 @@ class TestRemoveConstraint:
             assem_tools.execute("catia_remove_constraint", {"constraint_name": "Ghost"})
 
 
+class TestGroundConstraint:
+    def test_ground_valid(self, assem_tools, conn_mock):
+        product = conn_mock.get_active_product()
+        constraints = product.Connections.return_value
+        ground_cst = MagicMock()
+        ground_cst.Name = "Ground.Part1"
+        constraints.AddMonoEltCst.return_value = ground_cst
+        result = assem_tools.execute("catia_ground_constraint", {"component_name": "Part1"})
+        assert "Ground" in result or "ground" in result.lower()
+        constraints.AddMonoEltCst.assert_called_once()
+
+    def test_ground_nonexistent_component_raises(self, assem_tools, conn_mock):
+        product = conn_mock.get_active_product()
+        product.Products.Item.side_effect = Exception("not found")
+        with pytest.raises(ValueError, match="not found"):
+            assem_tools.execute("catia_ground_constraint", {"component_name": "NonExistent"})
+
+
 class TestExecuteRouting:
     def test_unknown_tool_raises(self, assem_tools):
         with pytest.raises(ValueError, match="Unknown assembly tool"):
@@ -310,6 +328,6 @@ class TestExecuteRouting:
 
 
 class TestToolDefinitions:
-    def test_all_14_tools_defined(self, assem_tools):
+    def test_all_15_tools_defined(self, assem_tools):
         defs = assem_tools.get_tool_definitions()
-        assert len(defs) == 14
+        assert len(defs) == 15

@@ -327,6 +327,24 @@ class AssemblyTools:
                     "properties": {},
                 },
             },
+            {
+                "name": "catia_ground_constraint",
+                "description": (
+                    "Ground a component to the product origin (fully constrained in place). "
+                    "Unlike Fix, Ground prevents the component from moving even when other "
+                    "constraints are modified. Use this to anchor components in an assembly."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "component_name": {
+                            "type": "string",
+                            "description": "Name of the component to ground (e.g., 'Part.1').",
+                        },
+                    },
+                    "required": ["component_name"],
+                },
+            },
         ]
 
     def execute(self, tool_name: str, arguments: dict[str, Any]) -> str:
@@ -359,6 +377,8 @@ class AssemblyTools:
                 return self._list_components()
             case "catia_list_constraints":
                 return self._list_constraints()
+            case "catia_ground_constraint":
+                return self._ground_constraint(arguments["component_name"])
             case _:
                 raise ValueError(f"Unknown assembly tool: {tool_name}")
 
@@ -685,3 +705,29 @@ class AssemblyTools:
         if not cst_list:
             return "No constraints in the active assembly"
         return json.dumps(cst_list, indent=2, ensure_ascii=False)
+
+    # ── New Assembly Methods (Phase 1e) ────────────────────────────────────
+
+    def _ground_constraint(self, component_name: str) -> str:
+        """Ground a component to the product origin."""
+        product = self.conn.get_active_product()
+        try:
+            component = product.Products.Item(component_name)
+        except Exception:
+            raise ValueError(f"Component '{component_name}' not found in assembly.")
+
+        if _is_pycatia(product):
+            constraints = product.constraints
+            comp_ref = product.create_reference_from_object(component)
+        else:
+            constraints = product.Connections("CATIAConstraints")
+            comp_ref = product.CreateReferenceFromObject(component)
+
+        try:
+            # catCstTypeGround = 1
+            cst = constraints.AddMonoEltCst(1, comp_ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddMonoEltCst(ground)", e))
+
+        self.conn.refresh_display()
+        return f"Component '{component_name}' grounded to product origin. Constraint: '{cst.Name}'"

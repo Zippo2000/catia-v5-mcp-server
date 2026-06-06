@@ -3,9 +3,9 @@
 | Feld | Wert |
 |------|------|
 | **Dokument-ID** | REQ-001 |
-| **Version** | 1.8 |
+| **Version** | 1.9 |
 | **Status** | Freigegeben |
-| **Letzte Änderung** | 2026-06-03 |
+| **Letzte Änderung** | 2026-06-06 |
 | **Projekt** | catia-v5-mcp-server |
 | **Software-Version** | 0.1.0 |
 
@@ -75,13 +75,13 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 | Kategorie | Tool-Anzahl | Beschreibung |
 |-----------|------------|-------------|
 | Dokument-Verwaltung | 10 | Erstellen, Öffnen, Speichern, Schließen von Part/Product/Drawing |
-| Sketcher | 14 | 2D-Geometrie-Erstellung (inkl. Conics) und -Bearbeitung |
-| Part Design | 19 | 3D-Feature-Erstellung (Pad, Pocket, Fillet, Lifting, Sweep, Loft, Boolean, etc.) |
-| Assembly | 14 | Baugruppen-Verwaltung und Constraints (inkl. Contact, Distance, Tangent, Remove) |
+| Sketcher | 18 | 2D-Geometrie-Erstellung (inkl. Conics, Trim, Mirror, Construction Element) und -Bearbeitung |
+| Part Design | 23 | 3D-Feature-Erstellung (Pad, Pocket, Fillet, Lifting, Sweep, Loft, Boolean, Rib, Slot, Stiffener, Split Body, etc.) |
+| Assembly | 15 | Baugruppen-Verwaltung und Constraints (inkl. Contact, Distance, Tangent, Ground, Remove) |
 | Measurement | 10 | Abstand, Trägheit, Bounding Box, Parameter, Winkel, Fläche, Länge, Interferenz |
 | Export & View | 4 | Export (STEP/IGES/STL), Screenshots, View |
-| GSD (Wireframe & Surface) | 24 | Point, Line, Circle, Plane, Cylinder, Fill, Sweep, Join, Sphere, Cone, Torus, Ruled, Blend, Split, Extend, Trim |
-| **Total** | **95** | — |
+| GSD (Wireframe & Surface) | 32 | Point, Line, Circle, Plane, Cylinder, Fill, Sweep, Join, Sphere, Cone, Torus, Ruled, Blend, Split, Extend, Trim, Mirror, Tabulated Cylinder, Point on Curve, Point Intersection, Line Tangent, Line Normal, Plane Parallel, Plane Tangent |
+| **Total** | **111** | — |
 
 #### 2.1.3 Nutzerklassen und Charakteristiken
 
@@ -128,7 +128,7 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 > *Verifizierbarkeit:* Der Server antwortet auf `initialize`-Request mit `serverInfo.name == "catia-v5-mcp"`.
 
-**FR-01.2** Das System SOLL mindestens 95 Tools implementieren und über `tools/list` verfügbar machen.
+**FR-01.2** Das System SOLL mindestens 111 Tools implementieren und über `tools/list` verfügbar machen.
 
 > *Verifizierbarkeit:* `tools/list`-Response enthält ≥55 Einträge mit korrekten `name`, `description`, `inputSchema`.
 
@@ -232,7 +232,7 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 ---
 
-#### FR-05: Sketcher (14 Tools)
+#### FR-05: Sketcher (18 Tools)
 
 **FR-05.1** `catia_create_sketch` SOLL einen 2D-Sketch auf einer Referenzebene (xy, yz, zx) erstellen.
 
@@ -287,12 +287,25 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 > *Parameter:* `cx`, `cy` (optional), `focal_length` (required, > 0), `angle` (optional). *Verifizierbarkeit:* Parabola-Element existiert im Sketch.
 
+**FR-05.15** `catia_sketch_trim` SOLL eine Sketch-Kurve mit einer anderen Kurve als Schneidelement trimmen.
+
+> *Parameter:* `curve_name`, `trim_tool` (required). *Verifizierbarkeit:* Kurve ist am Schneidelement getrimmt.
+
+**FR-05.16** `catia_sketch_mirror` SOLL ein Sketch-Element an einer Achse spiegeln.
+
+> *Parameter:* `element_name`, `mirror_axis` (required). *Verifizierbarkeit:* Gespiegeltes Element existiert im Sketch.
+
+**FR-05.17** `catia_sketch_construction_element` SOLL ein Sketch-Element in ein Konstruktionselement (Hilfslinie) umwandeln.
+
+> *Parameter:* `element_name` (required). *Verifizierbarkeit:* Element ist als Konstruktionselement markiert.
+
+**FR-05.18** `catia_sketch_get_geometry` SOLL alle Geometrie-Elemente im aktiven Sketch auflisten.
 
 > *Parameter:* keine. *Verifizierbarkeit:* Response enthält Indizes, Typen und Eigenschaften aller Elemente.
 
 ---
 
-#### FR-06: Part Design (19 Tools)
+#### FR-06: Part Design (23 Tools)
 
 **FR-06.1** `catia_pad` SOLL einen Pad (Extrusion) aus dem letzten oder benannten Sketch erstellen.
 
@@ -370,9 +383,25 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 > *Parameter:* `operation` (required, enum: union/difference/intersection), `body1`, `body2` (required). *Verifizierbarkeit:* Boolean-Feature existiert.
 
+**FR-06.20** `catia_rib` SOLL ein Rib-Feature aus einem Sketch-Profil in einer Richtung erstellen.
+
+> *Parameter:* `direction` (required), `sketch_name` (optional). *Verifizierbarkeit:* Rib-Feature existiert.
+
+**FR-06.21** `catia_slot` SOLL ein Slot-Feature (Nut) aus einem Sketch-Profil erstellen.
+
+> *Parameter:* `sketch_name` (optional). *Verifizierbarkeit:* Slot-Feature existiert.
+
+**FR-06.22** `catia_stiffener` SOLL ein Stiffener-Feature entlang eines Sketch-Profils auf einer Supportfläche erstellen.
+
+> *Parameter:* `direction` (required), `sketch_name` (optional), `support` (optional). *Verifizierbarkeit:* Stiffener-Feature existiert.
+
+**FR-06.23** `catia_split_body` SOLL einen Body mit einer Ebene, Oberfläche oder einem Part aufteilen.
+
+> *Parameter:* `tool_name` (required), `keep_part` (optional). *Verifizierbarkeit:* Split-Feature existiert.
+
 ---
 
-#### FR-07: Assembly (14 Tools)
+#### FR-07: Assembly (15 Tools)
 
 **FR-07.1** `catia_add_component` SOLL eine existierende .CATPart oder .CATProduct als Komponente hinzufügen.
 
@@ -430,6 +459,10 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 **FR-07.14** `catia_remove_constraint` SOLL einen Constraint entfernen.
 
 > *Parameter:* `constraint_name` (required). *Verifizierbarkeit:* Constraint ist entfernt.
+
+**FR-07.15** `catia_ground_constraint` SOLL eine Komponente in der Assembly grounden (Bewegung verhindern, ohne vollständig zu fixieren).
+
+> *Parameter:* `component_name` (required). *Verifizierbarkeit:* Ground-Constraint existiert.
 
 ---
 
@@ -497,7 +530,7 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 
 ---
 
-#### FR-10: GSD — Wireframe & Surface (24 Tools)
+#### FR-10: GSD — Wireframe & Surface (32 Tools)
 
 **FR-10.1** `catia_create_geometrical_set` SOLL einen neuen Geometrical Set (HybridBody) erstellen.
 
@@ -594,6 +627,38 @@ MCP-Tool-Calls in COM-Aufrufe und formatiert COM-Ergebnisse als MCP-Tool-Respons
 **FR-10.24** `catia_trim_surface` SOLL eine Oberfläche mit einem Schneidelement beschneiden.
 
 > *Parameter:* `surface_name`, `tool_name` (required), `keep_part` (optional). *Verifizierbarkeit:* Trim-Element existiert.
+
+**FR-10.25** `catia_create_point_on_curve` SOLL einen Punkt auf einer Kurve an einem gegebenen Parameter erstellen.
+
+> *Parameter:* `curve_name` (required), `parameter` (required, 0-1), `set_name` (optional). *Verifizierbarkeit:* Point-Element existiert auf der Kurve.
+
+**FR-10.26** `catia_create_point_intersection` SOLL einen Punkt am Schnittpunkt zweier Elemente erstellen.
+
+> *Parameter:* `element1_name`, `element2_name` (required), `set_name` (optional). *Verifizierbarkeit:* Point-Element existiert am Schnittpunkt.
+
+**FR-10.27** `catia_create_line_tangent` SOLL eine Tangente an einer Kurve an einem Punkt erstellen.
+
+> *Parameter:* `curve_name`, `point_name` (required), `set_name` (optional). *Verifizierbarkeit:* Line-Element existiert als Tangente.
+
+**FR-10.28** `catia_create_line_normal_to_surface` SOLL eine Normale auf einer Oberfläche an einem Punkt erstellen.
+
+> *Parameter:* `surface_name`, `point_name` (required), `set_name` (optional). *Verifizierbarkeit:* Line-Element existiert als Normalenvektor.
+
+**FR-10.29** `catia_create_plane_parallel` SOLL eine parallele Ebene durch einen Punkt erstellen.
+
+> *Parameter:* `reference_plane`, `point_name` (required), `set_name` (optional). *Verifizierbarkeit:* Plane-Element existiert parallel zur Referenzebene.
+
+**FR-10.30** `catia_create_plane_tangent_to_surface` SOLL eine Tangentialebene auf einer Oberfläche an einem Punkt erstellen.
+
+> *Parameter:* `surface_name`, `point_name` (required), `set_name` (optional). *Verifizierbarkeit:* Plane-Element existiert als Tangentialebene.
+
+**FR-10.31** `catia_create_mirror` SOLL ein Wireframe-Element an einer Ebene spiegeln.
+
+> *Parameter:* `element_name`, `mirror_plane_name` (required), `set_name` (optional). *Verifizierbarkeit:* Gespiegeltes Element existiert.
+
+**FR-10.32** `catia_create_tabulated_cylinder` SOLL eine Tabulated-Cylinder-Oberfläche durch Extrusion eines Profils erstellen.
+
+> *Parameter:* `profile_name`, `direction`, `length` (required), `set_name` (optional). *Verifizierbarkeit:* Tabulated-Cylinder-Element existiert.
 
 ---
 

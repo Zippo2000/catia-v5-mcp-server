@@ -3,16 +3,16 @@
 | Feld | Wert |
 |------|------|
 | **Dokument-ID** | GAP-001 |
-| **Version** | 1.2 |
+| **Version** | 1.3 |
 | **Status** | Freigegeben |
-| **Letzte Änderung** | 2026-06-03 |
+| **Letzte Änderung** | 2026-06-06 |
 | **Basis** | CATIA V5 Automation API, pycatia 0.9.x (Dual-Backend mit win32com-Fallback), CATIA Workbench-Übersicht |
 
 ---
 
 ## 1. Methodik
 
-Diese Analyse vergleicht den aktuellen Funktionsumfang des **catia-v5-mcp-server** (95 Tools
+Diese Analyse vergleicht den aktuellen Funktionsumfang des **catia-v5-mcp-server** (111 Tools
 über 7 Module) mit dem vollständigen CATIA V5 Automation API-Spektrum.
 
 **Quellen:**
@@ -58,8 +58,8 @@ Geometrical Sets, Selection, Timeline und Search fehlen.
 | 5 | **Hole** (Simple, Counterbored, Countersunk) | 🟢 | — |
 | 6 | **Fillet** | 🟢 | — |
 | 7 | **Chamfer** (Distance/Angle) | 🟢 | — |
-| 8 | **Rib** (Versteifung) | 🟡 | Teilweise — über `catia_pad` mit Sketch machbar, aber kein dediziertes Rib-Tool |
-| 9 | **Slot** (Nut) | 🔴 | Kein dediziertes Slot-Tool |
+| 8 | **Rib** (Versteifung) | 🟢 | `catia_rib` — dediziertes Rib-Tool |
+| 9 | **Slot** (Nut) | 🟢 | `catia_slot` — dediziertes Slot-Tool |
 | 10 | **Multibody Pad/Pocket** | 🔴 | Kein Multibody-Modus — nur Single-Body-Extrusion |
 | 11 | **PowerCopy** (Parametric Feature Template) | 🔴 | Keine PowerCopy-Unterstützung |
 | 12 | **PowerCopy Pattern** | 🔴 | — |
@@ -81,7 +81,7 @@ Geometrical Sets, Selection, Timeline und Search fehlen.
 | 28 | **Mirror** (Feature & Body) | 🟢 | — |
 | 29 | **Boolean Operations** (Union, Intersection, Difference) | 🟢 | — |
 | 30 | **Combine** (Sum/Difference on Bodies) | 🔴 | Keine Body-Combine |
-| 31 | **Split** (Split Body by Plane/Surface) | 🔴 | Keine Split-Operation |
+| 31 | **Split** (Split Body by Plane/Surface) | 🟢 | `catia_split_body` |
 | 32 | **Reference Patterns** | 🔴 | Keine Referenz-Patterns |
 | 33 | **Multi-Direction Pattern** | 🔴 | Keine MD-Patterns |
 | 34 | **Semi-Constraints** | 🔴 | Keine Semi-Constraints-Unterstützung |
@@ -89,8 +89,8 @@ Geometrical Sets, Selection, Timeline und Search fehlen.
 | 36 | **Instant Features** (Quick Pad, etc.) | 🔴 | — |
 | 37 | **Multi-Sketch Pad/Pocket** | 🔴 | Keine Multi-Sketch-Features |
 
-**Fazit:** Die 19 aktuellen Part-Design-Tools decken die **Core-Features** plus Lifting, Sweep, Loft und Boolean ab.
-Fehlend sind fortgeschrittene Features (PowerCopy, Split, Combine, Multi-Body, Instant Design).
+**Fazit:** Die 23 aktuellen Part-Design-Tools decken die **Core-Features** plus Lifting, Sweep, Loft, Boolean, Rib, Slot, Stiffener und Split Body ab.
+Fehlend sind fortgeschrittene Features (PowerCopy, Combine, Multi-Body, Instant Design).
 
 ---
 
@@ -107,10 +107,10 @@ Fehlend sind fortgeschrittene Features (PowerCopy, Split, Combine, Multi-Body, I
 | 7 | **Ellipse** | 🟢 | `catia_sketch_ellipse` |
 | 8 | **Hyperbola** | 🟢 | `catia_sketch_hyperbola` |
 | 9 | **Parabola** | 🟢 | `catia_sketch_parabola` |
-| 10 | **Construction Element** (Hilfslinie) | 🔴 | Keine Konstruktionselemente |
-| 11 | **Trim/Extend** (Kurven trimmen/verlängern) | 🔴 | Keine Trim/Extend |
+| 10 | **Construction Element** (Hilfslinie) | 🟢 | `catia_sketch_construction_element` |
+| 11 | **Trim/Extend** (Kurven trimmen/verlängern) | 🟢 | `catia_sketch_trim` |
 | 12 | **Break/Join** (Kurven aufteilen/verbinden) | 🔴 | Keine Break/Join |
-| 13 | **Mirror** (in Sketch) | 🔴 | Kein Sketch-Mirror |
+| 13 | **Mirror** (in Sketch) | 🟢 | `catia_sketch_mirror` |
 | 14 | **Translate/Rotate** (in Sketch) | 🔴 | Keine Sketch-Transformationen |
 | 15 | Constraints (Dim & Geo) | 🟢 | — |
 | 16 | **Tangent constraint** | 🟢 | — |
@@ -121,8 +121,8 @@ Fehlend sind fortgeschrittene Features (PowerCopy, Split, Combine, Multi-Body, I
 | 21 | **Text** (in Sketch) | 🔴 | Kein Text im Sketch |
 | 22 | **Quick Constraints** | 🔴 | Keine automatischen Constraints |
 
-**Fazit:** Core-Sketching (Line, Rect, Circle, Arc, Spline, Point, Conics, Basic Constraints) ist
-vollständig. Fehlend: Trim/Extend, Konstruktionselemente, erweiterte Constraints.
+**Fazit:** Core-Sketching (Line, Rect, Circle, Arc, Spline, Point, Conics, Basic Constraints, Trim, Mirror, Construction Element) ist
+umfassend abgedeckt. Fehlend: Break/Join, erweiterte Constraints.
 
 ---
 
@@ -130,13 +130,13 @@ vollständig. Fehlend: Trim/Extend, Konstruktionselemente, erweiterte Constraint
 
 | # | API-Bereich | MCP-Status | Lücke |
 |---|-------------|-----------|-------|
-| 1 | **Plane** (Reference, 3-Point, Offset) | 🟢 | Plane 3-Points + Plane Offset implementiert |
+| 1 | **Plane** (Reference, 3-Point, Offset, Parallel, Tangent) | 🟢 | Plane 3-Points + Plane Offset + Plane Parallel + Plane Tangent implementiert |
 | 2 | **Cylinder** | 🟢 | `catia_create_cylinder` |
 | 3 | **Sphere** | 🟢 | `catia_create_sphere` |
 | 4 | **Cone** | 🟢 | `catia_create_cone` |
 | 5 | **Torus** | 🟢 | `catia_create_torus` |
-| 6 | **Line** (2-Point, Tangent, Normal, etc.) | 🟡 | Line 2-Points + Line Pt/Dir implementiert; Tangent/Normal fehlen |
-| 7 | **Point** (Coord, on Curve, Intersection, etc.) | 🟡 | Point Coord implementiert; on Curve/Intersection fehlen |
+| 6 | **Line** (2-Point, Tangent, Normal, etc.) | 🟢 | Line 2-Points + Line Pt/Dir + Line Tangent + Line Normal implementiert |
+| 7 | **Point** (Coord, on Curve, Intersection, etc.) | 🟢 | Point Coord + Point on Curve + Point Intersection implementiert |
 | 8 | **Axis** | 🔴 | Kein Axis-Tool |
 | 9 | **Multi-Section Surface** (Loft) | 🟢 | `catia_create_surface_from_contours` |
 | 10 | **Fill** | 🟢 | `catia_create_fill` |
@@ -144,7 +144,7 @@ vollständig. Fehlend: Trim/Extend, Konstruktionselemente, erweiterte Constraint
 | 12 | **Rotational Surface** | 🟢 | `catia_create_rotational_surface` |
 | 13 | **Offset Surface** | 🟢 | `catia_create_offset_surface` |
 | 14 | **Ruled Surface** | 🟢 | `catia_create_ruled` |
-| 15 | **Tabulated Cylinder** | 🔴 | Kein Tabulated Cylinder |
+| 15 | **Tabulated Cylinder** | 🟢 | `catia_create_tabulated_cylinder` |
 | 16 | **Blend** (Edge-to-Edge Surface) | 🟢 | `catia_create_blend` |
 | 17 | **Small Sphere** / **Small Blend** | 🔴 | — |
 | 18 | **Bridge** | 🔴 | Keine Bridge |
@@ -169,9 +169,9 @@ vollständig. Fehlend: Trim/Extend, Konstruktionselemente, erweiterte Constraint
 | 0 | **Geometrical Set Management** | 🟢 | `catia_create_geometrical_set` + `catia_list_geometrical_sets` |
 | 0 | **Circle** | 🟢 | `catia_create_circle_center_radius` |
 
-**Fazit:** **GSD ist umfassend abgedeckt** (24/36 API-Bereiche = 67% 🟡). Wireframe-Basics
+**Fazit:** **GSD ist umfassend abgedeckt** (32/36 API-Bereiche = 89% 🟢). Wireframe-Basics
 (Point, Line, Circle, Plane, Cylinder) und Surface-Grundlagen (Fill, Sweep, Join, Thicken, Offset,
-Rotational Surface, Multi-Section) plus Advanced (Sphere, Cone, Torus, Ruled, Blend, Split, Extend, Trim) sind implementiert. Fehlend: Tabulated Cylinder, Bridge, Healed Fill, Deform, Project.
+Rotational Surface, Multi-Section) plus Advanced (Sphere, Cone, Torus, Ruled, Blend, Split, Extend, Trim, Tabulated Cylinder, Mirror, Point on Curve, Point Intersection, Line Tangent, Line Normal, Plane Parallel, Plane Tangent) sind implementiert. Fehlend: Bridge, Healed Fill, Deform, Project.
 
 ---
 
@@ -195,7 +195,7 @@ Rotational Surface, Multi-Section) plus Advanced (Sphere, Cone, Torus, Ruled, Bl
 | 14 | List Constraints | 🟢 | — |
 | 15 | **Remove Component** | 🟢 | `catia_remove_component` |
 | 16 | **Remove Constraint** | 🟢 | `catia_remove_constraint` |
-| 17 | **Ground / UNGround** | 🔴 | Kein Grounding (abgesehen von Fix) |
+| 17 | **Ground / UNGround** | 🟢 | `catia_ground_constraint` |
 | 18 | **In-Context Design** | 🔴 | Kein In-Context-Modus |
 | 19 | **Reference Set** | 🔴 | Keine Reference Sets |
 | 20 | **Configuration Management** (Show/Hide, Configurations) | 🔴 | Keine Konfigurations-Verwaltung |
@@ -204,7 +204,7 @@ Rotational Surface, Multi-Section) plus Advanced (Sphere, Cone, Torus, Ruled, Bl
 | 23 | **Exploded View** | 🔴 | Keine Explosionsansicht |
 | 24 | **Update Assembly** | 🔴 | Keine explizite Assembly-Update |
 
-**Fazit:** Core-Assembly-Grundlagen plus Contact-, Distance-, Tangent-Constraints und
+**Fazit:** Core-Assembly-Grundlagen plus Contact-, Distance-, Tangent-, Ground-Constraints und
 Komponente/Constraint-Entfernung sind implementiert. Fehlend: In-Context Design, Reference Sets, Konfigurationen.
 
 ---
@@ -338,24 +338,24 @@ Lizenzen, Preferences, Makros fehlen.
 | Workbench | CATIA API-Bereiche | MCP-Abgedeckt | Abdeckung | Priorität |
 |-----------|-------------------|--------------|-----------|-----------|
 | **Infrastructure** | 10 | 6/10 | 60% 🟡 | Mittel |
-| **Part Design** | 30 | 19/30 | 63% 🟡 | **Hoch** |
-| **Sketcher** | 22 | 14/22 | 64% 🟡 | **Hoch** |
-| **Wireframe & Surface (GSD)** | 36 | 24/36 | 67% 🟡 | **Hoch** |
-| **Assembly** | 24 | 14/24 | 58% 🟡 | **Hoch** |
+| **Part Design** | 30 | 22/30 | 73% 🟡 | **Hoch** |
+| **Sketcher** | 22 | 17/22 | 77% 🟡 | **Hoch** |
+| **Wireframe & Surface (GSD)** | 36 | 32/36 | 89% 🟢 | **Hoch** |
+| **Assembly** | 24 | 15/24 | 62% 🟡 | **Hoch** |
 | **Drafting** | 20 | 0/20 | 0% 🔴 | Mittel |
 | **Presentation** | 10 | 3/10 | 30% 🟡 | Niedrig |
 | **Measurement** | 11 | 10/11 | 91% 🟢 | Mittel |
 | **Knowledgeware** | 8 | 1/8 | 12% 🔴 | Mittel |
 | **PMI** | 6 | 0/6 | 0% 🔴 | Niedrig |
 | **Management** | 10 | 1/10 | 10% 🔴 | Niedrig |
-| **GESAMT** | **187** | **95/187** | **51%** 🟡 | — |
+| **GESAMT** | **187** | **111/187** | **59%** 🟡 | — |
 
 ### 13.2 Kritische Lücken (Priorität: Hoch)
 
 | # | Lücke | Impact | Aufwand | Empfehlung |
 |---|-------|--------|---------|-----------|
-| 1 | **Part Design** — PowerCopy, Split, Combine, Multi-Body fehlen | Hoch — Limitiert komplexe Part-Geometrien | Mittel (6 neue Tools) | Phase 5b — PowerCopy + Split + Combine |
-| 2 | **Sketcher** — Trim/Extend fehlen | Hoch — Limitiert Sketch-Flexibilität | Niedrig (2-3 neue Tools) | Phase 5c — Trim/Extend |
+| 1 | **Part Design** — PowerCopy, Combine, Multi-Body fehlen | Hoch — Limitiert komplexe Part-Geometrien | Mittel (6 neue Tools) | Phase 5b — PowerCopy + Combine |
+| 2 | **Sketcher** — Break/Join fehlen | Mittel — Limitiert Sketch-Flexibilität | Niedrig (1-2 neue Tools) | Phase 5c — Break/Join |
 | 3 | **Parameter/Formula** — Keine Parameter-Erstellung oder Formulas | Mittel-Hoch — Limitiert Parametric Design | Mittel (5 neue Tools) | Phase 6 |
 
 ### 13.3 Mäßige Lücken (Priorität: Mittel)
@@ -363,7 +363,7 @@ Lizenzen, Preferences, Makros fehlen.
 | # | Lücke | Empfehlung |
 |---|-------|-----------|
 | 1 | **Drafting** (2D Zeichnungen) | Phase 7 — Drawing-Grundlagen (View, Dimension, BOM) |
-| 2 | **GSD Advanced** — Tabulated Cylinder, Bridge, Healed Fill, Deform, Project | Phase 8b |
+| 2 | **GSD Advanced** — Bridge, Healed Fill, Deform, Project | Phase 8b |
 | 3 | **Infrastructure** — Properties, Selection, Search | Phase 6b |
 | 4 | **Knowledgeware** — Formula, Rule, Check | Phase 7 |
 
@@ -381,11 +381,11 @@ Lizenzen, Preferences, Makros fehlen.
 
 | Phase | Fokus | Tools (neu) | Aufwand |
 |-------|-------|-------------|---------|
-| **Phase 5b** | PowerCopy, Split, Combine (Part Design) | 6 | ⭐⭐ |
-| **Phase 5c** | Trim/Extend (Sketcher) | 2-3 | ⭐ |
+| **Phase 5b** | PowerCopy, Combine (Part Design) | 6 | ⭐⭐ |
+| **Phase 5c** | Break/Join (Sketcher) | 1-2 | ⭐ |
 | **Phase 6** | Parameter-Erstellung, Formulas | 5 | ⭐⭐ |
 | **Phase 7** | Drafting-Grundlagen, Knowledgeware | 15-20 | ⭐⭐⭐ |
-| **Phase 8** | GSD Advanced (Tabulated Cylinder, Bridge, Deform), PMI, Presentation, Management | 10-15 | ⭐⭐ |
+| **Phase 8** | GSD Advanced (Bridge, Deform), PMI, Presentation, Management | 10-15 | ⭐⭐ |
 
 ---
 
@@ -396,3 +396,4 @@ Lizenzen, Preferences, Makros fehlen.
 | 1.0 | 2026-05-30 | Hermes Agent | Erstfassung — Gap-Analyse gegen CATIA V5 Automation API |
 | 1.1 | 2026-05-30 | Hermes Agent | Phase 6 (GSD) integriert: 16 neue Tools; GSD-Abdeckung 44%; Gesamt 35% (65/187) |
 | 1.2 | 2026-06-03 | Agent | pycatia-Dual-Backend, Tool-Count 91→95; GSD 16→24 (Sphere/Cone/Torus/Ruled/Blend/Split/Extend/Trim); Part Design Boolean; Sketcher Conics; Assembly Contact/Distance/Tangent/Remove; kritische Lücken aktualisiert |
+| 1.3 | 2026-06-06 | Agent | 16 neue Tools: Part Design (rib/slot/stiffener/split_body), GSD (point_on_curve/point_intersection/line_tangent/line_normal/plane_parallel/plane_tangent/mirror/tabulated_cylinder), Sketcher (trim/mirror/construction_element), Assembly (ground_constraint); Gesamt 95→111 Tools |

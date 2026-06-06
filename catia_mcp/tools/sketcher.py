@@ -315,6 +315,77 @@ class SketcherTools:
                     "properties": {},
                 },
             },
+            {
+                "name": "catia_sketch_trim",
+                "description": (
+                    "Trim one sketch element at the intersection with another. "
+                    "Keep either the first or second part of the trimmed element. "
+                    "Requires an active sketch."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "curve1_index": {
+                            "type": "integer",
+                            "description": "Index of the element to trim (from catia_sketch_get_geometry).",
+                        },
+                        "curve2_index": {
+                            "type": "integer",
+                            "description": "Index of the cutting element (from catia_sketch_get_geometry).",
+                        },
+                        "keep_part": {
+                            "type": "integer",
+                            "description": "Which part to keep: 1 (first) or 2 (second). Default 1.",
+                        },
+                    },
+                    "required": ["curve1_index", "curve2_index"],
+                },
+            },
+            {
+                "name": "catia_sketch_mirror",
+                "description": (
+                    "Mirror sketch elements across an axis (line). "
+                    "Specify element indices to mirror and the axis line index. "
+                    "Requires an active sketch."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "element_indices": {
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "description": "List of element indices to mirror (from catia_sketch_get_geometry).",
+                        },
+                        "axis_index": {
+                            "type": "integer",
+                            "description": "Index of the mirror axis line (from catia_sketch_get_geometry).",
+                        },
+                    },
+                    "required": ["element_indices", "axis_index"],
+                },
+            },
+            {
+                "name": "catia_sketch_construction_element",
+                "description": (
+                    "Toggle a sketch element as a construction element (auxiliary geometry). "
+                    "Construction elements are shown dashed and are not used for solid features. "
+                    "Requires an active sketch."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "element_index": {
+                            "type": "integer",
+                            "description": "Index of the element (from catia_sketch_get_geometry).",
+                        },
+                        "is_construction": {
+                            "type": "boolean",
+                            "description": "True to make it construction, False to make it normal.",
+                        },
+                    },
+                    "required": ["element_index", "is_construction"],
+                },
+            },
         ]
 
     def execute(self, tool_name: str, arguments: dict[str, Any]) -> str:
@@ -379,6 +450,12 @@ class SketcherTools:
                 return self._add_constraint(arguments)
             case "catia_sketch_get_geometry":
                 return self._get_geometry()
+            case "catia_sketch_trim":
+                return self._sketch_trim(arguments)
+            case "catia_sketch_mirror":
+                return self._sketch_mirror(arguments)
+            case "catia_sketch_construction_element":
+                return self._sketch_construction_element(arguments)
             case _:
                 raise ValueError(f"Unknown sketcher tool: {tool_name}")
 
@@ -732,3 +809,83 @@ class SketcherTools:
             f"Parabola created at ({cx}, {cy}), "
             f"focal_length={focal_length} mm, rotation={angle}°"
         )
+
+    # ── New Sketcher Methods (Phase 1d) ────────────────────────────────────
+
+    def _sketch_trim(self, args: dict[str, Any]) -> str:
+        """Trim one sketch element at the intersection with another."""
+        self._ensure_sketch_open()
+        sketch = self._active_sketch
+        geom = sketch.GeometricElements
+
+        idx1 = args.get("curve1_index")
+        idx2 = args.get("curve2_index")
+        keep_part = int(args.get("keep_part", 1))
+        if idx1 is None or idx2 is None:
+            raise ValueError("curve1_index and curve2_index are required")
+
+        elem1 = geom.Item(idx1)
+        elem2 = geom.Item(idx2)
+
+        _part = self.conn.get_active_part()
+        if _is_pycatia(_part):
+            ref1 = _part.create_reference_from_object(elem1)
+            ref2 = _part.create_reference_from_object(elem2)
+        else:
+            ref1 = _part.CreateReferenceFromObject(elem1)
+            ref2 = _part.CreateReferenceFromObject(elem2)
+
+        try:
+            sketch.SketchFactory.CreateTrim(ref1, ref2, keep_part)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateTrim", e))
+
+        return f"Trimmed element {idx1} with element {idx2}, keep_part={keep_part}"
+
+    def _sketch_mirror(self, args: dict[str, Any]) -> str:
+        """Mirror sketch elements across an axis (line)."""
+        self._ensure_sketch_open()
+        sketch = self._active_sketch
+        geom = sketch.GeometricElements
+
+        indices = args.get("element_indices", [])
+        axis_idx = args.get("axis_index")
+        if not indices or axis_idx is None:
+            raise ValueError("element_indices and axis_index are required")
+
+        _part = self.conn.get_active_part()
+
+        def _make_ref(elem: Any) -> Any:
+            if _is_pycatia(_part):
+                return _part.create_reference_from_object(elem)
+            return _part.CreateReferenceFromObject(elem)
+
+        refs = [_make_ref(geom.Item(i)) for i in indices]
+        axis_ref = _make_ref(geom.Item(axis_idx))
+
+        try:
+            sketch.SketchFactory.CreateMirror(refs, axis_ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateMirror", e))
+
+        return f"Mirrored {len(indices)} element(s) across axis {axis_idx}"
+
+    def _sketch_construction_element(self, args: dict[str, Any]) -> str:
+        """Toggle a sketch element as construction element."""
+        self._ensure_sketch_open()
+        sketch = self._active_sketch
+        geom = sketch.GeometricElements
+
+        idx = args.get("element_index")
+        is_construction = args.get("is_construction", True)
+        if idx is None:
+            raise ValueError("element_index is required")
+
+        elem = geom.Item(idx)
+        try:
+            elem.ConstructionElement = is_construction
+        except Exception as e:
+            raise RuntimeError(format_catia_error("ConstructionElement", e))
+
+        status = "construction" if is_construction else "normal"
+        return f"Element {idx} set as {status} element"

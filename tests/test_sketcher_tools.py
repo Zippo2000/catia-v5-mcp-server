@@ -556,6 +556,54 @@ class TestDrawLineNoActiveSketch:
             sk_tools._draw_line(0, 0, 1, 1)
 
 
+class TestSketchTrim:
+    def test_sketch_trim_valid(self, sk_tools, conn_mock):
+        mock_sketch = MagicMock()
+        sk_tools._active_sketch = mock_sketch
+        sk_tools._active_factory = MagicMock()
+        result = sk_tools.execute("catia_sketch_trim", {"curve1_index": 1, "curve2_index": 2})
+        assert "Trim" in result or "trim" in result.lower()
+
+    def test_sketch_trim_missing_curve1_raises(self, sk_tools):
+        sk_tools._active_sketch = MagicMock()
+        sk_tools._active_factory = MagicMock()
+        with pytest.raises(ValueError, match="curve1_index"):
+            sk_tools.execute("catia_sketch_trim", {"curve2_index": 2})
+
+
+class TestSketchMirror:
+    def test_sketch_mirror_valid(self, sk_tools, conn_mock):
+        mock_sketch = MagicMock()
+        sk_tools._active_sketch = mock_sketch
+        sk_tools._active_factory = MagicMock()
+        result = sk_tools.execute("catia_sketch_mirror", {"element_indices": [1, 2], "axis_index": 3})
+        assert "Mirror" in result or "mirror" in result.lower()
+
+    def test_sketch_mirror_missing_elements_raises(self, sk_tools):
+        sk_tools._active_sketch = MagicMock()
+        sk_tools._active_factory = MagicMock()
+        with pytest.raises(ValueError, match="element_indices"):
+            sk_tools.execute("catia_sketch_mirror", {"axis_index": 3})
+
+
+class TestSketchConstructionElement:
+    def test_sketch_construction_element_valid(self, sk_tools, conn_mock):
+        mock_sketch = MagicMock()
+        sk_tools._active_sketch = mock_sketch
+        sk_tools._active_factory = MagicMock()
+        result = sk_tools.execute(
+            "catia_sketch_construction_element",
+            {"element_index": 1, "is_construction": True},
+        )
+        assert "construction" in result.lower()
+
+    def test_sketch_construction_element_missing_index_raises(self, sk_tools):
+        sk_tools._active_sketch = MagicMock()
+        sk_tools._active_factory = MagicMock()
+        with pytest.raises(ValueError, match="element_index"):
+            sk_tools.execute("catia_sketch_construction_element", {"is_construction": True})
+
+
 class TestExecuteRouting:
     def test_unknown_tool_raises(self, sk_tools):
         with pytest.raises(ValueError, match="Unknown sketcher tool"):
@@ -563,6 +611,6 @@ class TestExecuteRouting:
 
 
 class TestToolDefinitions:
-    def test_all_14_tools_defined(self, sk_tools):
+    def test_all_17_tools_defined(self, sk_tools):
         defs = sk_tools.get_tool_definitions()
-        assert len(defs) == 14
+        assert len(defs) == 17

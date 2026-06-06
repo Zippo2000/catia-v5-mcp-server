@@ -499,8 +499,150 @@ class PartDesignTools:
                 },
             },
             {
+                "name": "catia_rib",
+                "description": (
+                    "Create a Rib (swept feature along a spine curve). "
+                    "Extrudes a 2D profile along a guiding curve (spine). "
+                    "The sketch profile should be on a plane perpendicular to the spine. "
+                    "Use this for brackets, stiffeners, and structural members."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "spine": {
+                            "type": "string",
+                            "description": (
+                                "Name of the spine/guide curve (e.g., 'Edge.1', 'Line.1'). "
+                                "The rib follows this curve."
+                            ),
+                        },
+                        "section": {
+                            "type": "string",
+                            "description": (
+                                "Name of the cross-section sketch. "
+                                "If not specified, uses the last created sketch."
+                            ),
+                        },
+                        "direction": {
+                            "type": "string",
+                            "description": (
+                                "Optional pulling direction. "
+                                "If not specified, uses 'normal' (perpendicular to spine)."
+                            ),
+                        },
+                        "with_material_at_ends": {
+                            "type": "boolean",
+                            "description": "Include material at the ends of the rib (default: false).",
+                            "default": False,
+                        },
+                    },
+                    "required": ["spine"],
+                },
+            },
+            {
+                "name": "catia_slot",
+                "description": (
+                    "Create a Slot (swept cut along a spine curve). "
+                    "Removes material by extruding a 2D profile along a guiding curve. "
+                    "The sketch profile should be on a plane perpendicular to the spine. "
+                    "Use this for keyways, slots, and structural cutouts."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "spine": {
+                            "type": "string",
+                            "description": (
+                                "Name of the spine/guide curve (e.g., 'Edge.1', 'Line.1'). "
+                                "The slot follows this curve."
+                            ),
+                        },
+                        "section": {
+                            "type": "string",
+                            "description": (
+                                "Name of the cross-section sketch. "
+                                "If not specified, uses the last created sketch."
+                            ),
+                        },
+                        "direction": {
+                            "type": "string",
+                            "description": (
+                                "Optional pulling direction. "
+                                "If not specified, uses 'normal' (perpendicular to spine)."
+                            ),
+                        },
+                        "with_material_at_ends": {
+                            "type": "boolean",
+                            "description": "Include material at the ends of the slot (default: false).",
+                            "default": False,
+                        },
+                    },
+                    "required": ["spine"],
+                },
+            },
+            {
+                "name": "catia_stiffener",
+                "description": (
+                    "Create a Stiffener (rib between two faces). "
+                    "Generates a rib-like feature between two support faces. "
+                    "The sketch profile is drawn on a plane perpendicular to the stiffener surface. "
+                    "Use this for sheet metal stiffeners and internal reinforcement."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "section": {
+                            "type": "string",
+                            "description": (
+                                "Name of the cross-section sketch. "
+                                "If not specified, uses the last created sketch."
+                            ),
+                        },
+                        "support": {
+                            "type": "string",
+                            "description": "Name of the first support face (e.g., 'Face.1').",
+                        },
+                        "support2": {
+                            "type": "string",
+                            "description": "Name of the second support face (e.g., 'Face.2').",
+                        },
+                    },
+                    "required": ["support", "support2"],
+                },
+            },
+            {
+                "name": "catia_split_body",
+                "description": (
+                    "Split a body using a plane or surface. "
+                    "Cuts the active body with a splitting element (plane, surface, or face). "
+                    "Choose which side of the cut to keep. "
+                    "Use this for multi-body part design and sectioning."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "tool": {
+                            "type": "string",
+                            "description": (
+                                "Name of the splitting element (plane, surface, or face). "
+                                "e.g., 'xy', 'yz', 'zx', 'Plane.1', 'Surface.1'."
+                            ),
+                        },
+                        "keep_side": {
+                            "type": "integer",
+                            "description": (
+                                "Which side to keep: 1 (default, positive side) or 2 (negative side). "
+                                "Use 0 to keep both sides (creates two separate bodies)."
+                            ),
+                            "default": 1,
+                        },
+                    },
+                    "required": ["tool"],
+                },
+            },
+            {
                 "name": "catia_list_features",
-                "description": "List all features in the active Part Body with their names and types.",
+                "description": "List all features in the active body with their names and types.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {},
@@ -552,6 +694,14 @@ class PartDesignTools:
                 return self._loft(arguments)
             case "catia_boolean":
                 return self._boolean(arguments)
+            case "catia_rib":
+                return self._rib(arguments)
+            case "catia_slot":
+                return self._slot(arguments)
+            case "catia_stiffener":
+                return self._stiffener(arguments)
+            case "catia_split_body":
+                return self._split_body(arguments)
             case "catia_list_features":
                 return self._list_features()
             case "catia_list_edges":
@@ -1490,6 +1640,239 @@ class PartDesignTools:
             "intersection": "Intersection",
         }[operation]
         return f"Boolean {op_label}: '{body1_name}' ◦ '{body2_name}'. Feature: '{boolean.Name}'"
+
+    def _rib(self, args: dict[str, Any]) -> str:
+        """Create a Rib (swept feature along a spine curve).
+
+        CATIA API: ShapeFactory.AddNewRib(i_spine, i_section, i_direction)
+        """
+        self.conn.ensure_connected()
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
+
+        spine_name = args.get("spine")
+        if not spine_name:
+            raise RuntimeError("Rib requires 'spine' (spine curve name).")
+
+        sketch_name = validate_sketch_name(args.get("section"))
+        sketch = self._get_last_sketch(sketch_name, part)
+
+        try:
+            spine = self._resolve_geometry(spine_name)
+            spine_ref = part.CreateReferenceFromObject(spine)
+        except Exception as e:
+            raise RuntimeError(
+                f"Could not resolve spine '{spine_name}': {e}\n"
+                "Use catia_list_edges or catia_list_features to find valid curve names."
+            ) from None
+
+        sketch_ref = part.CreateReferenceFromObject(sketch)
+
+        # Default direction: None means perpendicular to spine
+        direction_ref = None
+        if args.get("direction"):
+            try:
+                direction = self._resolve_geometry(args["direction"])
+                direction_ref = part.CreateReferenceFromObject(direction)
+            except Exception as e:
+                raise RuntimeError(f"Could not resolve direction '{args['direction']}': {e}") from None
+
+        try:
+            rib = sf.AddNewRib(spine_ref, sketch_ref, direction_ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewRib", e))
+
+        if args.get("with_material_at_ends", False):
+            rib.WithMaterialAtEnds = True
+
+        try:
+            if has_pycatia:
+                part.update_object(rib)
+            else:
+                part.UpdateObject(rib)
+        except Exception as e:
+            raise RuntimeError(f"Failed to update rib feature: {e}")
+
+        self.conn.refresh_display()
+        return f"Rib created along '{spine_name}'. Feature: '{rib.Name}'"
+
+    def _slot(self, args: dict[str, Any]) -> str:
+        """Create a Slot (swept cut along a spine curve).
+
+        CATIA API: ShapeFactory.AddNewSlot(i_spine, i_section)
+        """
+        self.conn.ensure_connected()
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
+
+        spine_name = args.get("spine")
+        if not spine_name:
+            raise RuntimeError("Slot requires 'spine' (spine curve name).")
+
+        sketch_name = validate_sketch_name(args.get("section"))
+        sketch = self._get_last_sketch(sketch_name, part)
+
+        try:
+            spine = self._resolve_geometry(spine_name)
+            spine_ref = part.CreateReferenceFromObject(spine)
+        except Exception as e:
+            raise RuntimeError(
+                f"Could not resolve spine '{spine_name}': {e}\n"
+                "Use catia_list_edges or catia_list_features to find valid curve names."
+            ) from None
+
+        sketch_ref = part.CreateReferenceFromObject(sketch)
+
+        try:
+            slot = sf.AddNewSlot(spine_ref, sketch_ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewSlot", e))
+
+        if args.get("with_material_at_ends", False):
+            slot.WithMaterialAtEnds = True
+
+        try:
+            if has_pycatia:
+                part.update_object(slot)
+            else:
+                part.UpdateObject(slot)
+        except Exception as e:
+            raise RuntimeError(f"Failed to update slot feature: {e}")
+
+        self.conn.refresh_display()
+        return f"Slot created along '{spine_name}'. Feature: '{slot.Name}'"
+
+    def _stiffener(self, args: dict[str, Any]) -> str:
+        """Create a Stiffener (rib between two faces).
+
+        CATIA API: ShapeFactory.AddNewStiffener(i_section, i_support, i_support2)
+        """
+        self.conn.ensure_connected()
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
+
+        sketch_name = validate_sketch_name(args.get("section"))
+        sketch = self._get_last_sketch(sketch_name, part)
+
+        support_name = args.get("support")
+        support2_name = args.get("support2")
+        if not support_name:
+            raise RuntimeError("Stiffener requires 'support' (first support face).")
+        if not support2_name:
+            raise RuntimeError("Stiffener requires 'support2' (second support face).")
+
+        try:
+            support = self._resolve_geometry(support_name)
+            support_ref = part.CreateReferenceFromObject(support)
+        except Exception as e:
+            raise RuntimeError(f"Could not resolve support '{support_name}': {e}") from None
+
+        try:
+            support2 = self._resolve_geometry(support2_name)
+            support2_ref = part.CreateReferenceFromObject(support2)
+        except Exception as e:
+            raise RuntimeError(f"Could not resolve support2 '{support2_name}': {e}") from None
+
+        sketch_ref = part.CreateReferenceFromObject(sketch)
+
+        try:
+            stiffener = sf.AddNewStiffener(sketch_ref, support_ref, support2_ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewStiffener", e))
+
+        try:
+            if has_pycatia:
+                part.update_object(stiffener)
+            else:
+                part.UpdateObject(stiffener)
+        except Exception as e:
+            raise RuntimeError(f"Failed to update stiffener feature: {e}")
+
+        self.conn.refresh_display()
+        return f"Stiffener created between '{support_name}' and '{support2_name}'. Feature: '{stiffener.Name}'"
+
+    def _split_body(self, args: dict[str, Any]) -> str:
+        """Split a body using a plane or surface.
+
+        CATIA API: ShapeFactory.AddNewSplit(i_shape, i_tool, i_mode, i_keepPart)
+        i_mode: catSplitModeCut = 0
+        i_keepPart: catSplitKeepPart1 = 1, catSplitKeepPart2 = 2, catSplitKeepBoth = 0
+        """
+        self.conn.ensure_connected()
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
+
+        tool_name = args.get("tool")
+        if not tool_name:
+            raise RuntimeError("Split requires 'tool' (splitting element name).")
+
+        keep_side = args.get("keep_side", 1)
+        if keep_side not in (0, 1, 2):
+            raise RuntimeError("keep_side must be 0 (both), 1 (positive), or 2 (negative).")
+
+        try:
+            tool = self._resolve_geometry(tool_name)
+            tool_ref = part.CreateReferenceFromObject(tool)
+        except Exception as e:
+            raise RuntimeError(
+                f"Could not resolve splitting element '{tool_name}': {e}\n"
+                "Use catia_list_features to find valid element names."
+            ) from None
+
+        body_ref = part.CreateReferenceFromObject(body)
+
+        try:
+            split = sf.AddNewSplit(body_ref, tool_ref, 0, keep_side)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewSplit", e))
+
+        try:
+            if has_pycatia:
+                part.update_object(split)
+            else:
+                part.UpdateObject(split)
+        except Exception as e:
+            raise RuntimeError(f"Failed to update split feature: {e}")
+
+        self.conn.refresh_display()
+        side_label = {0: "both sides", 1: "positive side", 2: "negative side"}[keep_side]
+        return f"Body split by '{tool_name}', keeping {side_label}. Feature: '{split.Name}'"
 
     def _list_features(self) -> str:
         self.conn.ensure_connected()

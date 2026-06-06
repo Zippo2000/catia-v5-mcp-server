@@ -778,6 +778,93 @@ class TestThicknessValidation:
             pd_tools._thickness({"offset": -5})
 
 
+class TestRib:
+    def test_rib_valid(self, pd_tools, conn_mock):
+        part = conn_mock.get_active_part()
+        body = conn_mock.get_active_part_body()
+        mock_sketch = MagicMock()
+        mock_sketch.Name = "Sketch.1"
+        body.Sketches.Item.return_value = mock_sketch
+        body.Sketches.Count = 1
+        conn_mock.hso.Count = 1
+        conn_mock.hso.Item.return_value.Value = MagicMock()
+        rib_mock = MagicMock()
+        rib_mock.Name = "Rib.1"
+        part.shape_factory.AddNewRib.return_value = rib_mock
+        result = pd_tools.execute("catia_rib", {"spine": "Edge.1"})
+        assert "Rib" in result
+        part.update_object.assert_called_once()
+
+    def test_rib_missing_spine_raises(self, pd_tools):
+        with pytest.raises(RuntimeError, match="spine"):
+            pd_tools.execute("catia_rib", {"section": "Sketch.1"})
+
+
+class TestSlot:
+    def test_slot_valid(self, pd_tools, conn_mock):
+        part = conn_mock.get_active_part()
+        body = conn_mock.get_active_part_body()
+        mock_sketch = MagicMock()
+        mock_sketch.Name = "Sketch.1"
+        body.Sketches.Item.return_value = mock_sketch
+        body.Sketches.Count = 1
+        conn_mock.hso.Count = 1
+        conn_mock.hso.Item.return_value.Value = MagicMock()
+        slot_mock = MagicMock()
+        slot_mock.Name = "Slot.1"
+        part.shape_factory.AddNewSlot.return_value = slot_mock
+        result = pd_tools.execute("catia_slot", {"spine": "Edge.1"})
+        assert "Slot" in result
+        part.update_object.assert_called_once()
+
+    def test_slot_missing_spine_raises(self, pd_tools):
+        with pytest.raises(RuntimeError, match="spine"):
+            pd_tools.execute("catia_slot", {"section": "Sketch.1"})
+
+
+class TestStiffener:
+    def test_stiffener_valid(self, pd_tools, conn_mock):
+        part = conn_mock.get_active_part()
+        body = conn_mock.get_active_part_body()
+        mock_sketch = MagicMock()
+        mock_sketch.Name = "Sketch.1"
+        body.Sketches.Item.return_value = mock_sketch
+        body.Sketches.Count = 1
+        conn_mock.hso.Count = 1
+        conn_mock.hso.Item.return_value.Value = MagicMock()
+        stiffener_mock = MagicMock()
+        stiffener_mock.Name = "Stiffener.1"
+        part.shape_factory.AddNewStiffener.return_value = stiffener_mock
+        result = pd_tools.execute(
+            "catia_stiffener",
+            {"support": "Face.1", "support2": "Face.2"},
+        )
+        assert "Stiffener" in result
+        part.update_object.assert_called_once()
+
+    def test_stiffener_missing_support_raises(self, pd_tools):
+        with pytest.raises(RuntimeError, match="support"):
+            pd_tools.execute("catia_stiffener", {"support2": "Face.2", "section": "Sketch.1"})
+
+
+class TestSplitBody:
+    def test_split_body_valid(self, pd_tools, conn_mock):
+        part = conn_mock.get_active_part()
+        body = conn_mock.get_active_part_body()
+        conn_mock.hso.Count = 1
+        conn_mock.hso.Item.return_value.Value = MagicMock()
+        split_mock = MagicMock()
+        split_mock.Name = "Split.1"
+        part.shape_factory.AddNewSplit.return_value = split_mock
+        result = pd_tools.execute("catia_split_body", {"tool": "xy", "keep_side": 1})
+        assert "Split" in result or "split" in result.lower()
+        part.update_object.assert_called_once()
+
+    def test_split_body_invalid_keep_side_raises(self, pd_tools):
+        with pytest.raises(RuntimeError, match="keep_side"):
+            pd_tools.execute("catia_split_body", {"tool": "xy", "keep_side": 3})
+
+
 class TestExecuteRouting:
     def test_unknown_tool_raises(self, pd_tools):
         with pytest.raises(ValueError, match="Unknown part design tool"):
@@ -785,9 +872,9 @@ class TestExecuteRouting:
 
 
 class TestToolDefinitions:
-    def test_all_19_tools_defined(self, pd_tools):
+    def test_all_23_tools_defined(self, pd_tools):
         defs = pd_tools.get_tool_definitions()
-        assert len(defs) == 19
+        assert len(defs) == 23
 
     def test_pad_has_required_height(self, pd_tools):
         defs = pd_tools.get_tool_definitions()

@@ -6,15 +6,15 @@ The first open-source MCP server for CATIA V5. Drive CATIA V5 CAD modeling from 
 
 ## What it does
 
-This MCP server exposes **96 tools** across 7 modules that let an LLM-driven client:
+This MCP server exposes **111 tools** across 7 modules that let an LLM-driven client:
 
 | Category | Tools | Examples |
 |----------|-------|----------|
 | 📄 **Document Management** | 10 | Create/open/save/close parts and assemblies, list documents |
-| ✏️ **2D Sketching** | 15 | Lines, rectangles, circles, arcs, splines, points, constraints, ellipse, hyperbola, parabola |
-| 🔧 **Part Design** | 19 | Pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, shell, draft, lifting, sweep, loft, boolean |
-| 🎨 **GSD (Wireframe & Surface)** | 24 | Point, line, circle, plane, cylinder, fill, sweep, join, thicken, offset, sphere, cone, torus, ruled, blend, split, extend, trim |
-| 📦 **Assembly** | 14 | Add components, constraints (fix/coincidence/offset/angle/contact/distance/tangent), move, remove |
+| ✏️ **2D Sketching** | 18 | Lines, rectangles, circles, arcs, splines, points, constraints, ellipse, hyperbola, parabola, trim, mirror, construction element |
+| 🔧 **Part Design** | 23 | Pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, shell, draft, lifting, sweep, loft, boolean, rib, slot, stiffener, split body |
+| 🎨 **GSD (Wireframe & Surface)** | 32 | Point, line, circle, plane, cylinder, fill, sweep, join, thicken, offset, sphere, cone, torus, ruled, blend, split, extend, trim, point on curve, point intersection, line tangent, line normal, plane parallel, plane tangent, mirror, tabulated cylinder |
+| 📦 **Assembly** | 15 | Add components, constraints (fix/coincidence/offset/angle/contact/distance/tangent/ground), move, remove |
 | 📏 **Measurement** | 10 | Distance, inertia, bounding box, parameters, update, angle, area, length, interference |
 | 📤 **Export & View** | 4 | STEP/IGES/STL export, screenshots, view orientations |
 
@@ -259,11 +259,11 @@ catia-v5-mcp-server/
 │   └── tools/
 │       ├── __init__.py
 │       ├── document.py        # Document management (10 tools)
-│       ├── sketcher.py        # 2D sketching (15 tools)
-│       ├── part_design.py     # 3D part design (19 tools)
-│       ├── assembly.py        # Assembly/product (14 tools)
+│       ├── sketcher.py        # 2D sketching (18 tools)
+│       ├── part_design.py     # 3D part design (23 tools)
+│       ├── assembly.py        # Assembly/product (15 tools)
 │       ├── measurement.py     # Measurement & analysis (10 tools)
-│       ├── gsd.py             # Wireframe & surface (24 tools)
+│       ├── gsd.py             # Wireframe & surface (32 tools)
 │       └── export.py          # Export & view control (4 tools)
 ├── tests/                     # pytest test suite (256 tests)
 │   ├── conftest.py            # Shared COM mocking infrastructure
@@ -334,7 +334,7 @@ All dimensions are in **millimeters**, angles in **degrees**.
 
 ---
 
-### ✏️ Sketcher Tools (15)
+### ✏️ Sketcher Tools (18)
 
 | Tool | Parameters | Required | Description |
 |------|------------|----------|-------------|
@@ -352,10 +352,13 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_sketch_point` | `x`, `y` | `x`, `y` | Create a point in the active sketch. |
 | `catia_sketch_constraint` | `type`, `value`, `geometry_index_1`, `geometry_index_2` | `type` | Add a dimensional/geometric constraint. Types: `distance`, `radius`, `angle`, `coincidence`, `tangent`, `perpendicular`, `parallel`, `horizontal`, `vertical`, `fix`. |
 | `catia_sketch_get_geometry` | — | — | List all geometry elements in the active sketch with their indices and types. |
+| `catia_sketch_trim` | `curve_name`, `trim_tool` | `curve_name`, `trim_tool` | Trim a sketch curve using another curve as the cutting tool. |
+| `catia_sketch_mirror` | `element_name`, `mirror_axis` | `element_name`, `mirror_axis` | Mirror a sketch element across a specified axis. |
+| `catia_sketch_construction_element` | `element_name` | `element_name` | Convert a sketch element to a construction (helper) element. |
 
 ---
 
-### 🔧 Part Design Tools (19)
+### 🔧 Part Design Tools (23)
 
 | Tool | Parameters | Required | Description |
 |------|------------|----------|-------------|
@@ -376,18 +379,23 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_sweep` | `spine`, `section`, `profile`, `direction` | `spine`, `section` | Variable Section Sweep (VSS) — sweep a profile along a spine curve. Optional end profile and direction curve. |
 | `catia_loft` | `sketch_names` (list) | `sketch_names` | Create a smooth solid between 2+ sketches. `sketch_names` is an ordered list like `['Sketch.1', 'Sketch.2']`. |
 | `catia_boolean` | `operation`, `body1`, `body2` | all | Boolean operation between two bodies. `operation`: `union` (merge), `difference` (cut), `intersection` (common volume). |
+| `catia_rib` | `direction`, `sketch_name` | `direction` | Create a rib feature from a sketch profile along a specified direction. |
+| `catia_slot` | `sketch_name` | — | Create a slot (nut) feature from a sketch profile. |
+| `catia_stiffener` | `direction`, `sketch_name`, `support` | `direction` | Create a stiffener feature along a sketch profile on a support face. |
+| `catia_split_body` | `tool_name`, `keep_part` | `tool_name` | Split a body using a plane, surface, or part as the cutting tool. |
 | `catia_list_features` | — | — | List all features in the active Part Body with names and types. |
 | `catia_list_edges` | — | — | List all edges of the active solid body for use with fillet/chamfer. |
 
 ---
 
-### 📦 Assembly Tools (14)
+### 📦 Assembly Tools (15)
 
 | Tool | Parameters | Required | Description |
 |------|------------|----------|-------------|
 | `catia_add_component` | `file_path` | `file_path` | Add an existing `.CATPart` or `.CATProduct` as a component in the active assembly. |
 | `catia_add_new_part` | `name` | — | Create a new empty Part directly inside the active assembly. |
 | `catia_fix_constraint` | `component_name` | `component_name` | Fix a component in place (remove all degrees of freedom). |
+| `catia_ground_constraint` | `component_name` | `component_name` | Ground a component in the assembly (prevents movement without fully fixing). |
 | `catia_coincidence_constraint` | `component1`, `component2`, `element1`, `element2` | `component1`, `component2` | Align axes, planes, or points of two components. |
 | `catia_offset_constraint` | `component1`, `component2`, `offset` | `component1`, `component2`, `offset` | Maintain a constant distance between two faces/planes. |
 | `catia_angle_constraint` | `component1`, `component2`, `angle` | `component1`, `component2`, `angle` | Set an angle between two axes or planes. |
@@ -428,16 +436,22 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_set_view` | `view` | `view` | Set view orientation: `front`, `back`, `top`, `bottom`, `left`, `right`, `isometric`. |
 | `catia_fit_all` | — | — | Fit all geometry in the current 3D view (zoom to fit). |
 
-### 🎨 GSD (Wireframe & Surface) Tools (24)
+### 🎨 GSD (Wireframe & Surface) Tools (32)
 
 | Tool | Parameters | Required | Description |
 |------|------------|----------|-------------|
 | `catia_create_geometrical_set` | `name` | `name` | Create a new Geometrical Set (HybridBody) for wireframe/surface geometry. |
 | `catia_create_point_coord` | `x`, `y`, `z`, `set_name` | `x`, `y`, `z` | Create a point by 3D coordinates (mm). |
+| `catia_create_point_on_curve` | `curve_name`, `parameter`, `set_name` | `curve_name`, `parameter` | Create a point on a curve at a given parameter (0-1). |
+| `catia_create_point_intersection` | `element1_name`, `element2_name`, `set_name` | `element1_name`, `element2_name` | Create a point at the intersection of two elements (curves, surfaces, curve+surface). |
 | `catia_create_line_2points` | `point1_name`, `point2_name`, `set_name` | `point1_name`, `point2_name` | Create a line defined by two named points. |
 | `catia_create_line_point_direction` | `point_name`, `direction`, `set_name` | `point_name`, `direction` | Create a line through a point along an axis or plane normal (x/y/z/xy/yz/zx). |
+| `catia_create_line_tangent` | `curve_name`, `point_name`, `set_name` | `curve_name`, `point_name` | Create a line tangent to a curve at a given point. |
+| `catia_create_line_normal_to_surface` | `surface_name`, `point_name`, `set_name` | `surface_name`, `point_name` | Create a line normal to a surface at a given point. |
 | `catia_create_circle_center_radius` | `center_name`, `radius`, `support_plane`, `set_name` | `center_name`, `radius` | Create a circle by center point and radius on a support plane. |
 | `catia_create_plane_offset` | `reference_plane`, `offset`, `set_name` | `reference_plane`, `offset` | Create a plane parallel to a reference plane with an offset distance. |
+| `catia_create_plane_parallel` | `reference_plane`, `point_name`, `set_name` | `reference_plane`, `point_name` | Create a plane parallel to a reference plane passing through a point. |
+| `catia_create_plane_tangent_to_surface` | `surface_name`, `point_name`, `set_name` | `surface_name`, `point_name` | Create a plane tangent to a surface at a given point. |
 | `catia_create_cylinder` | `center_name`, `axis`, `radius`, `height`, `set_name` | `center_name`, `axis`, `radius`, `height` | Create a cylinder defined by center, axis, radius, and height. |
 | `catia_list_geometrical_sets` | — | — | List all Geometrical Sets in the active Part with shape counts. |
 | `catia_create_plane_3points` | `point1_name`, `point2_name`, `point3_name`, `set_name` | `point1_name`, `point2_name`, `point3_name` | Create a plane defined by three named points. |
@@ -456,6 +470,8 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_split_surface` | `surface_name`, `tool_name`, `set_name` | `surface_name`, `tool_name` | Split a surface using a cutting element (plane, curve, or surface). |
 | `catia_extend_surface` | `surface_name`, `distance`, `set_name` | `surface_name` | Extend a surface beyond its current boundary. Default distance: 10 mm. |
 | `catia_trim_surface` | `surface_name`, `tool_name`, `keep_part`, `set_name` | `surface_name`, `tool_name` | Trim a surface using a cutting element, keeping part 1 or 2. |
+| `catia_create_mirror` | `element_name`, `mirror_plane_name`, `set_name` | `element_name`, `mirror_plane_name` | Mirror a wireframe element across a plane. |
+| `catia_create_tabulated_cylinder` | `profile_name`, `direction`, `length`, `set_name` | `profile_name`, `direction`, `length` | Create a tabulated cylinder surface by extruding a profile along a direction. |
 
 ---
 

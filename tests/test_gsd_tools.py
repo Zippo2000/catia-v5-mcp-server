@@ -79,7 +79,7 @@ class TestToolDefinitions:
 
     def test_16_tools(self, gsd_tools):
         defs = gsd_tools.get_tool_definitions()
-        assert len(defs) == 24
+        assert len(defs) == 32
 
     def test_all_tool_names_present(self, gsd_tools):
         names = {d["name"] for d in gsd_tools.get_tool_definitions()}
@@ -112,6 +112,15 @@ class TestToolDefinitions:
             "catia_split_surface",
             "catia_extend_surface",
             "catia_trim_surface",
+            # New GSD Tools (Phase 1b/1c)
+            "catia_create_point_on_curve",
+            "catia_create_point_intersection",
+            "catia_create_line_tangent",
+            "catia_create_line_normal_to_surface",
+            "catia_create_plane_parallel",
+            "catia_create_plane_tangent_to_surface",
+            "catia_create_mirror",
+            "catia_create_tabulated_cylinder",
         }
         assert names == expected
 
@@ -705,3 +714,118 @@ class TestConnection:
         tools = GSDTools(mock)
         with pytest.raises(RuntimeError, match="CATIA not connected"):
             tools.execute("catia_create_point_coord", {"x": 0, "y": 0, "z": 0})
+
+
+# ── New GSD Tools (Phase 1b/1c) ────────────────────────────────────────────
+
+
+class TestCreatePointOnCurve:
+    def test_point_on_curve_valid(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute(
+            "catia_create_point_on_curve",
+            {"curve_name": "Line.1", "parameter": 0.5},
+        )
+        assert isinstance(result, str)
+        assert "Point" in result or "point" in result.lower()
+
+    def test_point_on_curve_missing_curve_raises(self, gsd_tools):
+        with pytest.raises(ValueError, match="curve_name"):
+            gsd_tools.execute("catia_create_point_on_curve", {"parameter": 0.5})
+
+
+class TestCreatePointIntersection:
+    def test_point_intersection_valid(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute(
+            "catia_create_point_intersection",
+            {"element1": "Line.1", "element2": "Line.2"},
+        )
+        assert isinstance(result, str)
+        assert "Point" in result or "intersection" in result.lower()
+
+    def test_point_intersection_missing_element1_raises(self, gsd_tools):
+        with pytest.raises(ValueError, match="element1"):
+            gsd_tools.execute("catia_create_point_intersection", {"element2": "Line.2"})
+
+
+class TestCreateLineTangent:
+    def test_line_tangent_valid(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute(
+            "catia_create_line_tangent",
+            {"curve_name": "Line.1", "point_name": "Point.1"},
+        )
+        assert isinstance(result, str)
+        assert "Line" in result or "tangent" in result.lower()
+
+    def test_line_tangent_missing_curve_raises(self, gsd_tools):
+        with pytest.raises(ValueError, match="curve_name"):
+            gsd_tools.execute("catia_create_line_tangent", {"point_name": "Point.1"})
+
+
+class TestCreateLineNormalToSurface:
+    def test_line_normal_to_surface_valid(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute(
+            "catia_create_line_normal_to_surface",
+            {"surface_name": "Plane.1", "point_name": "Point.1"},
+        )
+        assert isinstance(result, str)
+        assert "Line" in result or "normal" in result.lower()
+
+    def test_line_normal_to_surface_missing_surface_raises(self, gsd_tools):
+        with pytest.raises(ValueError, match="surface_name"):
+            gsd_tools.execute("catia_create_line_normal_to_surface", {"point_name": "Point.1"})
+
+
+class TestCreatePlaneParallel:
+    def test_plane_parallel_valid(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute(
+            "catia_create_plane_parallel",
+            {"reference_plane": "xy", "point_name": "Point.1"},
+        )
+        assert isinstance(result, str)
+        assert "Plane" in result or "parallel" in result.lower()
+
+    def test_plane_parallel_missing_reference_raises(self, gsd_tools):
+        with pytest.raises(ValueError, match="reference_plane"):
+            gsd_tools.execute("catia_create_plane_parallel", {"point_name": "Point.1"})
+
+
+class TestCreatePlaneTangentToSurface:
+    def test_plane_tangent_to_surface_valid(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute(
+            "catia_create_plane_tangent_to_surface",
+            {"surface_name": "Plane.1", "point_name": "Point.1"},
+        )
+        assert isinstance(result, str)
+        assert "Plane" in result or "tangent" in result.lower()
+
+    def test_plane_tangent_to_surface_missing_surface_raises(self, gsd_tools):
+        with pytest.raises(ValueError, match="surface_name"):
+            gsd_tools.execute("catia_create_plane_tangent_to_surface", {"point_name": "Point.1"})
+
+
+class TestCreateMirror:
+    def test_create_mirror_valid(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute(
+            "catia_create_mirror",
+            {"element_name": "Surface.1", "mirror_plane": "xy"},
+        )
+        assert isinstance(result, str)
+        assert "Mirror" in result or "mirror" in result.lower()
+
+    def test_create_mirror_missing_element_raises(self, gsd_tools):
+        with pytest.raises(ValueError, match="element_name"):
+            gsd_tools.execute("catia_create_mirror", {"mirror_plane": "xy"})
+
+
+class TestCreateTabulatedCylinder:
+    def test_tabulated_cylinder_valid(self, gsd_tools, conn_mock):
+        result = gsd_tools.execute(
+            "catia_create_tabulated_cylinder",
+            {"curve_name": "Line.1", "height1": 10, "height2": 10},
+        )
+        assert isinstance(result, str)
+        assert "Tabulated" in result or "cylinder" in result.lower()
+
+    def test_tabulated_cylinder_missing_curve_raises(self, gsd_tools):
+        with pytest.raises(ValueError, match="curve_name"):
+            gsd_tools.execute("catia_create_tabulated_cylinder", {"height1": 10, "height2": 10})

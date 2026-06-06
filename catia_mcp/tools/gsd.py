@@ -662,6 +662,214 @@ class GSDTools:
                     "required": ["surface_name", "tool_name"],
                 },
             },
+            # ── New GSD Tools (Phase 1b/1c) ─────────────────────────────
+            {
+                "name": "catia_create_point_on_curve",
+                "description": (
+                    "Create a point on a curve at a given parameter (0-1). "
+                    "Parameter 0 = start of curve, 1 = end of curve. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "curve_name": {
+                            "type": "string",
+                            "description": "Name of the curve (line, circle, spline, etc.).",
+                        },
+                        "parameter": {
+                            "type": "number",
+                            "description": "Parameter along the curve (0.0 = start, 1.0 = end).",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["curve_name", "parameter"],
+                },
+            },
+            {
+                "name": "catia_create_point_intersection",
+                "description": (
+                    "Create a point at the intersection of two elements "
+                    "(curves, surfaces, or curve+surface). "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "element1": {
+                            "type": "string",
+                            "description": "Name of the first element (curve or surface).",
+                        },
+                        "element2": {
+                            "type": "string",
+                            "description": "Name of the second element (curve or surface).",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["element1", "element2"],
+                },
+            },
+            {
+                "name": "catia_create_line_tangent",
+                "description": (
+                    "Create a line tangent to a curve at a given point. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "curve_name": {
+                            "type": "string",
+                            "description": "Name of the curve to create tangent from.",
+                        },
+                        "point_name": {
+                            "type": "string",
+                            "description": "Name of the point on the curve where the tangent is created.",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["curve_name", "point_name"],
+                },
+            },
+            {
+                "name": "catia_create_line_normal_to_surface",
+                "description": (
+                    "Create a line normal to a surface at a given point. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "surface_name": {
+                            "type": "string",
+                            "description": "Name of the surface.",
+                        },
+                        "point_name": {
+                            "type": "string",
+                            "description": "Name of the point on the surface.",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["surface_name", "point_name"],
+                },
+            },
+            {
+                "name": "catia_create_plane_parallel",
+                "description": (
+                    "Create a plane parallel to a reference plane through a point. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "reference_plane": {
+                            "type": "string",
+                            "description": "Name of the reference plane (e.g., 'xy', 'yz', 'zx', 'Plane.1').",
+                        },
+                        "point_name": {
+                            "type": "string",
+                            "description": "Name of the point through which the parallel plane passes.",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["reference_plane", "point_name"],
+                },
+            },
+            {
+                "name": "catia_create_plane_tangent_to_surface",
+                "description": (
+                    "Create a plane tangent to a surface at a given point. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "surface_name": {
+                            "type": "string",
+                            "description": "Name of the surface.",
+                        },
+                        "point_name": {
+                            "type": "string",
+                            "description": "Name of the point on the surface where the tangent plane is created.",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["surface_name", "point_name"],
+                },
+            },
+            {
+                "name": "catia_create_mirror",
+                "description": (
+                    "Create a mirror (symmetry) of a shape or element with respect to a plane. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "element_name": {
+                            "type": "string",
+                            "description": "Name of the element to mirror (surface, curve, point, etc.).",
+                        },
+                        "mirror_plane": {
+                            "type": "string",
+                            "description": "Name of the mirror plane (e.g., 'xy', 'yz', 'zx', 'Plane.1').",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["element_name", "mirror_plane"],
+                },
+            },
+            {
+                "name": "catia_create_tabulated_cylinder",
+                "description": (
+                    "Create a tabulated cylinder surface by extruding a curve along its normal. "
+                    "Specify heights in both directions from the curve. "
+                    "Optionally specify a target Geometrical Set."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "curve_name": {
+                            "type": "string",
+                            "description": "Name of the curve to extrude.",
+                        },
+                        "height1": {
+                            "type": "number",
+                            "description": "Height in the first direction (mm). Can be negative.",
+                        },
+                        "height2": {
+                            "type": "number",
+                            "description": "Height in the second direction (mm). Can be negative.",
+                        },
+                        "set_name": {
+                            "type": "string",
+                            "description": "Target Geometrical Set name. Defaults to first set.",
+                        },
+                    },
+                    "required": ["curve_name", "height1", "height2"],
+                },
+            },
         ]
 
     def execute(self, tool_name: str, arguments: dict[str, Any]) -> str:
@@ -714,6 +922,22 @@ class GSDTools:
                 return self._extend_surface(arguments)
             case "catia_trim_surface":
                 return self._trim_surface(arguments)
+            case "catia_create_point_on_curve":
+                return self._create_point_on_curve(arguments)
+            case "catia_create_point_intersection":
+                return self._create_point_intersection(arguments)
+            case "catia_create_line_tangent":
+                return self._create_line_tangent(arguments)
+            case "catia_create_line_normal_to_surface":
+                return self._create_line_normal_to_surface(arguments)
+            case "catia_create_plane_parallel":
+                return self._create_plane_parallel(arguments)
+            case "catia_create_plane_tangent_to_surface":
+                return self._create_plane_tangent_to_surface(arguments)
+            case "catia_create_mirror":
+                return self._create_mirror(arguments)
+            case "catia_create_tabulated_cylinder":
+                return self._create_tabulated_cylinder(arguments)
             case _:
                 raise ValueError(f"Unknown GSD tool: {tool_name}")
 
@@ -1512,3 +1736,180 @@ class GSDTools:
         hbody = self._get_or_create_set(part, args.get("set_name"))
         name = self._append_and_update(part, hbody, trim, f"Trim({surface_name},{tool_name},P{keep_part})")
         return f"Trim created on '{surface_name}' with '{tool_name}', keep_part={keep_part}. Name: '{name}'"
+
+    # ── New GSD Methods (Phase 1b/1c) ─────────────────────────────────────
+
+    def _create_point_on_curve(self, args: dict[str, Any]) -> str:
+        """Create a point on a curve at a given parameter."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        curve_name = args.get("curve_name")
+        parameter = float(args.get("parameter", 0.5))
+        if not curve_name:
+            raise ValueError("curve_name is required")
+
+        curve_ref = self._ref(part, curve_name)
+        hsf = self._hsf(part)
+        try:
+            point = hsf.CreatePointOnCurve(curve_ref, float(parameter))
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreatePointOnCurve", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, point, f"PointOnCurve({curve_name},{parameter})")
+        return f"Point on curve '{curve_name}' at parameter {parameter}. Name: '{name}'"
+
+    def _create_point_intersection(self, args: dict[str, Any]) -> str:
+        """Create a point at the intersection of two elements."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        element1 = args.get("element1")
+        element2 = args.get("element2")
+        if not element1 or not element2:
+            raise ValueError("element1 and element2 are required")
+
+        ref1 = self._ref(part, element1)
+        ref2 = self._ref(part, element2)
+        hsf = self._hsf(part)
+        try:
+            point = hsf.CreatePointAtIntersection(ref1, ref2)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreatePointAtIntersection", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, point, f"PointIntersection({element1},{element2})")
+        return f"Point at intersection of '{element1}' and '{element2}'. Name: '{name}'"
+
+    def _create_line_tangent(self, args: dict[str, Any]) -> str:
+        """Create a line tangent to a curve at a given point."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        curve_name = args.get("curve_name")
+        point_name = args.get("point_name")
+        if not curve_name or not point_name:
+            raise ValueError("curve_name and point_name are required")
+
+        curve_ref = self._ref(part, curve_name)
+        point_ref = self._ref(part, point_name)
+        hsf = self._hsf(part)
+        try:
+            line = hsf.CreateLineTangent(curve_ref, point_ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateLineTangent", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, line, f"LineTangent({curve_name},{point_name})")
+        return f"Line tangent to '{curve_name}' at '{point_name}'. Name: '{name}'"
+
+    def _create_line_normal_to_surface(self, args: dict[str, Any]) -> str:
+        """Create a line normal to a surface at a given point."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        surface_name = args.get("surface_name")
+        point_name = args.get("point_name")
+        if not surface_name or not point_name:
+            raise ValueError("surface_name and point_name are required")
+
+        surface_ref = self._ref(part, surface_name)
+        point_ref = self._ref(part, point_name)
+        hsf = self._hsf(part)
+        try:
+            line = hsf.CreateLineNormalToSurface(surface_ref, point_ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateLineNormalToSurface", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, line, f"LineNormalToSurface({surface_name},{point_name})")
+        return f"Line normal to '{surface_name}' at '{point_name}'. Name: '{name}'"
+
+    def _create_plane_parallel(self, args: dict[str, Any]) -> str:
+        """Create a plane parallel to a reference plane through a point."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        ref_plane_name = args.get("reference_plane")
+        point_name = args.get("point_name")
+        if not ref_plane_name or not point_name:
+            raise ValueError("reference_plane and point_name are required")
+
+        plane_ref = self._ref(part, ref_plane_name)
+        point_ref = self._ref(part, point_name)
+        hsf = self._hsf(part)
+        try:
+            plane = hsf.CreatePlaneParallel(plane_ref, point_ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreatePlaneParallel", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, plane, f"PlaneParallel({ref_plane_name},{point_name})")
+        return f"Plane parallel to '{ref_plane_name}' through '{point_name}'. Name: '{name}'"
+
+    def _create_plane_tangent_to_surface(self, args: dict[str, Any]) -> str:
+        """Create a plane tangent to a surface at a given point."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        surface_name = args.get("surface_name")
+        point_name = args.get("point_name")
+        if not surface_name or not point_name:
+            raise ValueError("surface_name and point_name are required")
+
+        surface_ref = self._ref(part, surface_name)
+        point_ref = self._ref(part, point_name)
+        hsf = self._hsf(part)
+        try:
+            plane = hsf.CreatePlaneTangentToSurface(surface_ref, point_ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreatePlaneTangentToSurface", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, plane, f"PlaneTangentToSurface({surface_name},{point_name})")
+        return f"Plane tangent to '{surface_name}' at '{point_name}'. Name: '{name}'"
+
+    def _create_mirror(self, args: dict[str, Any]) -> str:
+        """Create a mirror (symmetry) of a shape with respect to a plane."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        element_name = args.get("element_name")
+        mirror_plane_name = args.get("mirror_plane")
+        if not element_name or not mirror_plane_name:
+            raise ValueError("element_name and mirror_plane are required")
+
+        element_ref = self._ref(part, element_name)
+        plane_ref = self._ref(part, mirror_plane_name)
+        hsf = self._hsf(part)
+        try:
+            mirror = hsf.CreateMirror(element_ref, plane_ref)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateMirror", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, mirror, f"Mirror({element_name},{mirror_plane_name})")
+        return f"Mirror of '{element_name}' about '{mirror_plane_name}'. Name: '{name}'"
+
+    def _create_tabulated_cylinder(self, args: dict[str, Any]) -> str:
+        """Create a tabulated cylinder surface by extruding a curve along its normal."""
+        self.conn.ensure_connected()
+        part = self.conn.get_active_part()
+
+        curve_name = args.get("curve_name")
+        height1 = float(args.get("height1", 10))
+        height2 = float(args.get("height2", 10))
+        if not curve_name:
+            raise ValueError("curve_name is required")
+
+        curve_ref = self._ref(part, curve_name)
+        hsf = self._hsf(part)
+        try:
+            cyl = hsf.CreateTabulatedCylinder(curve_ref, float(height1), float(height2))
+        except Exception as e:
+            raise RuntimeError(format_catia_error("CreateTabulatedCylinder", e))
+
+        hbody = self._get_or_create_set(part, args.get("set_name"))
+        name = self._append_and_update(part, hbody, cyl, f"TabulatedCylinder({curve_name},{height1},{height2})")
+        return f"Tabulated cylinder from '{curve_name}' (h1={height1}, h2={height2}). Name: '{name}'"
