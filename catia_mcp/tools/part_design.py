@@ -1197,38 +1197,22 @@ class PartDesignTools:
         # 2. The revolution axis (a 1D element: line, axis, or direction)
         if axis_name:
             try:
+                import win32com.client
                 import win32com.client.dynamic as d
-                # Use part.HybridBodies.Add() (same pattern as GSD tools)
-                hbody = part.HybridBodies.Add()
-                hbody.Name = "ShaftAxisSet"
-                part.UpdateObject(hbody)
-                part.InWorkObject = hbody
-                # Use part.HybridShapeFactory (GSD pattern)
-                hsf = part.HybridShapeFactory
+                # Use gencache for OriginElements access (GSD pattern)
+                gc_part = win32com.client.gencache.EnsureDispatch(part)
+                oe = gc_part.OriginElements
                 lookup = axis_name.lower().strip()
-                # Create point at origin
-                origin_pt = hsf.AddNewPointCoord(0, 0, 0)
-                origin_pt.Name = "ShaftOrigin"
-                hbody.AppendHybridShape(origin_pt)
-                part.UpdateObject(origin_pt)
-                # Create direction reference
-                if lookup == "x":
-                    dir_ref = hsf.AddNewDirectionByCoord(1, 0, 0)
-                elif lookup == "y":
-                    dir_ref = hsf.AddNewDirectionByCoord(0, 1, 0)
-                elif lookup == "z":
-                    dir_ref = hsf.AddNewDirectionByCoord(0, 0, 1)
-                else:
+                axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
+                if lookup not in axis_map:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
-                # Create line through origin with direction
-                axis_line = hsf.AddNewLinePtDir(origin_pt, dir_ref)
-                axis_line.Name = "ShaftAxis"
-                hbody.AppendHybridShape(axis_line)
-                part.UpdateObject(axis_line)
-                part.InWorkObject = body  # restore body as in-work
+                axis_elem = getattr(oe, axis_map[lookup])
+                # Create reference to the origin axis
+                dpart = d.Dispatch(part)
+                axis_ref = dpart.CreateReferenceFromObject(axis_elem)
 
-                # AddNewShaft(sketch, axis) — pass the line directly as the axis
-                shaft = body.Shapes.AddNewShaft(sketch, axis_line)
+                # AddNewShaft(sketch, axis) — pass the axis reference
+                shaft = body.Shapes.AddNewShaft(sketch, axis_ref)
             except Exception as e:
                 raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
         else:
