@@ -1196,7 +1196,7 @@ class PartDesignTools:
         # If axis is specified:
         #   1. Create GeometricalSet with 3D line as revolution axis (via 2 points)
         #   2. Set body as InWorkObject
-        #   3. Create shaft from sketch, passing the line as axis reference
+        #   3. Create shaft from sketch via AddNewShaft, then set axis via Axis property
         # Close the sketch first if it's open (from catia_create_sketch)
         try:
             sketch.CloseEdition()
@@ -1244,10 +1244,11 @@ class PartDesignTools:
                 # Step 2: Set body as InWorkObject
                 part.InWorkObject = body
 
-                # Step 3: Create shaft from sketch, passing the line as axis reference
-                axis_ref = part.CreateReferenceFromObject(axis_line)
+                # Step 3: Create shaft from sketch, then set axis
                 sf = part.ShapeFactory
-                shaft = sf.AddNewShaftFromRef(sketch, axis_ref)
+                shaft = sf.AddNewShaft(sketch)
+                axis_ref = part.CreateReferenceFromObject(axis_line)
+                shaft.Axis = axis_ref
             except Exception as e:
                 raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
         else:
