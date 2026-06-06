@@ -1192,35 +1192,26 @@ class PartDesignTools:
         angle = validate_positive_float(args.get("angle", 360), "angle")
         axis_name = args.get("axis")
 
-        # AddNewShaft(iSketch) — the sketch must contain both contour AND axis
-        # If axis is specified, inject a 2D line into the sketch as the rotation axis
+        # AddNewShaftFromRef(iSketch, iAxis) — takes a sketch and an axis reference
         if axis_name:
             try:
-                # Try to close sketch if it's open (OpenEdition would fail on open sketch)
-                try:
-                    sketch.CloseEdition()
-                except Exception:
-                    pass
-                # Open the sketch to inject the axis line
-                factory2d = sketch.OpenEdition()
+                import win32com.client as wc
+                # Get axis reference from OriginElements via gencache (GSD _ref pattern)
+                part_raw = self.conn.active_document
+                gc_part = wc.gencache.EnsureDispatch(part_raw).Part
+                oe = gc_part.OriginElements
                 lookup = axis_name.lower().strip()
-                # Create a 2D line through origin as the rotation axis
-                if lookup == "x":
-                    axis_line = factory2d.CreateLine(0, 0, 100, 0)
-                elif lookup == "y":
-                    axis_line = factory2d.CreateLine(0, 0, 0, 100)
-                elif lookup == "z":
-                    axis_line = factory2d.CreateLine(0, 0, 0, 100)
-                else:
+                axis_map = {"x": "XAxis", "y": "YAxis", "z": "ZAxis"}
+                if lookup not in axis_map:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
-                axis_line.Name = "ShaftAxis"
-                setattr(axis_line, "Construction", True)  # Mark as construction geometry
-                sketch.CloseEdition()
-                part.Update()  # Update the sketch geometry before creating shaft
-                
-                # Use part.ShapeFactory.AddNewShaft directly
+                axis_elem = getattr(oe, axis_map[lookup])
+                import win32com.client.dynamic as d
+                dpart = d.Dispatch(gc_part)
+                axis_ref = dpart.CreateReferenceFromObject(axis_elem)
+
+                # Use AddNewShaftFromRef (takes sketch + axis reference)
                 sf = part.ShapeFactory
-                shaft = sf.AddNewShaft(sketch)
+                shaft = sf.AddNewShaftFromRef(sketch, axis_ref)
             except Exception as e:
                 raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
         else:
