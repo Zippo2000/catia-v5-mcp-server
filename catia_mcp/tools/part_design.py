@@ -1192,29 +1192,28 @@ class PartDesignTools:
         angle = validate_positive_float(args.get("angle", 360), "angle")
         axis_name = args.get("axis")
 
-        # AddNewShaftFromRef(iProfile, iAxis) takes TWO References:
-        # 1. Reference to the sketch profile
-        # 2. Reference to the revolution axis (line, axis, or direction)
+        # AddNewShaft(iSketch) — the sketch must contain both contour AND axis
+        # If axis is specified, inject a 2D line into the sketch as the rotation axis
         if axis_name:
             try:
                 import win32com.client.dynamic as d
-                # Use HybridShapeFactory to create a direction as the axis
-                hsf = part.HybridShapeFactory
+                # Open the sketch to inject the axis line
+                factory2d = sketch.OpenEdition()
                 lookup = axis_name.lower().strip()
+                # Create a 2D line through origin as the rotation axis
                 if lookup == "x":
-                    direction = hsf.AddNewDirectionByCoord(1, 0, 0)
+                    axis_line = factory2d.CreateLine(0, 0, 100, 0)
                 elif lookup == "y":
-                    direction = hsf.AddNewDirectionByCoord(0, 1, 0)
+                    axis_line = factory2d.CreateLine(0, 0, 0, 100)
                 elif lookup == "z":
-                    direction = hsf.AddNewDirectionByCoord(0, 0, 1)
+                    axis_line = factory2d.CreateLine(0, 0, 0, 100)
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
-                # Create references for AddNewShaftFromRef
-                dpart = d.Dispatch(part)
-                sketch_ref = dpart.CreateReferenceFromObject(sketch)
-                dir_ref = dpart.CreateReferenceFromObject(direction)
-                # AddNewShaftFromRef(sketch_ref, dir_ref) — both must be References
-                shaft = body.Shapes.AddNewShaftFromRef(sketch_ref, dir_ref)
+                axis_line.Name = "ShaftAxis"
+                # Close the sketch
+                sketch.CloseEdition()
+                # AddNewShaft(sketch) — CATIA uses the line in the sketch as the axis
+                shaft = body.Shapes.AddNewShaft(sketch)
             except Exception as e:
                 raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
         else:
