@@ -1,6 +1,6 @@
 # CATIA V5 MCP Server — Realtest Results
 
-> **Date:** 2026-06-04 22:28:30  
+> **Date:** 2026-06-06 17:27:15  
 > **Server:** SSE on http://192.168.177.151:8765  
 
 ## Summary
@@ -18,18 +18,15 @@
 | Phase | Test ID | Status | Remark |
 |-------|---------|--------|--------|
 | P0 | P0-01 | ✅ | Connected to running CATIA V5 instance (CATIA V5) |
-| P0 | P0-02 | ✅ | Created new Part document: 'Part1' |
-| P0 | P0-03 | ✅ | Created new Part document: 'Part2' |
+| P0 | P0-02 | ✅ | Created new Part document: 'Part2' |
+| P0 | P0-03 | ✅ | Created new Part document: 'Part3' |
 | P0 | P0-04 | ✅ | Created new Product (assembly) document: 'Product1' |
 | P0 | P0-05 | ✅ | Created new Product (assembly) document: 'Product2' |
 | P0 | P0-06 | ✅ | [
   {
-    "name": "Part1.CATPart",
-    "path": "Part1.CATPart",
-    "type": "Other"
-  },
-  {
-    "na |
+    "name": "alu_housing_3L.CATPart",
+    "path": "C:\\catia_tests\\alu_housing_3L.CATPart",
+  |
 | P0 | P0-07 | ✅ | {
   "name": "Product2.CATProduct",
   "path": "Product2.CATProduct",
@@ -99,12 +96,12 @@
 | P2 | P2-15 | ✅ | Line created from (0, 0) to (0, 30) mm |
 | P2 | P2-16 | ✅ | Rectangle created from (10, 5) to (25, 25) mm [15.0 x 20.0 mm] |
 | P2 | P2-17 | ✅ | Sketch closed. You can now apply Part Design features (pad, pocket, etc.). |
-| P2 | P2-18 | ✅ | Error in catia_shaft: module 'pythoncom' has no attribute 'CastToPyObject' |
-| P2 | P2-19 | ✅ | Error in catia_shaft: module 'pythoncom' has no attribute 'CastToPyObject' |
+| P2 | P2-18 | ✅ | Error in catia_shaft: module 'win32com.client.dynamic' has no attribute 'PropertyPut' |
+| P2 | P2-19 | ✅ | Error in catia_shaft: module 'win32com.client.dynamic' has no attribute 'PropertyPut' |
 | P2 | P2-20 | ✅ | Sketch created on XY (front) plane. Ready for geometry. |
 | P2 | P2-21 | ✅ | Point created at (30, 20) mm |
 | P2 | P2-22 | ❌ | Error in catia_close_sketch: (-2147352567, 'Ausnahmefehler aufgetreten.', (0, 'CATIAPart', 'The meth |
-| P2 | P2-23 | ✅ | Error in catia_hole: module 'pythoncom' has no attribute 'CastToPyObject' |
+| P2 | P2-23 | ✅ | Error in catia_hole: module 'win32com.client.dynamic' has no attribute 'PropertyPut' |
 | P2 | P2-24 | ✅ | Error in catia_rect_pattern: CATIA operation 'AddNewRectPattern' failed: The Python instance can not |
 | P2 | P2-25 | ✅ | Error in catia_mirror: (-2147352567, 'Ausnahmefehler aufgetreten.', (0, 'CATIAPart', 'The method Upd |
 | P3 | P3-01 | ✅ | Geometrical Set 'TestGeoSet' created. |
@@ -159,14 +156,14 @@
 | P5 | P5-08 | ⏭️ | Skipped - requires 2 bodies |
 | P5 | P5-09 | ✅ | [
   {
-    "name": "Part6\\PartBody\\Sketch.1\\Activity",
+    "name": "Part7\\PartBody\\Sketch.1\\Activity",
     "value": true,
     "comment": ""
   },
   |
 | P5 | P5-10 | ✅ | [
   {
-    "name": "Part6\\PartBody\\Pad.1\\FirstLimit\\Length",
+    "name": "Part7\\PartBody\\Pad.1\\FirstLimit\\Length",
     "value": 40.0,
     "comment": "" |
 | P5 | P5-11 | ⏭️ | Skipped - requires known parameter name |
@@ -190,9 +187,9 @@
 | P7 | P7-09 | ✅ | Error in catia_open_document: 'file_path' does not appear to be a valid file path: 'nonexistent_file |
 | P7 | P7-10 | ✅ | Error in catia_export: 'file_path' does not appear to be a valid file path: 'relative_path.stp'
 On W |
-| P8 | P8-01 | ✅ | Created new Part document: 'Part7' |
-| P8 | P8-02 | ✅ | Created new Part document: 'Part8' |
-| P8 | P8-03 | ✅ | Listed tools, response length: 45312 |
+| P8 | P8-01 | ✅ | Created new Part document: 'Part8' |
+| P8 | P8-02 | ✅ | Created new Part document: 'Part9' |
+| P8 | P8-03 | ✅ | Listed tools, response length: 55650 |
 | P8 | P8-04 | ✅ | Unknown tool: 'catia_nonexistent'. Use list_tools to see available tools. |
 | P8 | P8-05 | ✅ | 10/10 rapid calls succeeded |
 

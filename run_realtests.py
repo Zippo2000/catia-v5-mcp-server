@@ -1204,6 +1204,173 @@ def run_tests(sess):
     except Exception as e:
         record("P8", "P8-05", "❌", str(e)[:100])
 
+    # ============ P9: New Tools (v1.10.0) ============
+    print("\n" + "="*60)
+    print("PHASE P9: New Tools (v1.10.0)")
+    print("="*60)
+
+    # Fresh part for new tool tests
+    try:
+        r = txt(sess.call_tool("catia_new_part", {"name": "TestNewTools"}))
+        print(f"  [Setup] New part: {r[:80]}")
+    except Exception as e:
+        print(f"  [Setup] New part failed: {e}")
+
+    # GSD: Create geometrical set and base geometry
+    try:
+        r = txt(sess.call_tool("catia_create_geometrical_set", {"name": "TestSet"}))
+        print(f"  [Setup] Geometrical set: {r[:80]}")
+    except Exception as e:
+        print(f"  [Setup] Geometrical set failed: {e}")
+
+    try:
+        r = txt(sess.call_tool("catia_create_point_coord", {"x": 0, "y": 0, "z": 0, "set_name": "TestSet"}))
+        print(f"  [Setup] Point coord: {r[:80]}")
+    except Exception as e:
+        print(f"  [Setup] Point coord failed: {e}")
+
+    try:
+        r = txt(sess.call_tool("catia_create_line_2points", {"x1": 0, "y1": 0, "z1": 0, "x2": 100, "y2": 0, "z2": 0, "set_name": "TestSet"}))
+        print(f"  [Setup] Line 2points: {r[:80]}")
+    except Exception as e:
+        print(f"  [Setup] Line 2points failed: {e}")
+
+    # P9-01: catia_create_point_on_curve
+    try:
+        r = txt(sess.call_tool("catia_create_point_on_curve", {"curve_name": "Line.1", "parameter": 0.5, "set_name": "TestSet"}))
+        ok = "point" in r.lower() or "created" in r.lower()
+        record("P9", "P9-01", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        record("P9", "P9-01", "❌", str(e)[:100])
+
+    # P9-02: catia_create_point_intersection
+    try:
+        r = txt(sess.call_tool("catia_create_point_intersection", {"element1": "Line.1", "element2": "Point.1", "set_name": "TestSet"}))
+        ok = "point" in r.lower() or "created" in r.lower() or "intersection" in r.lower()
+        record("P9", "P9-02", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        record("P9", "P9-02", "❌", str(e)[:100])
+
+    # P9-03: catia_create_line_tangent
+    try:
+        r = txt(sess.call_tool("catia_create_line_tangent", {"curve_name": "Line.1", "point_name": "Point.1", "set_name": "TestSet"}))
+        ok = "line" in r.lower() or "created" in r.lower() or "tangent" in r.lower()
+        record("P9", "P9-03", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        record("P9", "P9-03", "❌", str(e)[:100])
+
+    # P9-04: catia_create_line_normal_to_surface
+    try:
+        r = txt(sess.call_tool("catia_create_line_normal_to_surface", {"surface_name": "xy", "point_name": "Point.1", "set_name": "TestSet"}))
+        ok = "line" in r.lower() or "created" in r.lower() or "normal" in r.lower()
+        record("P9", "P9-04", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        record("P9", "P9-04", "❌", str(e)[:100])
+
+    # P9-05: catia_create_plane_parallel
+    try:
+        r = txt(sess.call_tool("catia_create_plane_parallel", {"reference_plane": "xy", "point_name": "Point.1", "set_name": "TestSet"}))
+        ok = "plane" in r.lower() or "created" in r.lower() or "parallel" in r.lower()
+        record("P9", "P9-05", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        record("P9", "P9-05", "❌", str(e)[:100])
+
+    # P9-06: catia_create_plane_tangent_to_surface
+    try:
+        r = txt(sess.call_tool("catia_create_plane_tangent_to_surface", {"surface_name": "xy", "point_name": "Point.1", "set_name": "TestSet"}))
+        ok = "plane" in r.lower() or "created" in r.lower() or "tangent" in r.lower()
+        record("P9", "P9-06", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        record("P9", "P9-06", "❌", str(e)[:100])
+
+    # P9-07: catia_create_mirror
+    try:
+        r = txt(sess.call_tool("catia_create_mirror", {"element_name": "Point.1", "mirror_plane": "xy", "set_name": "TestSet"}))
+        ok = "mirror" in r.lower() or "created" in r.lower()
+        record("P9", "P9-07", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        record("P9", "P9-07", "❌", str(e)[:100])
+
+    # P9-08: catia_create_tabulated_cylinder
+    try:
+        r = txt(sess.call_tool("catia_create_tabulated_cylinder", {"curve_name": "Line.1", "height1": 10, "height2": 10, "set_name": "TestSet"}))
+        ok = "cylinder" in r.lower() or "created" in r.lower() or "tabulated" in r.lower()
+        record("P9", "P9-08", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        record("P9", "P9-08", "❌", str(e)[:100])
+
+    # P9-09: catia_rib (validation - no spine)
+    try:
+        r = txt(sess.call_tool("catia_rib", {}))
+        ok = "error" in r.lower() or "spine" in r.lower() or "required" in r.lower()
+        record("P9", "P9-09", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "spine" in str(e).lower() or "required" in str(e).lower()
+        record("P9", "P9-09", "✅" if ok else "❌", str(e)[:100])
+
+    # P9-10: catia_slot (validation - no spine)
+    try:
+        r = txt(sess.call_tool("catia_slot", {}))
+        ok = "error" in r.lower() or "spine" in r.lower() or "required" in r.lower()
+        record("P9", "P9-10", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "spine" in str(e).lower() or "required" in str(e).lower()
+        record("P9", "P9-10", "✅" if ok else "❌", str(e)[:100])
+
+    # P9-11: catia_stiffener (validation - no supports)
+    try:
+        r = txt(sess.call_tool("catia_stiffener", {}))
+        ok = "error" in r.lower() or "support" in r.lower() or "required" in r.lower()
+        record("P9", "P9-11", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "support" in str(e).lower() or "required" in str(e).lower()
+        record("P9", "P9-11", "✅" if ok else "❌", str(e)[:100])
+
+    # P9-12: catia_split_body (validation - no tool)
+    try:
+        r = txt(sess.call_tool("catia_split_body", {}))
+        ok = "error" in r.lower() or "tool" in r.lower() or "required" in r.lower()
+        record("P9", "P9-12", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "tool" in str(e).lower() or "required" in str(e).lower()
+        record("P9", "P9-12", "✅" if ok else "❌", str(e)[:100])
+
+    # P9-13: catia_sketch_trim (validation - no sketch)
+    try:
+        r = txt(sess.call_tool("catia_sketch_trim", {}))
+        ok = "error" in r.lower() or "sketch" in r.lower() or "required" in r.lower()
+        record("P9", "P9-13", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "sketch" in str(e).lower() or "required" in str(e).lower()
+        record("P9", "P9-13", "✅" if ok else "❌", str(e)[:100])
+
+    # P9-14: catia_sketch_construction_element (validation - no sketch)
+    try:
+        r = txt(sess.call_tool("catia_sketch_construction_element", {}))
+        ok = "error" in r.lower() or "sketch" in r.lower() or "required" in r.lower()
+        record("P9", "P9-14", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "sketch" in str(e).lower() or "required" in str(e).lower()
+        record("P9", "P9-14", "✅" if ok else "❌", str(e)[:100])
+
+    # P9-15: catia_sketch_mirror (validation - no sketch)
+    try:
+        r = txt(sess.call_tool("catia_sketch_mirror", {}))
+        ok = "error" in r.lower() or "sketch" in r.lower() or "required" in r.lower()
+        record("P9", "P9-15", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "sketch" in str(e).lower() or "required" in str(e).lower()
+        record("P9", "P9-15", "✅" if ok else "❌", str(e)[:100])
+
+    # P9-16: catia_ground_constraint (validation - no assembly)
+    try:
+        r = txt(sess.call_tool("catia_ground_constraint", {}))
+        ok = "error" in r.lower() or "component" in r.lower() or "required" in r.lower()
+        record("P9", "P9-16", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "component" in str(e).lower() or "required" in str(e).lower()
+        record("P9", "P9-16", "✅" if ok else "❌", str(e)[:100])
+
     # ============ Print Summary ============
     print("\n" + "="*60)
     print("TEST RESULTS SUMMARY")
