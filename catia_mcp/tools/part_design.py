@@ -1213,8 +1213,9 @@ class PartDesignTools:
                 axis_line.Name = "ShaftAxis"
                 # Close the sketch
                 sketch.CloseEdition()
-                # Use gencache for ShapeFactory, then dynamic.Dispatch for AddNewShaft
-                gc_part = wc.gencache.EnsureDispatch(part)
+                # Get gencache Part from the active document (not from dynamic proxy)
+                doc = self.conn.active_document
+                gc_part = wc.gencache.EnsureDispatch(doc).Part
                 sf = gc_part.ShapeFactory
                 dsf = d.Dispatch(sf)
                 shaft = dsf.AddNewShaft(sketch)
@@ -1224,7 +1225,8 @@ class PartDesignTools:
             try:
                 import win32com.client.dynamic as d
                 import win32com.client as wc
-                gc_part = wc.gencache.EnsureDispatch(part)
+                doc = self.conn.active_document
+                gc_part = wc.gencache.EnsureDispatch(doc).Part
                 sf = gc_part.ShapeFactory
                 dsf = d.Dispatch(sf)
                 shaft = dsf.AddNewShaft(sketch)
