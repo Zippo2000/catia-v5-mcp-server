@@ -6,13 +6,13 @@ The first open-source MCP server for CATIA V5. Drive CATIA V5 CAD modeling from 
 
 ## What it does
 
-This MCP server exposes **111 tools** across 7 modules that let an LLM-driven client:
+This MCP server exposes **116 tools** across 7 modules that let an LLM-driven client:
 
 | Category | Tools | Examples |
 |----------|-------|----------|
 | 📄 **Document Management** | 10 | Create/open/save/close parts and assemblies, list documents |
 | ✏️ **2D Sketching** | 18 | Lines, rectangles, circles, arcs, splines, points, constraints, ellipse, hyperbola, parabola, trim, mirror, construction element |
-| 🔧 **Part Design** | 23 | Pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, shell, draft, lifting, sweep, loft, boolean, rib, slot, stiffener, split body |
+| 🔧 **Part Design** | 28 | Pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, shell, draft, lifting, sweep, loft, boolean, rib, slot, stiffener, split body, variable fillet, drafted filleted pad/pocket, multi pad/pocket |
 | 🎨 **GSD (Wireframe & Surface)** | 32 | Point, line, circle, plane, cylinder, fill, sweep, join, thicken, offset, sphere, cone, torus, ruled, blend, split, extend, trim, point on curve, point intersection, line tangent, line normal, plane parallel, plane tangent, mirror, tabulated cylinder |
 | 📦 **Assembly** | 15 | Add components, constraints (fix/coincidence/offset/angle/contact/distance/tangent/ground), move, remove |
 | 📏 **Measurement** | 10 | Distance, inertia, bounding box, parameters, update, angle, area, length, interference |
@@ -260,7 +260,7 @@ catia-v5-mcp-server/
 │       ├── __init__.py
 │       ├── document.py        # Document management (10 tools)
 │       ├── sketcher.py        # 2D sketching (18 tools)
-│       ├── part_design.py     # 3D part design (23 tools)
+│       ├── part_design.py     # 3D part design (28 tools)
 │       ├── assembly.py        # Assembly/product (15 tools)
 │       ├── measurement.py     # Measurement & analysis (10 tools)
 │       ├── gsd.py             # Wireframe & surface (32 tools)
@@ -358,7 +358,7 @@ All dimensions are in **millimeters**, angles in **degrees**.
 
 ---
 
-### 🔧 Part Design Tools (23)
+### 🔧 Part Design Tools (28)
 
 | Tool | Parameters | Required | Description |
 |------|------------|----------|-------------|
@@ -383,6 +383,11 @@ All dimensions are in **millimeters**, angles in **degrees**.
 | `catia_slot` | `sketch_name` | — | Create a slot (nut) feature from a sketch profile. |
 | `catia_stiffener` | `direction`, `sketch_name`, `support` | `direction` | Create a stiffener feature along a sketch profile on a support face. |
 | `catia_split_body` | `tool_name`, `keep_part` | `tool_name` | Split a body using a plane, surface, or part as the cutting tool. |
+| `catia_variable_fillet` | `edge_name`, `radius1`, `radius2` | `edge_name`, `radius1`, `radius2` | Add a variable-radius fillet along an edge, transitioning from `radius1` to `radius2`. |
+| `catia_drafted_filleted_pad` | `height`, `draft_angle`, `fillet_radius`, `direction`, `symmetric`, `sketch_name` | `height`, `draft_angle`, `fillet_radius` | Create a pad with integrated draft angle and fillet in a single operation. `draft_angle` applied to vertical faces, `fillet_radius` on bottom edges. |
+| `catia_drafted_filleted_pocket` | `depth`, `draft_angle`, `fillet_radius`, `direction`, `sketch_name` | `depth`, `draft_angle`, `fillet_radius` | Create a pocket with integrated draft angle and fillet in a single operation. `draft_angle` applied to vertical walls, `fillet_radius` on bottom edges. |
+| `catia_multi_pad` | `height`, `direction`, `symmetric`, `sketch_names` | `height`, `sketch_names` | Create multiple pads from multiple sketches in a single operation. `sketch_names` is a list of sketch names. |
+| `catia_multi_pocket` | `depth`, `direction`, `sketch_names` | `depth`, `sketch_names` | Create multiple pockets from multiple sketches in a single operation. `sketch_names` is a list of sketch names. |
 | `catia_list_features` | — | — | List all features in the active Part Body with names and types. |
 | `catia_list_edges` | — | — | List all edges of the active solid body for use with fillet/chamfer. |
 

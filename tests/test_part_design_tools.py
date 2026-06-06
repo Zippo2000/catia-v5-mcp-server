@@ -871,10 +871,142 @@ class TestExecuteRouting:
             pd_tools.execute("catia_nonexistent", {})
 
 
+# ── FR-06.24 catia_variable_fillet ──────────────────────────────────────
+
+class TestVariableFillet:
+    def test_variable_fillet_valid(self, pd_tools, conn_mock):
+        part = conn_mock.get_active_part()
+        body = conn_mock.get_active_part_body()
+        body.Shapes.Count = 1
+        body.Shapes.Item.return_value.Name = "Pad.1"
+        fillet_mock = MagicMock()
+        fillet_mock.Name = "VariableFillet.1"
+        part.shape_factory.AddNewSolidEdgeFilletWithVariableRadius.return_value = fillet_mock
+        result = pd_tools.execute(
+            "catia_variable_fillet",
+            {"edge_name": "Edge.1", "radius1": 3, "radius2": 8},
+        )
+        assert "Variable fillet" in result or "fillet" in result.lower()
+        assert "3" in result or "8" in result
+
+    def test_variable_fillet_negative_radius_raises(self, pd_tools):
+        with pytest.raises(ValueError, match="must be positive"):
+            pd_tools.execute(
+                "catia_variable_fillet",
+                {"edge_name": "Edge.1", "radius1": -2, "radius2": 5},
+            )
+
+
+# ── FR-06.25 catia_drafted_filleted_pad ─────────────────────────────────
+
+class TestDraftedFilletedPad:
+    def test_drafted_filleted_pad_valid(self, pd_tools, conn_mock):
+        part = conn_mock.get_active_part()
+        body = conn_mock.get_active_part_body()
+        mock_sketch = MagicMock()
+        body.Sketches.Item.return_value = mock_sketch
+        body.Sketches.Count = 1
+        pad_mock = MagicMock()
+        pad_mock.Name = "DraftedFilletedPad.1"
+        part.shape_factory.AddNewDraftedFilletedPad.return_value = pad_mock
+        result = pd_tools.execute(
+            "catia_drafted_filleted_pad",
+            {"height": 25, "draft_angle": 3},
+        )
+        assert "pad" in result.lower() or "Pad" in result
+
+    def test_drafted_filleted_pad_zero_height_raises(self, pd_tools):
+        with pytest.raises(ValueError, match="must be positive"):
+            pd_tools.execute(
+                "catia_drafted_filleted_pad",
+                {"height": 0},
+            )
+
+
+# ── FR-06.26 catia_drafted_filleted_pocket ──────────────────────────────
+
+class TestDraftedFilletedPocket:
+    def test_drafted_filleted_pocket_valid(self, pd_tools, conn_mock):
+        part = conn_mock.get_active_part()
+        body = conn_mock.get_active_part_body()
+        mock_sketch = MagicMock()
+        body.Sketches.Item.return_value = mock_sketch
+        body.Sketches.Count = 1
+        pocket_mock = MagicMock()
+        pocket_mock.Name = "DraftedFilletedPocket.1"
+        part.shape_factory.AddNewDraftedFilletedPocket.return_value = pocket_mock
+        result = pd_tools.execute(
+            "catia_drafted_filleted_pocket",
+            {"height": 15, "draft_angle": 2},
+        )
+        assert "pocket" in result.lower() or "Pocket" in result
+
+    def test_drafted_filleted_pocket_negative_height_raises(self, pd_tools):
+        with pytest.raises(ValueError, match="must be positive"):
+            pd_tools.execute(
+                "catia_drafted_filleted_pocket",
+                {"height": -5},
+            )
+
+
+# ── FR-06.27 catia_multi_pad ────────────────────────────────────────────
+
+class TestMultiPad:
+    def test_multi_pad_valid(self, pd_tools, conn_mock):
+        part = conn_mock.get_active_part()
+        body = conn_mock.get_active_part_body()
+        mock_sketch = MagicMock()
+        body.Sketches.Item.return_value = mock_sketch
+        body.Sketches.Count = 1
+        multipad_mock = MagicMock()
+        multipad_mock.Name = "MultiPad.1"
+        multipad_mock.Pads.Count = 2
+        pad1 = MagicMock()
+        pad2 = MagicMock()
+        multipad_mock.Pads.Item.side_effect = lambda i: [pad1, pad2][i - 1]
+        part.shape_factory.AddNewMultiPad.return_value = multipad_mock
+        result = pd_tools.execute(
+            "catia_multi_pad",
+            {"heights": [10, 20]},
+        )
+        assert "multi" in result.lower() or "pad" in result.lower()
+
+    def test_multi_pad_empty_heights_raises(self, pd_tools):
+        with pytest.raises(RuntimeError, match="heights"):
+            pd_tools.execute("catia_multi_pad", {"heights": []})
+
+
+# ── FR-06.28 catia_multi_pocket ─────────────────────────────────────────
+
+class TestMultiPocket:
+    def test_multi_pocket_valid(self, pd_tools, conn_mock):
+        part = conn_mock.get_active_part()
+        body = conn_mock.get_active_part_body()
+        mock_sketch = MagicMock()
+        body.Sketches.Item.return_value = mock_sketch
+        body.Sketches.Count = 1
+        multipocket_mock = MagicMock()
+        multipocket_mock.Name = "MultiPocket.1"
+        multipocket_mock.Pockets.Count = 2
+        pocket1 = MagicMock()
+        pocket2 = MagicMock()
+        multipocket_mock.Pockets.Item.side_effect = lambda i: [pocket1, pocket2][i - 1]
+        part.shape_factory.AddNewMultiPocket.return_value = multipocket_mock
+        result = pd_tools.execute(
+            "catia_multi_pocket",
+            {"depths": [5, 10]},
+        )
+        assert "multi" in result.lower() or "pocket" in result.lower()
+
+    def test_multi_pocket_negative_depth_raises(self, pd_tools):
+        with pytest.raises(ValueError, match="must be positive"):
+            pd_tools.execute("catia_multi_pocket", {"depths": [-3]})
+
+
 class TestToolDefinitions:
-    def test_all_23_tools_defined(self, pd_tools):
+    def test_all_28_tools_defined(self, pd_tools):
         defs = pd_tools.get_tool_definitions()
-        assert len(defs) == 23
+        assert len(defs) == 28
 
     def test_pad_has_required_height(self, pd_tools):
         defs = pd_tools.get_tool_definitions()

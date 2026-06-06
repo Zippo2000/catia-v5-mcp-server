@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [1.11.0] - 2026-06-06
+
+### Added
+- **Part Design Phase 2 Tools** — 5 new tools:
+  - `catia_variable_fillet` — Variable-radius fillet transitioning between two radii along an edge
+  - `catia_drafted_filleted_pad` — Pad with integrated draft angle and bottom fillet in a single operation
+  - `catia_drafted_filleted_pocket` — Pocket with integrated draft angle and bottom fillet in a single operation
+  - `catia_multi_pad` — Create multiple pads from multiple sketches in one operation
+  - `catia_multi_pocket` — Create multiple pockets from multiple sketches in one operation
+- **Tool Count** — 111 → 116 tools (Part Design: 23 → 28)
+
+### Changed
+- **Version** — 1.10.0 → 1.11.0
+- **Part Design Module** — Added 5 advanced composite features for mold-design and multi-feature workflows
+
+---
+
 ## [Unreleased]
 
 ### Added
@@ -52,7 +69,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Initial release of CATIA V5 MCP Server
 - **Document Management** — 10 tools: create, open, save, close, list parts and products
 - **2D Sketching** — 14 tools: lines, rectangles, circles, arcs, splines, points, constraints
-- **Part Design** — 19 tools: pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, mirror, shell, draft, thickness, lifting, sweep, loft, boolean
+- **Part Design** — 28 tools: pad, pocket, shaft, groove, fillet, chamfer, hole, patterns, mirror, shell, draft, thickness, lifting, sweep, loft, boolean, rib, slot, stiffener, split body, variable fillet, drafted filleted pad/pocket, multi pad/pocket
 - **Assembly** — 14 tools: add/remove components, fix/coincidence/offset/angle/contact/distance/tangent constraints, move, list
 - **Measurement** — 10 tools: distance, inertia, bounding box, parameters, angle, area, length, interference, update
 - **Export & View** — 4 tools: STEP/IGES/STL export, screenshots, view orientations

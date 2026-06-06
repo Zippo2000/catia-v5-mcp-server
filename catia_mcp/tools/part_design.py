@@ -641,6 +641,194 @@ class PartDesignTools:
                 },
             },
             {
+                "name": "catia_variable_fillet",
+                "description": (
+                    "Create a variable radius fillet on edges with different radii at each end. "
+                    "Requires CATIA V5 R24+."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "edge_name": {
+                            "type": "string",
+                            "description": (
+                                "Name of the edge to fillet (e.g., 'Edge.1'). "
+                                "Use catia_list_edges to find edge names."
+                            ),
+                        },
+                        "radius1": {
+                            "type": "number",
+                            "description": "Fillet radius at the first end of the edge (mm)",
+                        },
+                        "radius2": {
+                            "type": "number",
+                            "description": "Fillet radius at the second end of the edge (mm)",
+                        },
+                        "additional_edges": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": (
+                                "Optional list of additional edge names to include in the same "
+                                "variable fillet. Each additional edge uses the same radius1/radius2."
+                            ),
+                        },
+                    },
+                    "required": ["edge_name", "radius1", "radius2"],
+                },
+            },
+            {
+                "name": "catia_drafted_filleted_pad",
+                "description": (
+                    "Create a Pad with optional draft angle and up to 3 fillets in a single "
+                    "operation. More efficient than separate Pad + Draft + Fillet."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "sketch_name": {
+                            "type": "string",
+                            "description": "Name of sketch to use. If not specified, uses the last created sketch.",
+                        },
+                        "height": {
+                            "type": "number",
+                            "description": "Extrusion height in mm",
+                        },
+                        "draft_angle": {
+                            "type": "number",
+                            "description": "Draft angle in degrees (default: 0)",
+                            "default": 0,
+                        },
+                        "neutral_element": {
+                            "type": "string",
+                            "description": (
+                                "Optional name of the neutral element for draft "
+                                "(e.g., 'xy', 'yz', 'zx', 'Plane.1')."
+                            ),
+                        },
+                        "fillet_lateral_radius": {
+                            "type": "number",
+                            "description": "Radius of the lateral fillet (mm). Default: 0 (none).",
+                        },
+                        "fillet_first_limit_radius": {
+                            "type": "number",
+                            "description": "Radius of the first limit fillet (mm). Default: 0 (none).",
+                        },
+                        "fillet_second_limit_radius": {
+                            "type": "number",
+                            "description": "Radius of the second limit fillet (mm). Default: 0 (none).",
+                        },
+                        "second_limit_face": {
+                            "type": "string",
+                            "description": (
+                                "Optional name of the second limit face for the second limit fillet."
+                            ),
+                        },
+                    },
+                    "required": ["sketch_name", "height"],
+                },
+            },
+            {
+                "name": "catia_drafted_filleted_pocket",
+                "description": (
+                    "Create a Pocket with optional draft angle and up to 3 fillets in a single "
+                    "operation. More efficient than separate Pocket + Draft + Fillet."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "sketch_name": {
+                            "type": "string",
+                            "description": "Name of sketch to use. If not specified, uses the last created sketch.",
+                        },
+                        "height": {
+                            "type": "number",
+                            "description": "Extrusion depth in mm",
+                        },
+                        "draft_angle": {
+                            "type": "number",
+                            "description": "Draft angle in degrees (default: 0)",
+                            "default": 0,
+                        },
+                        "neutral_element": {
+                            "type": "string",
+                            "description": (
+                                "Optional name of the neutral element for draft "
+                                "(e.g., 'xy', 'yz', 'zx', 'Plane.1')."
+                            ),
+                        },
+                        "fillet_lateral_radius": {
+                            "type": "number",
+                            "description": "Radius of the lateral fillet (mm). Default: 0 (none).",
+                        },
+                        "fillet_first_limit_radius": {
+                            "type": "number",
+                            "description": "Radius of the first limit fillet (mm). Default: 0 (none).",
+                        },
+                        "fillet_second_limit_radius": {
+                            "type": "number",
+                            "description": "Radius of the second limit fillet (mm). Default: 0 (none).",
+                        },
+                        "second_limit_face": {
+                            "type": "string",
+                            "description": (
+                                "Optional name of the second limit face for the second limit fillet."
+                            ),
+                        },
+                    },
+                    "required": ["sketch_name", "height"],
+                },
+            },
+            {
+                "name": "catia_multi_pad",
+                "description": (
+                    "Create multiple Pads from multiple closed profiles in a single sketch, "
+                    "each with independent extrusion length."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "sketch_name": {
+                            "type": "string",
+                            "description": "Name of sketch containing multiple closed profiles. If not specified, uses the last created sketch.",
+                        },
+                        "heights": {
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "description": (
+                                "List of extrusion heights (mm), one per profile in the sketch. "
+                                "e.g., [10, 20, 15]"
+                            ),
+                        },
+                    },
+                    "required": ["sketch_name", "heights"],
+                },
+            },
+            {
+                "name": "catia_multi_pocket",
+                "description": (
+                    "Create multiple Pockets from multiple closed profiles in a single sketch, "
+                    "each with independent depth."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "sketch_name": {
+                            "type": "string",
+                            "description": "Name of sketch containing multiple closed profiles. If not specified, uses the last created sketch.",
+                        },
+                        "depths": {
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "description": (
+                                "List of cut depths (mm), one per profile in the sketch. "
+                                "e.g., [5, 10, 8]"
+                            ),
+                        },
+                    },
+                    "required": ["sketch_name", "depths"],
+                },
+            },
+            {
                 "name": "catia_list_features",
                 "description": "List all features in the active body with their names and types.",
                 "inputSchema": {
@@ -702,6 +890,16 @@ class PartDesignTools:
                 return self._stiffener(arguments)
             case "catia_split_body":
                 return self._split_body(arguments)
+            case "catia_variable_fillet":
+                return self._variable_fillet(arguments)
+            case "catia_drafted_filleted_pad":
+                return self._drafted_filleted_pad(arguments)
+            case "catia_drafted_filleted_pocket":
+                return self._drafted_filleted_pocket(arguments)
+            case "catia_multi_pad":
+                return self._multi_pad(arguments)
+            case "catia_multi_pocket":
+                return self._multi_pocket(arguments)
             case "catia_list_features":
                 return self._list_features()
             case "catia_list_edges":
@@ -1873,6 +2071,308 @@ class PartDesignTools:
         self.conn.refresh_display()
         side_label = {0: "both sides", 1: "positive side", 2: "negative side"}[keep_side]
         return f"Body split by '{tool_name}', keeping {side_label}. Feature: '{split.Name}'"
+
+    def _variable_fillet(self, args: dict[str, Any]) -> str:
+        """Create a variable radius fillet on edges with different radii at each end.
+
+        CATIA API: ShapeFactory.AddNewSolidEdgeFilletWithVariableRadius(
+            i_edge_ref, i_nb_edges, i_radii_array)
+        radii_array is a 2D array: [[r1_end1, r1_end2], [r2_end1, r2_end2], ...]
+        """
+        self.conn.ensure_connected()
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            sf = part.shape_factory
+        else:
+            part = self.conn.get_active_part()
+            sf = part.ShapeFactory
+
+        radius1 = validate_positive_float(args["radius1"], "radius1")
+        radius2 = validate_positive_float(args["radius2"], "radius2")
+        edge_name = args.get("edge_name")
+
+        if edge_name:
+            target = self._resolve_geometry(edge_name)
+        else:
+            target = self._get_last_shape()
+
+        if has_pycatia:
+            edge_ref = part.create_reference_from_object(target)
+        else:
+            edge_ref = part.CreateReferenceFromObject(target)
+
+        additional_edges = args.get("additional_edges", [])
+        nb_edges = 1 + len(additional_edges)
+
+        radii_array = [[radius1, radius2]] * nb_edges
+
+        try:
+            fillet = sf.AddNewSolidEdgeFilletWithVariableRadius(
+                edge_ref,
+                nb_edges,
+                radii_array,
+            )
+        except Exception as e:
+            raise RuntimeError(
+                format_catia_error("AddNewSolidEdgeFilletWithVariableRadius", e)
+            )
+
+        if has_pycatia:
+            part.update_object(fillet)
+        else:
+            part.UpdateObject(fillet)
+        self.conn.refresh_display()
+        return f"Variable fillet created: R{radius1}-{radius2} mm. Feature: '{fillet.Name}'"
+
+    def _drafted_filleted_pad(self, args: dict[str, Any]) -> str:
+        """Create a Pad with optional draft angle and up to 3 fillets in one operation.
+
+        CATIA API: ShapeFactory.AddNewDraftedFilletedPad(
+            i_sketch, i_height, i_draft_angle, i_neutral,
+            i_fillet_lateral, i_fillet_first_limit, i_fillet_second_limit,
+            i_second_limit_face)
+        """
+        self.conn.ensure_connected()
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
+
+        sketch_name = validate_sketch_name(args.get("sketch_name"))
+        sketch = self._get_last_sketch(sketch_name, part)
+        height = validate_positive_float(args["height"], "height")
+        draft_angle = args.get("draft_angle", 0)
+        fillet_lateral = args.get("fillet_lateral_radius", 0)
+        fillet_first_limit = args.get("fillet_first_limit_radius", 0)
+        fillet_second_limit = args.get("fillet_second_limit_radius", 0)
+
+        neutral_ref = None
+        if args.get("neutral_element"):
+            try:
+                neutral = self._resolve_geometry(args["neutral_element"])
+                neutral_ref = part.CreateReferenceFromObject(neutral)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Could not resolve neutral element '{args['neutral_element']}': {e}"
+                ) from None
+
+        second_limit_ref = None
+        if args.get("second_limit_face"):
+            try:
+                second_limit = self._resolve_geometry(args["second_limit_face"])
+                second_limit_ref = part.CreateReferenceFromObject(second_limit)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Could not resolve second limit face '{args['second_limit_face']}': {e}"
+                ) from None
+
+        try:
+            pad = sf.AddNewDraftedFilletedPad(
+                sketch,
+                height,
+                draft_angle,
+                neutral_ref,
+                fillet_lateral,
+                fillet_first_limit,
+                fillet_second_limit,
+                second_limit_ref,
+            )
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewDraftedFilletedPad", e))
+
+        if has_pycatia:
+            part.update_object(pad)
+        else:
+            part.UpdateObject(pad)
+        self.conn.refresh_display()
+        return (
+            f"Drafted filleted pad created: {height} mm, "
+            f"draft {draft_angle}°. Feature: '{pad.Name}'"
+        )
+
+    def _drafted_filleted_pocket(self, args: dict[str, Any]) -> str:
+        """Create a Pocket with optional draft angle and up to 3 fillets in one operation.
+
+        CATIA API: ShapeFactory.AddNewDraftedFilletedPocket(
+            i_sketch, i_depth, i_draft_angle, i_neutral,
+            i_fillet_lateral, i_fillet_first_limit, i_fillet_second_limit,
+            i_second_limit_face)
+        """
+        self.conn.ensure_connected()
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
+
+        sketch_name = validate_sketch_name(args.get("sketch_name"))
+        sketch = self._get_last_sketch(sketch_name, part)
+        depth = validate_positive_float(args["height"], "height")
+        draft_angle = args.get("draft_angle", 0)
+        fillet_lateral = args.get("fillet_lateral_radius", 0)
+        fillet_first_limit = args.get("fillet_first_limit_radius", 0)
+        fillet_second_limit = args.get("fillet_second_limit_radius", 0)
+
+        neutral_ref = None
+        if args.get("neutral_element"):
+            try:
+                neutral = self._resolve_geometry(args["neutral_element"])
+                neutral_ref = part.CreateReferenceFromObject(neutral)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Could not resolve neutral element '{args['neutral_element']}': {e}"
+                ) from None
+
+        second_limit_ref = None
+        if args.get("second_limit_face"):
+            try:
+                second_limit = self._resolve_geometry(args["second_limit_face"])
+                second_limit_ref = part.CreateReferenceFromObject(second_limit)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Could not resolve second limit face '{args['second_limit_face']}': {e}"
+                ) from None
+
+        try:
+            pocket = sf.AddNewDraftedFilletedPocket(
+                sketch,
+                depth,
+                draft_angle,
+                neutral_ref,
+                fillet_lateral,
+                fillet_first_limit,
+                fillet_second_limit,
+                second_limit_ref,
+            )
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewDraftedFilletedPocket", e))
+
+        if has_pycatia:
+            part.update_object(pocket)
+        else:
+            part.UpdateObject(pocket)
+        self.conn.refresh_display()
+        return (
+            f"Drafted filleted pocket created: {depth} mm deep, "
+            f"draft {draft_angle}°. Feature: '{pocket.Name}'"
+        )
+
+    def _multi_pad(self, args: dict[str, Any]) -> str:
+        """Create multiple Pads from multiple closed profiles in a single sketch.
+
+        CATIA API: ShapeFactory.AddNewMultiPad(i_sketch)
+        After creation, set the length of each pad from the heights list.
+        """
+        self.conn.ensure_connected()
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
+
+        sketch_name = validate_sketch_name(args.get("sketch_name"))
+        sketch = self._get_last_sketch(sketch_name, part)
+        heights = args.get("heights", [])
+
+        if not isinstance(heights, list) or len(heights) == 0:
+            raise RuntimeError("multi_pad requires 'heights' as a non-empty list of numbers.")
+
+        for h in heights:
+            validate_positive_float(h, "height")
+
+        try:
+            multipad = sf.AddNewMultiPad(sketch)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewMultiPad", e))
+
+        try:
+            pads = multipad.Pads
+            for i in range(min(len(heights), pads.Count)):
+                pad = pads.Item(i + 1)
+                pad.Length = heights[i]
+        except Exception as e:
+            raise RuntimeError(f"Failed to set pad heights: {e}")
+
+        if has_pycatia:
+            part.update_object(multipad)
+        else:
+            part.UpdateObject(multipad)
+        self.conn.refresh_display()
+        heights_str = ", ".join(f"{h}mm" for h in heights)
+        return f"Multi-pad created: {len(heights)} pads ({heights_str}). Feature: '{multipad.Name}'"
+
+    def _multi_pocket(self, args: dict[str, Any]) -> str:
+        """Create multiple Pockets from multiple closed profiles in a single sketch.
+
+        CATIA API: ShapeFactory.AddNewMultiPocket(i_sketch)
+        After creation, set the depth of each pocket from the depths list.
+        """
+        self.conn.ensure_connected()
+        has_pycatia = hasattr(self.conn, "get_active_part_pycatia") and HAS_PYCATIA
+        if has_pycatia:
+            part = self.conn.get_active_part_pycatia()
+            body = self.conn.get_active_part_body()
+            sf = part.shape_factory
+            part.in_work_object = body
+        else:
+            part = self.conn.get_active_part()
+            body = self.conn.get_active_part_body()
+            sf = part.ShapeFactory
+            part.InWorkObject = body
+
+        sketch_name = validate_sketch_name(args.get("sketch_name"))
+        sketch = self._get_last_sketch(sketch_name, part)
+        depths = args.get("depths", [])
+
+        if not isinstance(depths, list) or len(depths) == 0:
+            raise RuntimeError("multi_pocket requires 'depths' as a non-empty list of numbers.")
+
+        for d in depths:
+            validate_positive_float(d, "depth")
+
+        try:
+            multipocket = sf.AddNewMultiPocket(sketch)
+        except Exception as e:
+            raise RuntimeError(format_catia_error("AddNewMultiPocket", e))
+
+        try:
+            pockets = multipocket.Pockets
+            for i in range(min(len(depths), pockets.Count)):
+                pocket = pockets.Item(i + 1)
+                pocket.Length = depths[i]
+        except Exception as e:
+            raise RuntimeError(f"Failed to set pocket depths: {e}")
+
+        if has_pycatia:
+            part.update_object(multipocket)
+        else:
+            part.UpdateObject(multipocket)
+        self.conn.refresh_display()
+        depths_str = ", ".join(f"{d}mm" for d in depths)
+        return (
+            f"Multi-pocket created: {len(depths)} pockets "
+            f"({depths_str}). Feature: '{multipocket.Name}'"
+        )
 
     def _list_features(self) -> str:
         self.conn.ensure_connected()

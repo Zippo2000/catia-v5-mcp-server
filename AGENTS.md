@@ -3,7 +3,7 @@
 > **Zweck:** Dieses Dokument gibt Agenten den notwendigen Kontext, die Code-Konventionen
 > und die Regeln für Arbeiten am catia-v5-mcp-server-Projekt.
 >
-> **Version:** 1.0 | **Datum:** 2026-06-03
+> **Version:** 1.1 | **Datum:** 2026-06-06
 
 ---
 
@@ -35,15 +35,15 @@ und ermöglicht damit LLM-gesteuerte CAD-Modellierung.
 - `SSE` — `python -m catia_mcp --sse` (Port 8765); LM Studio, vLLM
 - `Streamable HTTP` — `python -m catia_mcp --streamable-http` (Port 3001); Open WebUI
 
-**Sieben Tool-Module (95 Tools):**
+**Sieben Tool-Module (116 Tools):**
 
 | Modul | Datei | Tools | Beschreibung |
 |-------|-------|-------|-------------|
 | Document | `catia_mcp/tools/document.py` | 10 | Part/Product erstellen, öffnen, speichern, schließen |
-| Sketcher | `catia_mcp/tools/sketcher.py` | 14 | 2D-Sketching: Linien, Kreise, Bogen, Conics, Constraints |
-| Part Design | `catia_mcp/tools/part_design.py` | 19 | Pad, Pocket, Fillet, Shaft, Patterns, Boolean, Sweep, Loft |
-| GSD | `catia_mcp/tools/gsd.py` | 24 | Wireframe + Surface: Point, Line, Plane, Fill, Blend, Split |
-| Assembly | `catia_mcp/tools/assembly.py` | 14 | Komponenten, Constraints (Fix, Coincidence, Contact, ...) |
+| Sketcher | `catia_mcp/tools/sketcher.py` | 18 | 2D-Sketching: Linien, Kreise, Bogen, Conics, Constraints, trim, mirror |
+| Part Design | `catia_mcp/tools/part_design.py` | 28 | Pad, Pocket, Fillet, Shaft, Patterns, Boolean, Sweep, Loft, variable fillet, drafted filleted pad/pocket, multi pad/pocket |
+| GSD | `catia_mcp/tools/gsd.py` | 32 | Wireframe + Surface: Point, Line, Plane, Fill, Blend, Split, sphere, cone, torus, ruled |
+| Assembly | `catia_mcp/tools/assembly.py` | 15 | Komponenten, Constraints (Fix, Coincidence, Contact, ...) |
 | Measurement | `catia_mcp/tools/measurement.py` | 10 | Distance, Inertia, Bounding Box, Angle, Area, Length |
 | Export | `catia_mcp/tools/export.py` | 4 | STEP/IGES/STL, Screenshots, View Control |
 
@@ -72,8 +72,8 @@ Alle Dokumentationen liegen in `docs/`. Vor Änderungen: README + REQUIREMENTS l
 | Dokument | ID | Version | Zweck |
 |----------|-----|---------|-------|
 | `README.md` | — | — | Installation, Konfiguration, Tool-Referenz, Troubleshooting |
-| `REQUIREMENTS.md` | REQ-001 | 1.8 | ASPICE-Spezifikation, 92 FRs + NRs, Traceability Matrix |
-| `GAP_ANALYSIS.md` | GAP-001 | 1.2 | API-Abdeckungsanalyse, 187 API-Bereiche, Priorisierung |
+| `REQUIREMENTS.md` | REQ-001 | 1.9 | ASPICE-Spezifikation, 97 FRs + NRs, Traceability Matrix |
+| `GAP_ANALYSIS.md` | GAP-001 | 1.3 | API-Abdeckungsanalyse, 179 API-Bereiche, 65% Abdeckung, Priorisierung |
 | `CODE_REVIEW.md` | REV-001 | 1.0 | Code-Qualitätsbericht, Schwächen, Recommendations |
 | `MIGRATION_PLAN.md` | MIG-001 | 1.1 | pycatia-Dual-Backend-Migration (abgeschlossen) |
 | `TEST_PLAN.md` | TST-001 | 1.0 | Test-Abdeckungsplan, GSD-Pattern als Referenz |
@@ -256,8 +256,9 @@ Aus `docs/CODE_REVIEW.md` — diese sind die nächsten Verbesserungsschritte:
 
 ### Phase 2: Refactoring
 
-- [ ] pycatia/win32com-Backend-Switching in `part_design.py` als Helper-Method extrahieren
-- [ ] `CATIAConnection` um `get_part_factory()` ergänzen
+- [x] **Phase 2 Part Design Tools** — 5 new tools added (v1.11.0): `catia_variable_fillet`, `catia_drafted_filleted_pad`, `catia_drafted_filleted_pocket`, `catia_multi_pad`, `catia_multi_pocket`
+- [ ] pycatia/win32com-Backend-Switching in `part_design.py` als Helper-Methode oder Decorator extrahieren
+- [ ] `CATIAConnection` um `get_part_factory()` Methode ergänzen, die den pycatia/win32com-Switch kapselt
 - [ ] `_is_pycatia()` MagicMock-Detection via `unittest.mock` import verbessern
 
 ### Phase 3: Test-Härtung
@@ -297,7 +298,7 @@ Aus `docs/CODE_REVIEW.md` — diese sind die nächsten Verbesserungsschritte:
 | Default-Transport | stdio (Claude Desktop/Code) |
 | SSE-Port | 8765 |
 | Streamable HTTP Port | 3001 |
-| Tool-Anzahl | 95 |
+| Tool-Anzahl | 116 |
 | Test-Anzahl | 256 |
 | Python-Version | >= 3.10 |
 | Platform | Windows (COM), Tests auf Linux |
