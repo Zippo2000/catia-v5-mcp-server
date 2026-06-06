@@ -1193,27 +1193,32 @@ class PartDesignTools:
         angle = validate_positive_float(args.get("angle", 360), "angle")
         axis_name = args.get("axis")
 
-        # If axis is specified, create a 3D line first (before AddNewShaft)
-        # CATIA shaft requires a 3D axis reference
+        # If axis is specified, create a 3D line in a GeometricalSet (before AddNewShaft)
+        # CATIA shaft requires a 3D axis reference — lines live in HybridBody, not Body
         axis_ref = None
         if axis_name:
             try:
                 import win32com.client.dynamic as d
-                # dynamic.Dispatch for all COM calls — gencache fails on Windows server
                 dpart = d.Dispatch(part)
-                dbody = dpart.MainBody
-                dlines = dbody.Lines
+                # Create or get a GeometricalSet for the axis line
+                hybrid_bodies = dpart.HybridBodies
+                geo_set = hybrid_bodies.AddHybridBody()
+                geo_set.Name = "ShaftAxisSet"
+                dpart.UpdateObject(geo_set)
+                dpart.InWorkObject = geo_set
+                lines = geo_set.HybridShapes
                 lookup = axis_name.lower().strip()
                 if lookup == "x":
-                    axis_line = dlines.AddNewLine(0, 0, 0, 1, 0, 0)
+                    axis_line = lines.AddNewLine(0, 0, 0, 1, 0, 0)
                 elif lookup == "y":
-                    axis_line = dlines.AddNewLine(0, 0, 0, 0, 1, 0)
+                    axis_line = lines.AddNewLine(0, 0, 0, 0, 1, 0)
                 elif lookup == "z":
-                    axis_line = dlines.AddNewLine(0, 0, 0, 0, 0, 1)
+                    axis_line = lines.AddNewLine(0, 0, 0, 0, 0, 1)
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
                 axis_line.Name = "ShaftAxis"
                 dpart.UpdateObject(axis_line)
+                dpart.InWorkObject = body  # restore body as in-work
                 axis_ref = part.CreateReferenceFromObject(axis_line)
             except Exception as e:
                 raise RuntimeError(f"Cannot set revolution axis '{axis_name}': {e}")
