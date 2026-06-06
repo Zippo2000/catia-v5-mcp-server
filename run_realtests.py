@@ -1381,12 +1381,107 @@ def run_tests(sess):
         ok = "error" in str(e).lower() or "component" in str(e).lower() or "required" in str(e).lower()
         record("P9", "P9-16", "✅" if ok else "❌", str(e)[:100])
 
+    # ============ P10: Phase 2 Tools (v1.11.0) ============
+    print("\n" + "="*60)
+    print("PHASE P10: Phase 2 Tools (v1.11.0)")
+    print("="*60)
+
+    # P10-01: catia_variable_fillet (validation - no edge)
+    try:
+        r = txt(sess.call_tool("catia_variable_fillet", {}))
+        ok = "error" in r.lower() or "edge" in r.lower() or "required" in r.lower()
+        record("P10", "P10-01", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "edge" in str(e).lower() or "required" in str(e).lower()
+        record("P10", "P10-01", "✅" if ok else "❌", str(e)[:100])
+
+    # P10-02: catia_variable_fillet (validation - negative radius)
+    try:
+        r = txt(sess.call_tool("catia_variable_fillet", {"edge_name": "Edge.1", "radius1": -1, "radius2": 5}))
+        ok = "error" in r.lower() or "positive" in r.lower() or "invalid" in r.lower()
+        record("P10", "P10-02", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "positive" in str(e).lower() or "invalid" in str(e).lower()
+        record("P10", "P10-02", "✅" if ok else "❌", str(e)[:100])
+
+    # P10-03: catia_drafted_filleted_pad (validation - no sketch)
+    try:
+        r = txt(sess.call_tool("catia_drafted_filleted_pad", {}))
+        ok = "error" in r.lower() or "sketch" in r.lower() or "required" in r.lower()
+        record("P10", "P10-03", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "sketch" in str(e).lower() or "required" in str(e).lower()
+        record("P10", "P10-03", "✅" if ok else "❌", str(e)[:100])
+
+    # P10-04: catia_drafted_filleted_pad (validation - zero height)
+    try:
+        r = txt(sess.call_tool("catia_drafted_filleted_pad", {"sketch_name": "Sketch.1", "height": 0}))
+        ok = "error" in r.lower() or "positive" in r.lower() or "invalid" in r.lower()
+        record("P10", "P10-04", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "positive" in str(e).lower() or "invalid" in str(e).lower()
+        record("P10", "P10-04", "✅" if ok else "❌", str(e)[:100])
+
+    # P10-05: catia_drafted_filleted_pocket (validation - no sketch)
+    try:
+        r = txt(sess.call_tool("catia_drafted_filleted_pocket", {}))
+        ok = "error" in r.lower() or "sketch" in r.lower() or "required" in r.lower()
+        record("P10", "P10-05", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "sketch" in str(e).lower() or "required" in str(e).lower()
+        record("P10", "P10-05", "✅" if ok else "❌", str(e)[:100])
+
+    # P10-06: catia_drafted_filleted_pocket (validation - negative height)
+    try:
+        r = txt(sess.call_tool("catia_drafted_filleted_pocket", {"sketch_name": "Sketch.1", "height": -5}))
+        ok = "error" in r.lower() or "positive" in r.lower() or "invalid" in r.lower()
+        record("P10", "P10-06", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "positive" in str(e).lower() or "invalid" in str(e).lower()
+        record("P10", "P10-06", "✅" if ok else "❌", str(e)[:100])
+
+    # P10-07: catia_multi_pad (validation - no sketch)
+    try:
+        r = txt(sess.call_tool("catia_multi_pad", {}))
+        ok = "error" in r.lower() or "sketch" in r.lower() or "required" in r.lower()
+        record("P10", "P10-07", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "sketch" in str(e).lower() or "required" in str(e).lower()
+        record("P10", "P10-07", "✅" if ok else "❌", str(e)[:100])
+
+    # P10-08: catia_multi_pad (validation - empty heights)
+    try:
+        r = txt(sess.call_tool("catia_multi_pad", {"sketch_name": "Sketch.1", "heights": []}))
+        ok = "error" in r.lower() or "empty" in r.lower() or "required" in r.lower()
+        record("P10", "P10-08", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "empty" in str(e).lower() or "required" in str(e).lower()
+        record("P10", "P10-08", "✅" if ok else "❌", str(e)[:100])
+
+    # P10-09: catia_multi_pocket (validation - no sketch)
+    try:
+        r = txt(sess.call_tool("catia_multi_pocket", {}))
+        ok = "error" in r.lower() or "sketch" in r.lower() or "required" in r.lower()
+        record("P10", "P10-09", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "sketch" in str(e).lower() or "required" in str(e).lower()
+        record("P10", "P10-09", "✅" if ok else "❌", str(e)[:100])
+
+    # P10-10: catia_multi_pocket (validation - negative depth)
+    try:
+        r = txt(sess.call_tool("catia_multi_pocket", {"sketch_name": "Sketch.1", "depths": [-5]}))
+        ok = "error" in r.lower() or "positive" in r.lower() or "invalid" in r.lower()
+        record("P10", "P10-10", "✅" if ok else "❌", r[:100])
+    except Exception as e:
+        ok = "error" in str(e).lower() or "positive" in str(e).lower() or "invalid" in str(e).lower()
+        record("P10", "P10-10", "✅" if ok else "❌", str(e)[:100])
+
     # ============ Print Summary ============
     print("\n" + "="*60)
     print("TEST RESULTS SUMMARY")
     print("="*60)
 
-    phases = ["P0","P1","P2","P3","P4","P5","P6","P7","P8"]
+    phases = ["P0","P1","P2","P3","P4","P5","P6","P7","P8","P9","P10"]
     total = pass_c = fail_c = skip_c = 0
     for phase in phases:
         pr = [r for r in results if r["phase"] == phase]
