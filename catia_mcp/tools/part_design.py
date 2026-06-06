@@ -1192,9 +1192,9 @@ class PartDesignTools:
         angle = validate_positive_float(args.get("angle", 360), "angle")
         axis_name = args.get("axis")
 
-        # AddNewShaft(sketch, axis) takes TWO parameters:
-        # 1. The sketch profile
-        # 2. The revolution axis (a 1D element: line, axis, or direction)
+        # AddNewShaftFromRef(iProfile, iAxis) takes TWO References:
+        # 1. Reference to the sketch profile
+        # 2. Reference to the revolution axis (line, axis, or direction)
         if axis_name:
             try:
                 import win32com.client.dynamic as d
@@ -1209,8 +1209,12 @@ class PartDesignTools:
                     direction = hsf.AddNewDirectionByCoord(0, 0, 1)
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
-                # AddNewShaft(sketch, axis) — pass the direction directly
-                shaft = body.Shapes.AddNewShaft(sketch, direction)
+                # Create references for AddNewShaftFromRef
+                dpart = d.Dispatch(part)
+                sketch_ref = dpart.CreateReferenceFromObject(sketch)
+                dir_ref = dpart.CreateReferenceFromObject(direction)
+                # AddNewShaftFromRef(sketch_ref, dir_ref) — both must be References
+                shaft = body.Shapes.AddNewShaftFromRef(sketch_ref, dir_ref)
             except Exception as e:
                 raise RuntimeError(f"Cannot create shaft with axis '{axis_name}': {e}")
         else:
