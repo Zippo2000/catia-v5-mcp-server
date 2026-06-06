@@ -49,7 +49,8 @@ class SketcherTools:
             {
                 "name": "catia_create_sketch",
                 "description": (
-                    "Create a new 2D sketch on a reference plane (xy, yz, or zx). "
+                    "Create a new 2D sketch on a reference plane (xy, yz, or zx) or on a named "
+                    "plane (e.g. an offset plane created with catia_create_plane_offset). "
                     "The sketch is opened for editing. You must close it with catia_close_sketch "
                     "before creating 3D features."
                 ),
@@ -61,6 +62,10 @@ class SketcherTools:
                             "description": "Reference plane: 'xy' (front), 'yz' (right), 'zx' (top)",
                             "enum": ["xy", "yz", "zx"],
                             "default": "xy",
+                        },
+                        "plane_name": {
+                            "type": "string",
+                            "description": "Name of a custom plane (e.g. 'OffsetPlane.1') to use as sketch support. Overrides 'plane' if provided.",
                         },
                     },
                 },
@@ -315,7 +320,10 @@ class SketcherTools:
     def execute(self, tool_name: str, arguments: dict[str, Any]) -> str:
         match tool_name:
             case "catia_create_sketch":
-                return self._create_sketch(arguments.get("plane", "xy"))
+                return self._create_sketch(
+                    arguments.get("plane", "xy"),
+                    arguments.get("plane_name"),
+                )
             case "catia_close_sketch":
                 return self._close_sketch()
             case "catia_sketch_line":
@@ -380,10 +388,28 @@ class SketcherTools:
                 "No active sketch. Use catia_create_sketch first to open a sketch."
             )
 
-    def _create_sketch(self, plane: str = "xy") -> str:
+    def _create_sketch(self, plane: str = "xy", plane_name: str = None) -> str:
         self.conn.ensure_connected()
         part = self.conn.get_active_part()
         body = self.conn.get_active_part_body()
+
+        if plane_name:
+            # Use a named custom plane (e.g. offset plane)
+            sketches = body.Sketches
+            ref = part.CreateReferenceFromObject(plane_name)
+            try:
+                sketch = sketches.Add(ref)
+            except Exception as e:
+                raise RuntimeError(format_catia_error("CreateSketch", e))
+            self._active_sketch = sketch
+            try:
+                if _is_pycatia(sketch):
+                    self._active_factory = sketch.open_edition()
+                else:
+                    self._active_factory = sketch.OpenEdition()
+            except Exception as e:
+                raise RuntimeError(format_catia_error("OpenSketchEdition", e))
+            return f"Sketch created on custom plane '{plane_name}'. Ready for geometry."
 
         plane_key = validate_plane(plane)
 

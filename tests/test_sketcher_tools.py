@@ -66,6 +66,17 @@ class TestCreateSketch:
         result = sk_tools.execute("catia_create_sketch", {"plane": "zx"})
         assert "Sketch created" in result
 
+    def test_create_sketch_plane_name(self, sk_tools, conn_mock):
+        mock_sketch = MagicMock()
+        part = conn_mock.get_active_part()
+        part.CreateReferenceFromObject.return_value = MagicMock()
+        body = conn_mock.get_active_part_body()
+        body.Sketches.Add.return_value = mock_sketch
+        mock_sketch.OpenEdition.return_value = MagicMock()
+        result = sk_tools.execute("catia_create_sketch", {"plane_name": "Plane(xy,90mm)"})
+        assert "Plane(xy,90mm)" in result
+        part.CreateReferenceFromObject.assert_called_with("Plane(xy,90mm)")
+
     def test_create_sketch_invalid_plane(self, sk_tools):
         with pytest.raises(ValueError, match="Must be one of"):
             sk_tools.execute("catia_create_sketch", {"plane": "front"})
