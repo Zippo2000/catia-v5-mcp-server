@@ -1206,12 +1206,13 @@ class PartDesignTools:
                 # Get HybridShapes via dynamic dispatch
                 dlines = d.Dispatch(hbody).HybridShapes
                 lookup = axis_name.lower().strip()
+                # Use AddNewLinePtPt (GSD pattern) — AddNewLine doesn't exist
                 if lookup == "x":
-                    axis_line = dlines.AddNewLine(0, 0, 0, 1, 0, 0)
+                    axis_line = dlines.AddNewLinePtPt(0, 0, 0, 100, 0, 0)
                 elif lookup == "y":
-                    axis_line = dlines.AddNewLine(0, 0, 0, 0, 1, 0)
+                    axis_line = dlines.AddNewLinePtPt(0, 0, 0, 0, 100, 0)
                 elif lookup == "z":
-                    axis_line = dlines.AddNewLine(0, 0, 0, 0, 0, 1)
+                    axis_line = dlines.AddNewLinePtPt(0, 0, 0, 0, 0, 100)
                 else:
                     raise RuntimeError(f"Cannot find axis '{axis_name}'")
                 axis_line.Name = "ShaftAxis"
