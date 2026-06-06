@@ -1272,7 +1272,6 @@ class PartDesignTools:
         try:
             part.UpdateObject(shaft)
         except Exception:
-            # If UpdateObject fails, try full part update
             part.Update()
 
         self.conn.refresh_display()
